@@ -1,11 +1,14 @@
 package com.image.resizer.compose
 
 import android.Manifest
+import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.net.http.SslCertificate.restoreState
+import android.net.http.SslCertificate.saveState
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
@@ -40,10 +43,14 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -55,16 +62,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.isEmpty
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import coil.compose.AsyncImage
-import com.image.resizer.compose.theme.GeminiTest2Theme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import com.image.resizer.compose.theme.AppTheme
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
@@ -77,12 +93,178 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            GeminiTest2Theme {
-                MainScreen()
+            AppTheme {
+                Surface(tonalElevation = 5.dp) {
+                    MainApp()
+                }
             }
         }
     }
 }
+
+@Composable
+fun MainApp() {
+    val navController = rememberNavController()
+    Scaffold(
+        bottomBar = { BottomNavigationBar(navController) }
+    ) { innerPadding ->
+        Navigation(navController, innerPadding)
+    }
+}
+
+@Composable
+fun BottomNavigationBar(navController: NavHostController) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    val items = listOf(
+        Screen.Home,
+        Screen.MyImages,
+        Screen.Settings
+    )
+    NavigationBar {
+        items.forEach { item ->
+            NavigationBarItem(
+                icon = { Icon(item.icon, contentDescription = item.title) },
+                label = { Text(item.title) },
+                selected = currentRoute == item.route,
+                onClick = {
+                    navController.navigate(item.route) {
+                        // Pop up to the start destination of the graph to
+                        // avoid building up a large stack of destinations
+                        // on the back stack as users select items
+                        navController.graph.startDestinationRoute?.let { route ->
+                            popUpTo(route) {
+                                saveState = true
+                            }
+                        }
+                        // Avoid multiple copies of the same destination when
+                        // reselecting the same item
+                        launchSingleTop = true
+                        // Restore state when reselecting a previously selected item
+                        restoreState = true
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
+    NavHost(
+        navController = navController,
+        startDestination = Screen.Home.route,
+        modifier = Modifier.padding(innerPadding)
+    ) {
+        composable(Screen.Home.route) {
+            HomeScreen()
+        }
+        composable(Screen.MyImages.route) {
+            MyImagesScreen()
+        }
+        composable(Screen.Settings.route) {
+            SettingsScreen()
+        }
+    }
+}
+
+@Composable
+fun HomeScreen() {
+    MainScreen()
+}
+
+@Composable
+fun MyImagesScreen() {
+    val context = LocalContext.current
+    val compressedImageUris = getCompressedImageUris(context)
+
+    if (compressedImageUris.isEmpty()) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text("No compressed images found.")
+        }
+    } else {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(3),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            items(compressedImageUris) { uri ->
+                ImageCard(uri)
+            }
+        }
+    }
+}
+fun getCompressedImageUris(context: Context): List<Uri> {
+    val compressedImageUris = mutableListOf<Uri>()
+    val projection = arrayOf(
+        MediaStore.Images.Media._ID,
+        MediaStore.Images.Media.DISPLAY_NAME,
+        MediaStore.Images.Media.DATE_ADDED
+    )
+    val selection = "${MediaStore.Images.Media.DISPLAY_NAME} LIKE ?"
+    val selectionArgs = arrayOf("compressed_image_%")
+    val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
+
+    val query = context.contentResolver.query(
+        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+        projection,
+        selection,
+        selectionArgs,
+        sortOrder
+    )
+
+    query?.use { cursor ->
+        val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+        while (cursor.moveToNext()) {
+            val id = cursor.getLong(idColumn)
+            val contentUri = ContentUris.withAppendedId(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                id
+            )
+            compressedImageUris.add(contentUri)
+        }
+    }
+
+    return compressedImageUris
+}
+@Composable
+fun ImageCard(uri: Uri) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+    ) {
+        AsyncImage(
+            model = uri,
+            contentDescription = "Compressed Image",
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(150.dp),
+            contentScale = ContentScale.Crop
+        )
+    }
+}
+
+@Composable
+fun SettingsScreen() {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(text = "Settings Screen")
+    }
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,7 +275,7 @@ fun MainScreen() {
     val viewModel = ScaleImageViewModel()
 
     // State to control the popup's visibility
-    var showScalePopup by remember { mutableStateOf(true) }
+    var showScalePopup by remember { mutableStateOf(false) }
 
     // State to pass to the popup
 
@@ -105,7 +287,10 @@ fun MainScreen() {
                 viewModel,
                 onShowScalePopup = {
                     showScalePopup = !showScalePopup
-                } // Update state on menu click
+                },
+                onUndo = {
+                    imagePairs= emptyList()
+                }
             ) { compressedUris ->
                 imagePairs = selectedImageUris.zip(compressedUris) { original, compressed ->
                     ImagePair(original, compressed)
@@ -137,6 +322,7 @@ fun MainScreen() {
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         items(selectedImageUris) { uri ->
+
                             AsyncImage(
                                 model = uri,
                                 contentDescription = null,
@@ -165,8 +351,14 @@ fun MainScreen() {
         // Implement image scaling logic here
         AnimatedVisibility(
             visible = showScalePopup,
-            enter = fadeIn(animationSpec = tween(durationMillis = 20000)) + expandVertically(expandFrom = Alignment.CenterVertically, animationSpec = tween(durationMillis = 13000)),
-            exit = fadeOut(animationSpec = tween(durationMillis = 20000)) + shrinkVertically(shrinkTowards = Alignment.CenterVertically, animationSpec = tween(durationMillis = 13000)),
+            enter = fadeIn(animationSpec = tween(durationMillis = 20000)) + expandVertically(
+                expandFrom = Alignment.CenterVertically,
+                animationSpec = tween(durationMillis = 13000)
+            ),
+            exit = fadeOut(animationSpec = tween(durationMillis = 20000)) + shrinkVertically(
+                shrinkTowards = Alignment.CenterVertically,
+                animationSpec = tween(durationMillis = 13000)
+            ),
         ) {
             ScaleImagePopup(showScalePopup, onDismiss = {
                 showScalePopup = false
@@ -180,15 +372,19 @@ fun MainScreen() {
         }
     }
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyTopAppBar(
     selectedImageUris: List<Uri>,
     context: Context,
     viewModel: ScaleImageViewModel,
+    onUndo: () -> Unit,
     onShowScalePopup: () -> Unit, // Callback to trigger the popup
-    onCompress: (List<Uri>) -> Unit
-) {
+    onCompress: (List<Uri>) -> Unit,
+
+
+    ) {
     TopAppBar(
         title = {
             Row(
@@ -205,7 +401,7 @@ fun MyTopAppBar(
                     modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    IconButton(onClick = {
+                    IconButton(enabled = selectedImageUris.isNotEmpty(), onClick = {
                         val compressedUris = compressAndSaveImages(selectedImageUris, context)
                         onCompress(compressedUris)
                     }) {
@@ -214,18 +410,31 @@ fun MyTopAppBar(
                             contentDescription = "Compress",
                         )
                     }
-                    IconButton(onClick = {
-                        onShowScalePopup() // Trigger the popup via the callback
-                    }) {
+                    IconButton(
+                        onClick = {
+                            onShowScalePopup() // Trigger the popup via the callback
+                        }, enabled = selectedImageUris.isNotEmpty()
+                    ) {
                         Icon(
                             painterResource(id = R.drawable.ic_compress_24dp),
                             contentDescription = "Scale",
                         )
                     }
-                    IconButton(onClick = { cropImage(selectedImageUris) }) {
+                    IconButton(
+                        enabled = selectedImageUris.isNotEmpty(),
+                        onClick = { cropImage(selectedImageUris) }) {
                         Icon(
                             painterResource(id = R.drawable.ic_compress_24dp),
                             contentDescription = "Crop",
+                        )
+                    }
+                    IconButton(enabled = selectedImageUris.isNotEmpty(), onClick = {
+                        val compressedUris = compressAndSaveImages(selectedImageUris, context)
+                        onUndo()
+                    }) {
+                        Icon(
+                            painterResource(id = R.drawable.ic_compress_24dp),
+                            contentDescription = "Undo",
                         )
                     }
                 }
@@ -248,12 +457,7 @@ fun GalleryApp(onImagesSelected: (List<Uri>) -> Unit, viewModel: ScaleImageViewM
     )
     var showRationale by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(true) }
-    var onDismiss by remember {
-        mutableStateOf({
-            showDialog = false
-        })
-    }
-    val originalDimensions = listOf(Pair(1000, 2000))
+    listOf(Pair(1000, 2000))
 
 
     Column(
@@ -266,15 +470,15 @@ fun GalleryApp(onImagesSelected: (List<Uri>) -> Unit, viewModel: ScaleImageViewM
             onClick = {
                 showDialog = true
 
-                 if (galleryPermissionState.status.isGranted) {
-                       multiplePhotoPickerLauncher.launch(
-                           PickVisualMediaRequest(
-                               ActivityResultContracts.PickVisualMedia.ImageOnly
-                           )
-                       )
-                   } else {
-                       showRationale = true
-                   }
+                if (galleryPermissionState.status.isGranted) {
+                    multiplePhotoPickerLauncher.launch(
+                        PickVisualMediaRequest(
+                            ActivityResultContracts.PickVisualMedia.ImageOnly
+                        )
+                    )
+                } else {
+                    showRationale = true
+                }
 
             }
         ) {
