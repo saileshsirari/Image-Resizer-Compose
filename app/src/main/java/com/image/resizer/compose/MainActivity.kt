@@ -44,6 +44,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,6 +56,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -174,35 +176,7 @@ fun HomeScreen() {
     MainScreen()
 }
 
-@Composable
-fun MyImagesScreen() {
-    val context = LocalContext.current
-    val compressedImageUris = getCompressedImageUris(context)
-
-    if (compressedImageUris.isEmpty()) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text("No compressed images found.")
-        }
-    } else {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            items(compressedImageUris) { uri ->
-                ImageCard(uri)
-            }
-        }
-    }
-}
-fun getCompressedImageUris(context: Context): List<Uri> {
+fun getCompressedImageUris(context: Context, page: Int, pageSize: Int): List<Uri> {
     val compressedImageUris = mutableListOf<Uri>()
     val projection = arrayOf(
         MediaStore.Images.Media._ID,
@@ -223,36 +197,53 @@ fun getCompressedImageUris(context: Context): List<Uri> {
 
     query?.use { cursor ->
         val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-        while (cursor.moveToNext()) {
-            val id = cursor.getLong(idColumn)
-            val contentUri = ContentUris.withAppendedId(
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                id
-            )
-            compressedImageUris.add(contentUri)
+        val totalItems = cursor.count
+        val offset = (page - 1) * pageSize
+
+        if (offset >= totalItems) {
+            // Requested offset is beyond the total number of items
+            return compressedImageUris
+        }
+
+        val startIndex = offset
+        val endIndex = minOf(startIndex + pageSize, totalItems)
+
+        if (cursor.moveToPosition(startIndex)){
+            for (i in startIndex until endIndex){
+                if (cursor.moveToPosition(i)){
+                    val id = cursor.getLong(idColumn)
+                    val contentUri = ContentUris.withAppendedId(
+                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                        id
+                    )
+                    compressedImageUris.add(contentUri)
+                }
+            }
         }
     }
 
     return compressedImageUris
 }
-@Composable
-fun ImageCard(uri: Uri) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
-    ) {
-        AsyncImage(
-            model = uri,
-            contentDescription = "Compressed Image",
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(150.dp),
-            contentScale = ContentScale.Crop
-        )
+
+fun getTotalCompressedImagesCount(context: Context): Int {
+    val projection = arrayOf(MediaStore.Images.Media._ID)
+    val selection = "${MediaStore.Images.Media.DISPLAY_NAME} LIKE ?"
+    val selectionArgs = arrayOf("compressed_image_%")
+
+    val query = context.contentResolver.query(
+        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+        projection,
+        selection,
+        selectionArgs,
+        null
+    )
+
+    query?.use { cursor ->
+        return cursor.count
     }
+    return 0
 }
+
 
 @Composable
 fun SettingsScreen() {
