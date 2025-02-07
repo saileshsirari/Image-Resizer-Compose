@@ -11,6 +11,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
+import android.util.Log.i
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
@@ -38,6 +39,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -102,111 +104,31 @@ const val IMAGES_PER_PAGE = 6
 @Composable
 fun MyImagesScreen() {
     val context = LocalContext.current
-    var paginationState by remember {
-        mutableStateOf(PaginationState())
-    }
+
     val totalImagesCount = getTotalCompressedImagesCount(context)
+
+    var loadingImages by remember {
+        mutableStateOf(mutableSetOf<Int>())
+    }
     val placeholders = remember {
         List(totalImagesCount) { null }
     }
     var actualImageUris by remember {
-        mutableStateOf<List<Uri?>>(placeholders)
+        mutableStateOf<List<Uri?>>(emptyList())
     }
-    var loadingImages by remember {
-        mutableStateOf(mutableSetOf<Int>())
-    }
-
-    var loadingNextPage by remember {
-        mutableStateOf(false)
-    }
-    // ... your list of items (actualImageUris or similar) ...
-    val totalItems = actualImageUris.size
-    val totalPages = (totalImagesCount + IMAGES_PER_PAGE - 1) / IMAGES_PER_PAGE
-    if (paginationState.totalPages != totalPages)
-        paginationState = paginationState.copy(totalPages = totalPages)
     val lazyGridState = rememberLazyGridState()
-    var isLoadingMore by remember { mutableStateOf(false) }
-    val isAtEnd by remember {
-        derivedStateOf {
-            val lastVisibleItemIndex = lazyGridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
-            if (totalItems > 0) {
-                lastVisibleItemIndex != null && lastVisibleItemIndex >= totalItems - 1
-            } else {
-                false
-            }
-
-        }
-    }
-
-    LaunchedEffect(key1 = paginationState.currentPage) {
-        if (paginationState.currentPage > 1) {
-            loadingNextPage = false
-        }
-        paginationState = paginationState.copy(isLoading = true)
-        val startIndex = (paginationState.currentPage - 1) * IMAGES_PER_PAGE
-        val endIndex = minOf(startIndex + IMAGES_PER_PAGE, placeholders.size)
+    LaunchedEffect(true) {
         val newImages = mutableSetOf<Int>()
-        for (i in startIndex until endIndex) {
+        for (i in  1 .. totalImagesCount) {
             newImages.add(i)
         }
         loadingImages.addAll(newImages)
         val urisForPage = withContext(Dispatchers.IO) {
             getRealCompressedImageUris(context, newImages.toList())
         }
-
-        // Stage the changes here
-        val updatedActualImageUris = actualImageUris.toMutableList()
-        val updatedLoadingImages = loadingImages.toMutableSet()
-
-        for (i in urisForPage.indices) {
-            val uri = urisForPage[i]
-            if (uri != null) {
-                val index = newImages.toList()[i]
-                updatedActualImageUris[index] = uri
-                updatedLoadingImages.remove(index)
-            }
-        }
-
-        // Apply the changes after the loop
-        actualImageUris = updatedActualImageUris
-        loadingImages.clear()
-        loadingImages.addAll(updatedLoadingImages)
-        paginationState = paginationState.copy(isLoading = false)
-    }
-    LaunchedEffect(lazyGridState.layoutInfo.visibleItemsInfo) {
-        val visibleIndexes = lazyGridState.layoutInfo.visibleItemsInfo.map { it.index }
-        val indexesToLoad = mutableSetOf<Int>()
-        for (index in visibleIndexes) {
-            if (index < actualImageUris.size && actualImageUris[index] == null && !loadingImages.contains(
-                    index
-                )
-            ) {
-                indexesToLoad.add(index)
-            }
-        }
-        if (indexesToLoad.isNotEmpty()) {
-            val newLoadingImages = loadingImages.toMutableSet()
-            newLoadingImages.addAll(indexesToLoad)
-            loadingImages.clear()
-            loadingImages.addAll(newLoadingImages)
-
-            val urisForPage = withContext(Dispatchers.IO) {
-                getRealCompressedImageUris(context, indexesToLoad.toList())
-            }
-            val updatedActualImageUris = actualImageUris.toMutableList()
-            val updatedLoadingImages = loadingImages.toMutableSet()
-            for (i in urisForPage.indices) {
-                val uri = urisForPage[i]
-                if (uri != null) {
-                    val index = indexesToLoad.toList()[i]
-                    updatedActualImageUris[index] = uri
-                    updatedLoadingImages.remove(index)
-                }
-            }
-            actualImageUris = updatedActualImageUris
-            loadingImages.clear()
-            loadingImages.addAll(updatedLoadingImages)
-        }
+       val list = actualImageUris.toMutableList()
+        list.addAll(urisForPage)
+        actualImageUris = list
     }
     //image states
     var selectedImages = remember { mutableStateListOf<Uri>() }
@@ -397,7 +319,7 @@ fun MyImagesScreen() {
             )
         }
 
-        if (placeholders.isEmpty() && !paginationState.isLoading) {
+        if (actualImageUris.isEmpty() ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -429,7 +351,7 @@ fun MyImagesScreen() {
                     ) {
                         if (uri != null) {
                             val isSelected = selectedImages.contains(uri)
-                            ImageCard(uri, loadingImages.contains(index), isSelected, imageSelectionMode) {
+                            ImageCard(uri, false, isSelected, imageSelectionMode) {
                                 imageSelectionMode = true
                                 if (isSelected) {
                                     selectedImages.remove(uri)
@@ -443,48 +365,6 @@ fun MyImagesScreen() {
                         }
                     }
 
-                }
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-
-                        if (!paginationState.isLoading && !loadingNextPage) {
-                            if(!isAtEnd){
-                                CircularProgressIndicator()
-                            }
-
-                            LaunchedEffect(isAtEnd) {
-//                            LaunchedEffect(lazyGridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index) {
-                                if (isAtEnd && !isLoadingMore) {
-                                    val lastVisibleItemIndex =
-                                        lazyGridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
-                                    val totalItems = placeholders.size
-                                    if (lastVisibleItemIndex != null && lastVisibleItemIndex < totalItems) {
-                                        paginationState =
-                                            paginationState.copy(
-                                                currentPage = paginationState.currentPage + 1,
-                                                isLoading = true
-                                            )
-                                    }
-
-                                }
-
-                            }
-                        }
-                    }
-                }
-                item {
-                    Text(
-                    text = "Page ${paginationState.currentPage} of ${paginationState.totalPages}",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    textAlign = TextAlign.Center
-                )
                 }
             }
         }
@@ -674,21 +554,10 @@ fun getRealCompressedImageUris(context: Context, indexesToLoad: List<Int>): List
         if (totalCount == 0) {
             return emptyList()
         }
-        indexesToLoad.forEachIndexed { index, element ->
-            if (element < totalCount){
-                if (cursor.moveToPosition(element)) {
-                    val id = cursor.getLong(idColumn)
-                    imageIds[index] = id
-                }
-            }
-        }
-        imageIds.forEach { imageId->
-            if (imageId != null){
-                val contentUri = ContentUris.withAppendedId(queryUri, imageId)
-                compressedImageUris.add(contentUri)
-            } else{
-                compressedImageUris.add(null)
-            }
+        while (cursor.moveToNext()){
+            val id = cursor.getLong(idColumn)
+            val contentUri = ContentUris.withAppendedId(queryUri, id)
+            compressedImageUris.add(contentUri)
         }
     }
     return compressedImageUris
