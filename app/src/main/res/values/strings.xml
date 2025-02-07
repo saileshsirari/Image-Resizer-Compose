@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">Image Resizer Compose</string>
+    <string name="my_images">My Images</string>
+    <string name="select_all">Select All</string>
+    <string name="share">Share</string>
+    <string name="delete">Delete</string>
+    <string name="share_images_title">Share Images</string>
+    <string name="share_images">Share images</string>
+    <string name="delete_confirmation_title">Confirm Delete?</string>
+    <string name="delete_confirmation_message">Please confirm images deletion</string>
+    <string name="cancel">Cancel</string>
 </resources>
