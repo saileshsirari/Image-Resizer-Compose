@@ -11,13 +11,10 @@ import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
-import android.util.Log.i
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.launch
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
@@ -39,7 +36,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -50,7 +46,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -64,7 +59,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -78,18 +72,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.core.app.ActivityCompat.startIntentSenderForResult
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImagePainter
 import coil.compose.SubcomposeAsyncImage
 import coil.compose.SubcomposeAsyncImageContent
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import kotlin.contracts.contract
 import kotlin.math.min
 
 data class PaginationState(
@@ -397,15 +386,12 @@ fun ImageCard(uri: Uri?, isLoading: Boolean, isSelected: Boolean, imageSelection
                     SubcomposeAsyncImageContent()
                 }
             }
-            if (imageSelectionMode) {
                 Checkbox(
                     checked = isSelected,
                     onCheckedChange = { onClick() },
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(8.dp)
                 )
-            }
         }
     }
 }
