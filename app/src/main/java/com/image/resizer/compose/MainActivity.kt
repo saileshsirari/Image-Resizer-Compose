@@ -176,56 +176,9 @@ fun HomeScreen() {
     MainScreen()
 }
 
-fun getCompressedImageUris(context: Context, page: Int, pageSize: Int): List<Uri> {
-    val compressedImageUris = mutableListOf<Uri>()
-    val projection = arrayOf(
-        MediaStore.Images.Media._ID,
-        MediaStore.Images.Media.DISPLAY_NAME,
-        MediaStore.Images.Media.DATE_ADDED
-    )
-    val selection = "${MediaStore.Images.Media.DISPLAY_NAME} LIKE ?"
-    val selectionArgs = arrayOf("compressed_image_%")
-    val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
 
-    val query = context.contentResolver.query(
-        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-        projection,
-        selection,
-        selectionArgs,
-        sortOrder
-    )
 
-    query?.use { cursor ->
-        val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-        val totalItems = cursor.count
-        val offset = (page - 1) * pageSize
-
-        if (offset >= totalItems) {
-            // Requested offset is beyond the total number of items
-            return compressedImageUris
-        }
-
-        val startIndex = offset
-        val endIndex = minOf(startIndex + pageSize, totalItems)
-
-        if (cursor.moveToPosition(startIndex)){
-            for (i in startIndex until endIndex){
-                if (cursor.moveToPosition(i)){
-                    val id = cursor.getLong(idColumn)
-                    val contentUri = ContentUris.withAppendedId(
-                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                        id
-                    )
-                    compressedImageUris.add(contentUri)
-                }
-            }
-        }
-    }
-
-    return compressedImageUris
-}
-
-fun getTotalCompressedImagesCount(context: Context): Int {
+fun getTotalCompressedImagesCount1(context: Context): Int {
     val projection = arrayOf(MediaStore.Images.Media._ID)
     val selection = "${MediaStore.Images.Media.DISPLAY_NAME} LIKE ?"
     val selectionArgs = arrayOf("compressed_image_%")
