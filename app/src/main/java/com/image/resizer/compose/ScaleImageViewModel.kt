@@ -86,8 +86,8 @@ class ScaleImageViewModel : ViewModel() {
     fun selectPredefinedDimension(dimension: PredefinedDimension, index: Int) {
         selectedPredefinedDimension = dimension
         if(selectedPredefinedDimension.width!=-1 && selectedPredefinedDimension.height!=-1){
-            width = selectedPredefinedDimension.width.toString()
-            height = selectedPredefinedDimension.height.toString()
+          //  width = selectedPredefinedDimension.width.toString()
+         //   height = selectedPredefinedDimension.height.toString()
         }
        /* if (keepAspectRatio) {
             if (aspectRatio[0] > 1) {
@@ -127,35 +127,56 @@ class ScaleImageViewModel : ViewModel() {
 
     fun onScaleForList(onResult: (List<ScaleParams>) -> Unit) {
         val resultList = mutableListOf<ScaleParams>()
+
         if (mode == "custom") {
-            if(width.isNotEmpty() && height.isNotEmpty()) {
-                val parsedWidth = width.toInt()
-                val parsedHeight = height.toInt()
-                if (keepAspectRatio) {
-                    //we take width as deciding factor
-                    val scaleFactor = parsedWidth.toFloat() / parsedHeight.toFloat()
+            if(selectedPredefinedDimension.width!=-1 && selectedPredefinedDimension.height!=-1){
+                width = selectedPredefinedDimension.width.toString()
+                height = selectedPredefinedDimension.height.toString()
+            }
+            if(keepAspectRatio ){
+                if(width.isNotEmpty()){
+                    val newWidth = width.toInt()
                     originalDimensions.forEach { (width, height) ->
+                        //original aspect ratio
+                        val aspect = width.toFloat() / height.toFloat()
                         resultList.add(
                             ScaleParams(
-                                parsedWidth,
-                                (height / scaleFactor).roundToInt(),
+                                newWidth,
+                                (newWidth / aspect).roundToInt(),
                                 null,
                                 keepAspectRatio
                             )
                         )
                     }
-                }else{
-                    originalDimensions.forEach { (_, _) ->
+                }else if(height.isNotEmpty()){
+                    val newHeight = height.toInt()
+                    originalDimensions.forEach { (width, height) ->
+                        //original aspect ratio
+                        val aspect = width.toFloat() / height.toFloat()
                         resultList.add(
                             ScaleParams(
-                                parsedWidth,
-                                parsedHeight,
+                                (newHeight* aspect).roundToInt(),
+                                newHeight,
                                 null,
                                 keepAspectRatio
                             )
                         )
                     }
                 }
+            }
+            if(!keepAspectRatio && width.isNotEmpty() && height.isNotEmpty()) {
+                val newWidth = width.toInt()
+                val newHeight = height.toInt()
+                    originalDimensions.forEach { (_, _) ->
+                        resultList.add(
+                            ScaleParams(
+                                newWidth,
+                                newHeight,
+                                null,
+                                keepAspectRatio
+                            )
+                        )
+                    }
             }
 
         } else {

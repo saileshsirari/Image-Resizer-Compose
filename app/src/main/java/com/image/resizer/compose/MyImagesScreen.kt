@@ -108,14 +108,14 @@ fun MyImagesScreen() {
     val lazyGridState = rememberLazyGridState()
     LaunchedEffect(true) {
         val newImages = mutableSetOf<Int>()
-        for (i in  1 .. totalImagesCount) {
+        for (i in 1..totalImagesCount) {
             newImages.add(i)
         }
         loadingImages.addAll(newImages)
         val urisForPage = withContext(Dispatchers.IO) {
             getRealCompressedImageUris(context, newImages.toList())
         }
-       val list = actualImageUris.toMutableList()
+        val list = actualImageUris.toMutableList()
         list.addAll(urisForPage)
         actualImageUris = list
     }
@@ -125,16 +125,23 @@ fun MyImagesScreen() {
     var imageSelectionMode by remember { mutableStateOf(false) }
     var showShareSheet by remember { mutableStateOf(false) }
     var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
-    var deletePendingUris by remember { mutableStateOf<List<Uri>>(
-        emptyList()) }
-    var deletePendingRecoverableSecurityException by remember { mutableStateOf<RecoverableSecurityException?>(null) }
+    var deletePendingUris by remember {
+        mutableStateOf<List<Uri>>(
+            emptyList()
+        )
+    }
+    var deletePendingRecoverableSecurityException by remember {
+        mutableStateOf<RecoverableSecurityException?>(
+            null
+        )
+    }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
     ) { result: ActivityResult ->
         if (result.resultCode == Activity.RESULT_OK) {
             // Retry deletion for all uris
-            if(deletePendingRecoverableSecurityException!=null) {
+            if (deletePendingRecoverableSecurityException != null) {
                 deletePendingRecoverableSecurityException?.let { exception ->
                     deletePendingUris.forEach { uri ->
                         try {
@@ -145,12 +152,12 @@ fun MyImagesScreen() {
                         }
                     }
                 }
-            }else{
+            } else {
                 val list = actualImageUris.toMutableList()
                 selectedImages.forEach {
                     list.remove(it)
                 }
-                actualImageUris =list
+                actualImageUris = list
                 selectedImages.clear()
                 selectAll = false
                 imageSelectionMode = false
@@ -164,7 +171,7 @@ fun MyImagesScreen() {
         deletePendingUris = emptyList()
         deletePendingRecoverableSecurityException = null
     }
-        //update menu status
+    //update menu status
     val anyImageSelected = selectedImages.isNotEmpty()
     val showMenuItems = totalImagesCount > 0
     //modal bottom sheet
@@ -179,6 +186,7 @@ fun MyImagesScreen() {
             // Permission is denied
         }
     }
+
     fun requestStoragePermission() {
         if (ContextCompat.checkSelfPermission(
                 context,
@@ -191,84 +199,98 @@ fun MyImagesScreen() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.my_images)) },
+                title = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(modifier = Modifier.weight(1f)) {
+                            Text(
+                                stringResource(R.string.my_images),
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                        }
+                        // Action Items (Moved to the Left)
+                        Row(modifier = Modifier.weight(3f)) {
+                            if (showMenuItems) {
+                                // Delete Action
+                                IconButton(
+                                    onClick = {
+                                        showDeleteConfirmationDialog = true
+                                    },
+                                    enabled = anyImageSelected
+                                ) {
+                                    Row(
+                                        modifier = Modifier.wrapContentWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Delete,
+                                            contentDescription = stringResource(R.string.delete)
+                                        )
+                                        Spacer(modifier = Modifier.size(4.dp))
+                                        Text(stringResource(R.string.delete))
+                                    }
+                                }
+
+                                // Share Action
+                                IconButton(
+                                    onClick = {
+                                        showShareSheet = true
+                                    },
+                                    enabled = anyImageSelected
+                                ) {
+                                    Row(
+                                        modifier = Modifier.wrapContentWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Share,
+                                            contentDescription = stringResource(R.string.share)
+                                        )
+                                        Spacer(modifier = Modifier.size(4.dp))
+                                        Text(stringResource(R.string.share))
+                                    }
+                                }
+
+                                // Select All Action
+                                IconButton(
+                                    onClick = {
+                                        selectAll = !selectAll
+                                        imageSelectionMode = true
+                                        if (selectAll) {
+                                            selectedImages.clear()
+                                            actualImageUris.filterNotNull().forEach {
+                                                if (!selectedImages.contains(it))
+                                                    selectedImages.add(it)
+                                            }
+                                        } else {
+                                            selectedImages.clear()
+                                        }
+                                    },
+                                    enabled = showMenuItems,
+                                ) {
+                                    Row(
+                                        modifier = Modifier.wrapContentWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = if (selectAll) R.drawable.ic_compress_24dp else R.drawable.ic_compress_24dp),
+                                            contentDescription = stringResource(R.string.select_all),
+                                        )
+                                        Spacer(modifier = Modifier.size(4.dp))
+                                        Text(stringResource(R.string.select_all))
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.primary
                 ),
-                actions = {
-                    if (showMenuItems) {
-                        // Select All Action
-                        IconButton(
-                            onClick = {
-                                selectAll = !selectAll
-                                imageSelectionMode = true
-                                if (selectAll) {
-                                    selectedImages.clear()
-                                    actualImageUris.filterNotNull().forEach {
-                                        if (!selectedImages.contains(it))
-                                            selectedImages.add(it)
-                                    }
-                                } else {
-                                    selectedImages.clear()
-                                }
-                            },
-                            enabled = showMenuItems,
-                        ) {
-                            Row(
-                                modifier = Modifier.wrapContentWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = if (selectAll) R.drawable.ic_compress_24dp else R.drawable.ic_compress_24dp),
-                                    contentDescription = stringResource(R.string.select_all),
-                                )
-                                Spacer(modifier = Modifier.size(4.dp))
-                                Text(stringResource(R.string.select_all))
-                            }
-                        }
-
-                        // Share Action
-                        IconButton(
-                            onClick = {
-                                showShareSheet = true
-                            },
-                            enabled = anyImageSelected
-                        ) {
-                            Row(
-                                modifier = Modifier.wrapContentWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Share,
-                                    contentDescription = stringResource(R.string.share)
-                                )
-                                Spacer(modifier = Modifier.size(4.dp))
-                                Text(stringResource(R.string.share))
-                            }
-                        }
-
-                        // Delete Action
-                        IconButton(
-                            onClick = {
-                                showDeleteConfirmationDialog = true
-                            },
-                            enabled = anyImageSelected
-                        ) {
-                            Row(
-                                modifier = Modifier.wrapContentWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Delete,
-                                    contentDescription = stringResource(R.string.delete)
-                                )
-                                Spacer(modifier = Modifier.size(4.dp))
-                                Text(stringResource(R.string.delete))
-                            }
-                        }
-                    }
-                }
             )
         }
     ) { innerPadding ->
@@ -282,7 +304,7 @@ fun MyImagesScreen() {
                 text = { Text(stringResource(R.string.delete_confirmation_message)) },
                 confirmButton = {
                     Button(onClick = {
-                        deleteSelectedImages(context, selectedImages,launcher)
+                        deleteSelectedImages(context, selectedImages, launcher)
 
                         showDeleteConfirmationDialog = false
                     }) {
@@ -308,7 +330,7 @@ fun MyImagesScreen() {
             )
         }
 
-        if (actualImageUris.isEmpty() ) {
+        if (actualImageUris.isEmpty()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -335,7 +357,7 @@ fun MyImagesScreen() {
                     key = { index, uri -> uri?.hashCode() ?: index }
                 ) { index, uri ->
                     AnimatedVisibility(
-                        visible = uri != null ,
+                        visible = uri != null,
                         exit = fadeOut(animationSpec = tween(500))
                     ) {
                         if (uri != null) {
@@ -347,10 +369,16 @@ fun MyImagesScreen() {
                                 } else {
                                     selectedImages.add(uri)
                                 }
-                                selectAll = selectedImages.size == actualImageUris.filterNotNull().size
+                                selectAll =
+                                    selectedImages.size == actualImageUris.filterNotNull().size
                             }
                         } else {
-                            ImageCard(uri, loadingImages.contains(index), false, imageSelectionMode) {}
+                            ImageCard(
+                                uri,
+                                loadingImages.contains(index),
+                                false,
+                                imageSelectionMode
+                            ) {}
                         }
                     }
 
@@ -361,7 +389,13 @@ fun MyImagesScreen() {
 }
 
 @Composable
-fun ImageCard(uri: Uri?, isLoading: Boolean, isSelected: Boolean, imageSelectionMode: Boolean, onClick: () -> Unit) {
+fun ImageCard(
+    uri: Uri?,
+    isLoading: Boolean,
+    isSelected: Boolean,
+    imageSelectionMode: Boolean,
+    onClick: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -386,12 +420,12 @@ fun ImageCard(uri: Uri?, isLoading: Boolean, isSelected: Boolean, imageSelection
                     SubcomposeAsyncImageContent()
                 }
             }
-                Checkbox(
-                    checked = isSelected,
-                    onCheckedChange = { onClick() },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                )
+            Checkbox(
+                checked = isSelected,
+                onCheckedChange = { onClick() },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+            )
         }
     }
 }
@@ -423,7 +457,8 @@ fun ShareBottomSheet(selectedImages: List<Uri>, context: Context, onDismiss: () 
         onDismiss()
     }
 }
-fun getActualImageUris(context: Context,placeholders: List<Nothing?>) :List<Uri?> {
+
+fun getActualImageUris(context: Context, placeholders: List<Nothing?>): List<Uri?> {
     val totalImagesCount = getTotalCompressedImagesCount(context)
     val imageUris = mutableListOf<Uri?>()
 
@@ -449,7 +484,7 @@ fun getActualImageUris(context: Context,placeholders: List<Nothing?>) :List<Uri?
         if (totalCount == 0) {
             return emptyList()
         }
-        for (i in 0 until min(placeholders.size,totalCount)) {
+        for (i in 0 until min(placeholders.size, totalCount)) {
             if (cursor.moveToPosition(i)) {
                 val id = cursor.getLong(idColumn)
                 val contentUri = ContentUris.withAppendedId(queryUri, id)
@@ -458,7 +493,7 @@ fun getActualImageUris(context: Context,placeholders: List<Nothing?>) :List<Uri?
         }
 
         val remaining = placeholders.size - totalCount
-        for(i in 0 until remaining){
+        for (i in 0 until remaining) {
             imageUris.add(null)
         }
     }
@@ -466,24 +501,31 @@ fun getActualImageUris(context: Context,placeholders: List<Nothing?>) :List<Uri?
     return imageUris
 }
 
-fun deleteSelectedImages(context: Context, selectedImages: List<Uri>, launcher: androidx.activity.result.ActivityResultLauncher<IntentSenderRequest>) {
+fun deleteSelectedImages(
+    context: Context,
+    selectedImages: List<Uri>,
+    launcher: androidx.activity.result.ActivityResultLauncher<IntentSenderRequest>
+) {
     val urisToDelete = mutableListOf<Uri>()
     val contentResolver = context.contentResolver
 
     val recoverableSecurityExceptions = mutableListOf<RecoverableSecurityException>()
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        val trashIntent = MediaStore.createTrashRequest(contentResolver,
-            selectedImages,true)
+        val trashIntent = MediaStore.createTrashRequest(
+            contentResolver,
+            selectedImages, true
+        )
         val intentSenderRequest = IntentSenderRequest.Builder(trashIntent).build()
         launcher.launch(intentSenderRequest)
 
-    }else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
 
         selectedImages.forEach { uri ->
             try {
                 contentResolver.delete(uri, null, null)
             } catch (securityException: SecurityException) {
-                val recoverableSecurityException = securityException as? RecoverableSecurityException
+                val recoverableSecurityException =
+                    securityException as? RecoverableSecurityException
                 if (recoverableSecurityException != null) {
                     recoverableSecurityExceptions.add(recoverableSecurityException)
                     urisToDelete.add(uri)
@@ -498,7 +540,7 @@ fun deleteSelectedImages(context: Context, selectedImages: List<Uri>, launcher: 
             launcher.launch(intentSenderRequest)
         }
 
-    }else{
+    } else {
         selectedImages.forEach { uri ->
             try {
                 contentResolver.delete(uri, null, null)
@@ -535,12 +577,12 @@ fun getRealCompressedImageUris(context: Context, indexesToLoad: List<Int>): List
     )
     cursor?.use {
         val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-        val imageIds = MutableList<Long?>(indexesToLoad.size){null}
+        val imageIds = MutableList<Long?>(indexesToLoad.size) { null }
         val totalCount = cursor.count
         if (totalCount == 0) {
             return emptyList()
         }
-        while (cursor.moveToNext()){
+        while (cursor.moveToNext()) {
             val id = cursor.getLong(idColumn)
             val contentUri = ContentUris.withAppendedId(queryUri, id)
             compressedImageUris.add(contentUri)

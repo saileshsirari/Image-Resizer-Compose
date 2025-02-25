@@ -1,5 +1,6 @@
 package com.image.resizer.compose
 
+import android.R.attr.label
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -48,7 +49,6 @@ fun ScaleImagePopup(
     modifier: Modifier = Modifier,
     viewModel: ScaleImageViewModel
 ) {
-
         if (show) {
             var tabIndex by remember { mutableIntStateOf(0) }
             val tabs = listOf("Custom", "Percentage")
@@ -61,7 +61,10 @@ fun ScaleImagePopup(
             fun updateButtonEnableState() {
                 if (viewModel.mode == "custom") {
                     isButtonEnabled =
-                        (viewModel.width.isNotEmpty() && viewModel.height.isNotEmpty()) || hasPredefinedSelection
+                        ( !viewModel.keepAspectRatio &&
+                        viewModel.width.isNotEmpty() && viewModel.height.isNotEmpty())
+                                ||  (viewModel.keepAspectRatio &&
+                                (viewModel.width.isNotEmpty() || viewModel.height.isNotEmpty())) || hasPredefinedSelection
                 } else {
                     isButtonEnabled = true
                 }
@@ -71,6 +74,7 @@ fun ScaleImagePopup(
                 viewModel.width,
                 viewModel.height,
                 hasPredefinedSelection,
+                viewModel.keepAspectRatio,
                 viewModel.mode
             ) {
                 updateButtonEnableState()
@@ -145,6 +149,7 @@ fun ScaleImagePopup(
 @Composable
 fun CustomScaleTabContent(viewModel: ScaleImageViewModel, onPredefinedSelect: (Boolean) -> Unit) {
     var isDropdownExpanded by remember { mutableStateOf(false) }
+    val maxChar = 4
     Column(Modifier.padding(16.dp)) {
         // Dropdown for Predefined Dimensions
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -156,7 +161,9 @@ fun CustomScaleTabContent(viewModel: ScaleImageViewModel, onPredefinedSelect: (B
                         it.toString()
                     }
                 },
-                onValueChange = {},
+                onValueChange = {
+
+                },
                 readOnly = true,
                 label = { Text("Select Dimension") },
                 trailingIcon = {
@@ -177,8 +184,6 @@ fun CustomScaleTabContent(viewModel: ScaleImageViewModel, onPredefinedSelect: (B
                     text = { Text("Select") },
                     onClick = {
                         viewModel.resetSelectedPredefinedDimension()
-//                        viewModel.updateHeight("")
-//                        viewModel.updateWidth("")
                         onPredefinedSelect(false)
                         isDropdownExpanded = false
                     })
@@ -189,6 +194,8 @@ fun CustomScaleTabContent(viewModel: ScaleImageViewModel, onPredefinedSelect: (B
                             viewModel.selectPredefinedDimension(dimension, index)
                             onPredefinedSelect(true)
                             isDropdownExpanded = false
+                            viewModel.updateHeight("")
+                            viewModel.updateWidth("")
                         })
                 }
             }
@@ -198,10 +205,15 @@ fun CustomScaleTabContent(viewModel: ScaleImageViewModel, onPredefinedSelect: (B
         // Custom Width and Height fields
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
+
                 value = viewModel.width,
                 onValueChange = {
-                    viewModel.updateWidth(it)
-                    onPredefinedSelect(false)
+                    if(it.length<=maxChar) {
+                        viewModel.updateWidth(it)
+                        viewModel.resetSelectedPredefinedDimension()
+                        onPredefinedSelect(false)
+                        isDropdownExpanded = false
+                    }
                 },
                 label = { Text("Width") },
                 modifier = Modifier.weight(1f)
@@ -210,9 +222,12 @@ fun CustomScaleTabContent(viewModel: ScaleImageViewModel, onPredefinedSelect: (B
             OutlinedTextField(
                 value = viewModel.height,
                 onValueChange = {
-                    viewModel.updateHeight(it)
-
-                    onPredefinedSelect(false)
+                    if (it.length <= maxChar) {
+                        viewModel.updateHeight(it)
+                        viewModel.resetSelectedPredefinedDimension()
+                        onPredefinedSelect(false)
+                        isDropdownExpanded = false
+                    }
                 },
                 label = { Text("Height") },
                 modifier = Modifier.weight(1f)

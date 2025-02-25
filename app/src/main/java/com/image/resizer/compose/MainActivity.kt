@@ -1,14 +1,11 @@
 package com.image.resizer.compose
 
 import android.Manifest
-import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.net.http.SslCertificate.restoreState
-import android.net.http.SslCertificate.saveState
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
@@ -20,15 +17,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -43,11 +33,10 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -55,8 +44,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,20 +53,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.isEmpty
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import coil.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -118,7 +103,6 @@ fun MainApp() {
 fun BottomNavigationBar(navController: NavHostController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-
     val items = listOf(
         Screen.Home,
         Screen.MyImages,
@@ -171,12 +155,6 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
     }
 }
 
-@Composable
-fun HomeScreen() {
-    MainScreen()
-}
-
-
 
 fun getTotalCompressedImagesCount1(context: Context): Int {
     val projection = arrayOf(MediaStore.Images.Media._ID)
@@ -211,110 +189,10 @@ fun SettingsScreen() {
 
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Preview
 @Composable
-fun MainScreen() {
-    var selectedImageUris by remember { mutableStateOf(emptyList<Uri>()) }
-    val context = LocalContext.current
-    var imagePairs by remember { mutableStateOf(listOf<ImagePair>()) }
-    val viewModel = ScaleImageViewModel()
-
-    // State to control the popup's visibility
-    var showScalePopup by remember { mutableStateOf(false) }
-
-    // State to pass to the popup
-
-    Scaffold(
-        topBar = {
-            MyTopAppBar(
-                selectedImageUris,
-                context,
-                viewModel,
-                onShowScalePopup = {
-                    showScalePopup = !showScalePopup
-                },
-                onUndo = {
-                    imagePairs= emptyList()
-                }
-            ) { compressedUris ->
-                imagePairs = selectedImageUris.zip(compressedUris) { original, compressed ->
-                    ImagePair(original, compressed)
-                }
-            }
-        },
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-
-                if (imagePairs.isNotEmpty()) {
-                    ImageComparisonGrid(imagePairs)
-                } else if (selectedImageUris.isNotEmpty()) {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(3),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        items(selectedImageUris) { uri ->
-
-                            AsyncImage(
-                                model = uri,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .padding(4.dp)
-                                    .size(100.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .border(2.dp, Color.Gray, RoundedCornerShape(8.dp))
-
-                            )
-                        }
-                    }
-                }
-                GalleryApp(viewModel = viewModel, onImagesSelected = { uris ->
-                    selectedImageUris = uris
-                })
-
-            }
-
-        }
-    }
-
-    // Conditionally display the popup
-    if (showScalePopup) {
-        val originalDimensions = listOf(Pair(1000, 2000))
-        // Implement image scaling logic here
-        AnimatedVisibility(
-            visible = showScalePopup,
-            enter = fadeIn(animationSpec = tween(durationMillis = 20000)) + expandVertically(
-                expandFrom = Alignment.CenterVertically,
-                animationSpec = tween(durationMillis = 13000)
-            ),
-            exit = fadeOut(animationSpec = tween(durationMillis = 20000)) + shrinkVertically(
-                shrinkTowards = Alignment.CenterVertically,
-                animationSpec = tween(durationMillis = 13000)
-            ),
-        ) {
-            ScaleImagePopup(showScalePopup, onDismiss = {
-                showScalePopup = false
-            }, originalDimensions, viewModel = viewModel, onScale = {
-                it.forEachIndexed { index, it ->
-                    System.out.println(" $it here  ${originalDimensions[index]} ")
-                }
-
-
-            })
-        }
-    }
+fun HomeScreenPreview() {
+    HomeScreen()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -326,10 +204,12 @@ fun MyTopAppBar(
     onUndo: () -> Unit,
     onShowScalePopup: () -> Unit, // Callback to trigger the popup
     onCompress: (List<Uri>) -> Unit,
-
-
     ) {
     TopAppBar(
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            titleContentColor = MaterialTheme.colorScheme.primary
+        ),
         title = {
             Row(
                 modifier = Modifier.fillMaxWidth(),
