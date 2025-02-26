@@ -14,10 +14,10 @@ data class PredefinedDimension(val width: Int, val height: Int) {
 }
 
 data class ScaleParams(
-    val newWidth: Int?,
-    val newHeight: Int?,
-    val scaleFactor: Float?,
-    val keepAspectRatio: Boolean
+    val newWidth: Int,
+    val newHeight: Int,
+    val scaleFactor: Float? =null,
+    val keepAspectRatio: Boolean =true
 )
 
 class ScaleImageViewModel : ViewModel() {

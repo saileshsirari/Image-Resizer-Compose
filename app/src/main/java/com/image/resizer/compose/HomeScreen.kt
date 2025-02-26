@@ -2,6 +2,9 @@ package com.image.resizer.compose
 
 import android.net.Uri
 import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -20,8 +23,15 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,19 +42,41 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
+import androidx.core.net.toUri
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun HomeScreen() {
     val TAG = "HomeScreen"
     var selectedImageUris by remember { mutableStateOf(emptyList<Uri>()) }
     val context = LocalContext.current
     var imagePairs by remember { mutableStateOf(listOf<ImagePair>()) }
+    var scaledParams by remember { mutableStateOf(listOf<ScaleParams>()) }
     val viewModel = ScaleImageViewModel()
     // State to control the popup's visibility
+    val galleryPermissionState = rememberPermissionState(
+        getStoragePermission()
+    )
+    var showRationale by remember { mutableStateOf(false) }
+    var showDialog by remember { mutableStateOf(true) }
     var showScalePopup by remember { mutableStateOf(false) }
+    var showScaledImages by remember { mutableStateOf(false) }
+    var imagesDimensions by remember { mutableStateOf(listOf<Pair<Int, Int>>()) }
+    val multiplePhotoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(),
+        onResult = { uris ->
+          selectedImageUris = uris
+            imagesDimensions =  selectedImageUris.map {
+                imageDimensionsFromUri(context, ImageItem(it))
+            }
+        }
+    )
     // State to pass to the popup
     Scaffold(
         topBar = {
@@ -64,6 +96,32 @@ fun HomeScreen() {
                 }
             }
         },
+        floatingActionButton = {
+            // Custom position for the FloatingActionButton
+            Box(modifier = Modifier.fillMaxSize()) {
+                FloatingActionButton(
+                    onClick = {
+                        showDialog = true
+                        if (galleryPermissionState.status.isGranted) {
+                            multiplePhotoPickerLauncher.launch(
+                                PickVisualMediaRequest(
+                                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                                )
+                            )
+                        } else {
+                            showRationale = true
+                        }
+                        ///
+
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 16.dp) // Add padding from the bottom
+                ) {
+                    Icon(Icons.Filled.Add, "Select Images")
+                }
+            }
+        }
     ) { innerPadding ->
         Box(
             modifier = Modifier.Companion
@@ -71,45 +129,23 @@ fun HomeScreen() {
                 .padding(innerPadding)
         ) {
 
+
             Column(
                 modifier = Modifier.Companion
                     .fillMaxSize()
-                    .padding(16.dp),
+                    .padding(8.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.Companion.CenterHorizontally
             ) {
-
+                if(showScaledImages){
+                    val imageItems =   selectedImageUris.map { ImageItem(it) }
+                    ScaledImageScreen(imageItems = imageItems,scaledParams, onSaveClicked = {})
+                }else
                 if (imagePairs.isNotEmpty()) {
                     ImageComparisonGrid(imagePairs)
                 } else if (selectedImageUris.isNotEmpty()) {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(3),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        items(selectedImageUris) { uri ->
-
-                            AsyncImage(
-                                model = uri,
-                                contentDescription = null,
-                                modifier = Modifier.Companion
-                                    .padding(4.dp)
-                                    .size(100.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .border(
-                                        2.dp,
-                                        Color.Companion.Gray,
-                                        androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
-                                    )
-
-                            )
-                        }
-                    }
+                    GalleryImagesComponent(selectedImageUris)
                 }
-                GalleryApp(viewModel = viewModel, onImagesSelected = { uris ->
-                    selectedImageUris = uris
-                })
 
             }
 
@@ -117,8 +153,37 @@ fun HomeScreen() {
     }
 
     // Conditionally display the popup
+
+    if (showRationale) {
+        AlertDialog(
+            onDismissRequest = {
+                showRationale = false
+            },
+            title = { Text("Permission Required") },
+            text = { Text("The app needs permission to access your gallery.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showRationale = false
+                        galleryPermissionState.launchPermissionRequest()
+                    }
+                ) {
+                    Text("Grant Permission")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showRationale = false
+                    }
+                ) {
+                    Text("Dismiss")
+                }
+            }
+        )
+    }
     if (showScalePopup) {
-        val originalDimensions = listOf(Pair(1000, 2000))
+        val originalDimensions = imagesDimensions
         // Implement image scaling logic here
         AnimatedVisibility(
             visible = showScalePopup,
@@ -135,13 +200,51 @@ fun HomeScreen() {
                 showScalePopup = false
             }, originalDimensions, viewModel = viewModel, onScale = {
                 it.forEachIndexed { index, it ->
-
-                    Log.d(TAG," $it here  ${originalDimensions[index]} ")
+                    Log.d(TAG, " $it here  ${originalDimensions[index]} ")
                 }
-
+                showScaledImages = true
+                scaledParams = it
 
             })
         }
     }
 
+
+}
+
+
+@Preview
+@Composable
+fun GalleryImagesComponentPreview() {
+    val sampleUris = listOf<Uri>("content://media/external/file/54".toUri(),"content://media/external/file/54".toUri())
+    GalleryImagesComponent(selectedImageUris = sampleUris)
+}
+
+@Composable
+private fun GalleryImagesComponent(selectedImageUris: List<Uri>) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        contentPadding = PaddingValues(1.dp),
+        verticalArrangement = Arrangement.spacedBy(1.dp),
+        horizontalArrangement = Arrangement.spacedBy(1.dp)
+    ) {
+        //content://media/external/file/54
+        items(selectedImageUris) { uri ->
+
+            AsyncImage(
+                model = uri,
+                contentDescription = null,
+                modifier = Modifier.Companion
+                    .padding(4.dp)
+                    .size(200.dp)
+                    .clip(RoundedCornerShape(1.dp))
+                    .border(
+                        1.dp,
+                        Color.Companion.Gray,
+                        androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                    )
+
+            )
+        }
+    }
 }
