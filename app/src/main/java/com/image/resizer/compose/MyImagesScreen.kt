@@ -17,6 +17,7 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -41,6 +42,8 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -50,6 +53,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -205,7 +210,7 @@ fun MyImagesScreen() {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(modifier = Modifier.weight(1f)) {
-                            Text(
+                            Text(// title
                                 stringResource(R.string.my_images),
                                 style = MaterialTheme.typography.titleLarge
                             )
@@ -213,63 +218,60 @@ fun MyImagesScreen() {
                         // Action Items (Moved to the Left)
                         Row(modifier = Modifier.weight(3f)) {
                             if (showMenuItems) {
-                                // Delete Action
-                                IconButton(
-                                    onClick = {
-                                        showDeleteConfirmationDialog = true
-                                    },
-                                    enabled = anyImageSelected
+                                var expanded by remember { mutableStateOf(false) }
+
+                                Box(
+                                    modifier = Modifier.wrapContentWidth(),
                                 ) {
-                                    Row(
-                                        modifier = Modifier.wrapContentWidth(),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
+                                    IconButton(onClick = { expanded = true }) {
                                         Icon(
-                                            imageVector = Icons.Filled.Delete,
-                                            contentDescription = stringResource(R.string.delete)
+                                            imageVector = Icons.Filled.MoreVert,
+                                            contentDescription = "Localized description"
                                         )
-                                        Spacer(modifier = Modifier.size(4.dp))
-                                        Text(stringResource(R.string.delete))
+                                    }
+                                    DropdownMenu(
+                                        expanded = expanded,
+                                        onDismissRequest = { expanded = false }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.delete)) },
+                                            onClick = {
+                                                showDeleteConfirmationDialog = true
+                                                expanded = false
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                    Icons.Filled.Delete,
+                                                    contentDescription = stringResource(R.string.delete)
+                                                )
+                                            },
+                                            enabled = anyImageSelected
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.share)) },
+                                            onClick = {
+                                                showShareSheet = true
+                                                expanded = false
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                    Icons.Filled.Share,
+                                                    contentDescription = stringResource(R.string.share)
+                                                )
+                                            },
+                                            enabled = anyImageSelected
+                                        )
                                     }
                                 }
-
-                                // Share Action
-                                IconButton(
-                                    onClick = {
-                                        showShareSheet = true
-                                    },
-                                    enabled = anyImageSelected
-                                ) {
-                                    Row(
-                                        modifier = Modifier.wrapContentWidth(),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Share,
-                                            contentDescription = stringResource(R.string.share)
-                                        )
-                                        Spacer(modifier = Modifier.size(4.dp))
-                                        Text(stringResource(R.string.share))
+                                IconButton(onClick = {
+                                    selectAll = !selectAll
+                                    imageSelectionMode = true
+                                    if (selectAll) {
+                                        selectedImages.addAll(actualImageUris.filterNotNull())
+                                    } else {
+                                        selectedImages.clear()
                                     }
-                                }
-
-                                // Select All Action
-                                IconButton(
-                                    onClick = {
-                                        selectAll = !selectAll
-                                        imageSelectionMode = true
-                                        if (selectAll) {
-                                            selectedImages.clear()
-                                            actualImageUris.filterNotNull().forEach {
-                                                if (!selectedImages.contains(it))
-                                                    selectedImages.add(it)
-                                            }
-                                        } else {
-                                            selectedImages.clear()
-                                        }
-                                    },
-                                    enabled = showMenuItems,
-                                ) {
+                                }) {
                                     Row(
                                         modifier = Modifier.wrapContentWidth(),
                                         verticalAlignment = Alignment.CenterVertically
@@ -278,7 +280,7 @@ fun MyImagesScreen() {
                                             painter = painterResource(id = if (selectAll) R.drawable.ic_compress_24dp else R.drawable.ic_compress_24dp),
                                             contentDescription = stringResource(R.string.select_all),
                                         )
-                                        Spacer(modifier = Modifier.size(4.dp))
+                                        Spacer(modifier = Modifier.size(8.dp))
                                         Text(stringResource(R.string.select_all))
                                     }
                                 }

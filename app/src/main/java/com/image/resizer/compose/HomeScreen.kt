@@ -150,8 +150,6 @@ fun HomeScreen() {
                 .padding(innerPadding)
 
         ) {
-
-
             Column(
                 modifier = Modifier.Companion
                     .fillMaxSize()
@@ -161,7 +159,9 @@ fun HomeScreen() {
             ) {
                 if (showScaledImages) {
                     val imageItems = selectedImageUris.map { ImageItem(it) }
-                    ScaledImageScreen(imageItems = imageItems, scaledParams, onSaveClicked = {})
+                    ScaledImageScreen(imageItems = imageItems, scaledParams, onSaveClicked = {
+                        showScaledImages = false
+                    })
                 } else
                     if (imagePairs.isNotEmpty()) {
                         ImageComparisonGrid(imagePairs)

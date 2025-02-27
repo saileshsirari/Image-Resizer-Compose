@@ -12,8 +12,10 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -76,33 +78,34 @@ data class ImageItem(
 @Preview
 @Composable
 fun ScaledImageScreenPreview() {
+    val uri = "content://media/external/file/25".toUri()
     val imageItems = listOf(
         ImageItem(
-            uri = "content://media/external/file/54".toUri(),
+            uri = uri,
             scaledBitmap = createBitmap(200, 200),
             originalBitmap = createBitmap(100, 100)
         ),
         ImageItem(
-            uri = "content://media/external/file/54".toUri(), scaledBitmap = null,
+            uri = uri, scaledBitmap = null,
             originalBitmap = createBitmap(100, 100)
         ),
         ImageItem(
-            uri = "content://media/external/file/54".toUri(), scaledBitmap = null,
+            uri = uri, scaledBitmap = null,
             originalBitmap = createBitmap(100, 100)
         ),
         ImageItem(
-            uri = "content://media/external/file/54".toUri(), scaledBitmap = null,
+            uri = uri, scaledBitmap = null,
             originalBitmap = createBitmap(100, 100)
         ),
         ImageItem(
-            uri = "content://media/external/file/54".toUri(), scaledBitmap = null,
+            uri = uri, scaledBitmap = null,
             originalBitmap = createBitmap(100, 100)
         ), ImageItem(
-            uri = "content://media/external/file/54".toUri(), scaledBitmap = null,
+            uri = uri, scaledBitmap = null,
             originalBitmap = createBitmap(100, 100)
         ),
         ImageItem(
-            uri = "content://media/external/file/54".toUri(), scaledBitmap = null,
+            uri = uri, scaledBitmap = null,
             originalBitmap = createBitmap(100, 100)
         )
     )
@@ -146,123 +149,154 @@ fun ScaledImageScreen(
             }
         }
     }
-    Column(
-        modifier = Modifier.Companion
-            .fillMaxWidth(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.Companion.CenterHorizontally
-    ) {
-        if (imageItems.isEmpty()) {
-            Text(
-                text = "No images selected.",
-                textAlign = TextAlign.Center
-            )
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(1),
-                contentPadding = PaddingValues(bottom = 20.dp, top = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                horizontalArrangement = Arrangement.spacedBy(5.dp),
-                modifier = modifier
-                    .border(10.dp, Color.Yellow, RoundedCornerShape(8.dp))
-                    .weight(5f)
-            ) {
-                items(scaledImages.size) { index ->
-                    val imageItem = scaledImages[index]
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .border(1.dp, Color.Red),
-                        horizontalArrangement = Arrangement.Center, // Center columns
-                        verticalAlignment = Alignment.CenterVertically // Center vertically
+    Box(modifier = Modifier
+        .fillMaxSize()) {
+        Column(
+            modifier = Modifier.Companion
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.Companion.CenterHorizontally
+        ) {
+
+                ScaledImagesGrid( modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 80.dp), scaledImages, imageItems)
+
+
+            if (imagesScaled) {
+                Column() {
+                    Button(
+                        onClick = {
+                            onSaveClicked()
+                            saveImagesToGallery(context, imageItems)
+                        },
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        // First Column
-                        Column(
-                            modifier = Modifier
-                                .weight(1f) // Equal weight for both columns
-                                .fillMaxWidth()
-                                .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
-                                .padding(4.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally, // Center image
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            if (imageItem.originalBitmap != null) {
-                                Text("Original : ${imageItem.originalBitmap?.width ?: 0}x${imageItem.originalBitmap?.height ?: 0}")
-
-                                Image(
-                                    bitmap = imageItem.originalBitmap!!.asImageBitmap(),
-                                    contentDescription = "Scaled Image",
-                                    modifier = Modifier
-                                        .sizeIn(
-                                            minWidth = 200.dp,
-                                            minHeight = 200.dp,
-                                            maxHeight = 300.dp
-                                        )
-                                        .fillMaxWidth()
-                                        .fillMaxHeight()
-                                        .padding(1.dp),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Text(
-                                    text = "Scaling...",
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                        }
-
-
-                        // Second Column
-                        Column(
-                            modifier = Modifier
-                                .weight(1f) // Equal weight for both columns
-                                .fillMaxWidth()
-                                .padding(4.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally, // Center image
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            if (imageItem.scaledBitmap != null) {
-                                Text("Scaled: ${imageItem.scaledBitmap?.width ?: 0}x${imageItem.scaledBitmap?.height ?: 0}")
-                                Image(
-                                    bitmap = imageItem.scaledBitmap!!.asImageBitmap(),
-                                    contentDescription = "Scaled",
-                                    modifier = Modifier
-                                        .sizeIn(
-                                            minWidth = 200.dp,
-                                            minHeight = 200.dp,
-                                            maxHeight = 300.dp
-                                        )
-                                        .fillMaxWidth()
-                                        .fillMaxHeight()
-                                        .padding(1.dp),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else if (imageItems.size > 1) {
-                                Text(
-                                    text = "Scaling...",
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                        }
+                        Text(text = "Save Scaled Images")
                     }
                 }
+
             }
-
         }
-
+        // Save button at the bottom, above the FAB
         if (imagesScaled) {
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp) // Padding around the button
+                    .background(Color.LightGray) // Background for better visibility
+            ) {
                 Button(
-                    onClick = {
-                        onSaveClicked()
-                        saveImagesToGallery(context, imageItems)
-                    },
+                    onClick = onSaveClicked,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(text = "Save Scaled Images")
                 }
             }
+        }
+    }
+}
 
+@Composable
+private fun ScaledImagesGrid(
+    modifier: Modifier,
+    scaledImages: List<ImageItem>,
+    imageItems: List<ImageItem>
+) {
+    if (imageItems.isEmpty()) {
+        Text(
+            text = "No images selected.",
+            textAlign = TextAlign.Center
+        )
+    } else {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(1),
+            contentPadding = PaddingValues(bottom = 20.dp, top = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            modifier = modifier
+                .border(10.dp, Color.Yellow, RoundedCornerShape(8.dp))
+        ) {
+            items(scaledImages.size) { index ->
+                val imageItem = scaledImages[index]
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, Color.Red),
+                    horizontalArrangement = Arrangement.Center, // Center columns
+                    verticalAlignment = Alignment.CenterVertically // Center vertically
+                ) {
+                    // First Column
+                    Column(
+                        modifier = Modifier
+                            .weight(1f) // Equal weight for both columns
+                            .fillMaxWidth()
+                            .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+                            .padding(4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally, // Center image
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        if (imageItem.originalBitmap != null) {
+                            Text("Original : ${imageItem.originalBitmap?.width ?: 0}x${imageItem.originalBitmap?.height ?: 0}")
+
+                            Image(
+                                bitmap = imageItem.originalBitmap!!.asImageBitmap(),
+                                contentDescription = "Scaled Image",
+                                modifier = Modifier
+                                    .sizeIn(
+                                        minWidth = 200.dp,
+                                        minHeight = 200.dp,
+                                        maxHeight = 300.dp
+                                    )
+                                    .fillMaxWidth()
+                                    .fillMaxHeight()
+                                    .padding(1.dp),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Text(
+                                text = "Scaling...",
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+
+
+                    // Second Column
+                    Column(
+                        modifier = Modifier
+                            .weight(1f) // Equal weight for both columns
+                            .fillMaxWidth()
+                            .padding(4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally, // Center image
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        if (imageItem.scaledBitmap != null) {
+                            Text("Scaled: ${imageItem.scaledBitmap?.width ?: 0}x${imageItem.scaledBitmap?.height ?: 0}")
+                            Image(
+                                bitmap = imageItem.scaledBitmap!!.asImageBitmap(),
+                                contentDescription = "Scaled",
+                                modifier = Modifier
+                                    .sizeIn(
+                                        minWidth = 200.dp,
+                                        minHeight = 200.dp,
+                                        maxHeight = 300.dp
+                                    )
+                                    .fillMaxWidth()
+                                    .fillMaxHeight()
+                                    .padding(1.dp),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else if (imageItems.size > 1) {
+                            Text(
+                                text = "Scaling...",
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
