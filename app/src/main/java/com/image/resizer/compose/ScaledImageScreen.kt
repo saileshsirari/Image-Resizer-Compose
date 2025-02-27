@@ -1,5 +1,6 @@
 package com.image.resizer.compose
 
+import android.R.attr.bottom
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
@@ -82,26 +83,26 @@ fun ScaledImageScreenPreview() {
             originalBitmap = createBitmap(100, 100)
         ),
         ImageItem(
-            uri = "content://media/external/file/54".toUri(),   scaledBitmap = null,
+            uri = "content://media/external/file/54".toUri(), scaledBitmap = null,
             originalBitmap = createBitmap(100, 100)
         ),
         ImageItem(
-            uri = "content://media/external/file/54".toUri(),  scaledBitmap = null,
+            uri = "content://media/external/file/54".toUri(), scaledBitmap = null,
             originalBitmap = createBitmap(100, 100)
         ),
         ImageItem(
-            uri = "content://media/external/file/54".toUri(),  scaledBitmap = null,
+            uri = "content://media/external/file/54".toUri(), scaledBitmap = null,
             originalBitmap = createBitmap(100, 100)
         ),
         ImageItem(
-            uri = "content://media/external/file/54".toUri(),  scaledBitmap = null,
+            uri = "content://media/external/file/54".toUri(), scaledBitmap = null,
             originalBitmap = createBitmap(100, 100)
-        ),  ImageItem(
-            uri = "content://media/external/file/54".toUri(),  scaledBitmap = null,
+        ), ImageItem(
+            uri = "content://media/external/file/54".toUri(), scaledBitmap = null,
             originalBitmap = createBitmap(100, 100)
         ),
         ImageItem(
-            uri = "content://media/external/file/54".toUri(),  scaledBitmap = null,
+            uri = "content://media/external/file/54".toUri(), scaledBitmap = null,
             originalBitmap = createBitmap(100, 100)
         )
     )
@@ -139,7 +140,7 @@ fun ScaledImageScreen(
             withContext(Dispatchers.IO) {
                 scaleImages(imageItems, scaleParamsList, context) {
                     imagesScaled = true
-                    scaledImages= imageItems
+                    scaledImages = imageItems
                 }
 
             }
@@ -147,8 +148,7 @@ fun ScaledImageScreen(
     }
     Column(
         modifier = Modifier.Companion
-            .fillMaxSize()
-            .padding(bottom = 10.dp, top = 10.dp),
+            .fillMaxWidth(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.Companion.CenterHorizontally
     ) {
@@ -160,17 +160,19 @@ fun ScaledImageScreen(
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(1),
-                contentPadding = PaddingValues(1.dp),
+                contentPadding = PaddingValues(bottom = 20.dp, top = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 horizontalArrangement = Arrangement.spacedBy(5.dp),
-                modifier = modifier.border(10.dp, Color.Yellow, RoundedCornerShape(8.dp))
+                modifier = modifier
+                    .border(10.dp, Color.Yellow, RoundedCornerShape(8.dp))
+                    .weight(5f)
             ) {
                 items(scaledImages.size) { index ->
                     val imageItem = scaledImages[index]
-                    val scaleParams = scaleParamsList[index]
-
                     Row(
-                        modifier = Modifier.fillMaxWidth() .border(1.dp, Color.Red),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, Color.Red),
                         horizontalArrangement = Arrangement.Center, // Center columns
                         verticalAlignment = Alignment.CenterVertically // Center vertically
                     ) {
@@ -185,13 +187,17 @@ fun ScaledImageScreen(
                             verticalArrangement = Arrangement.Center
                         ) {
                             if (imageItem.originalBitmap != null) {
-                                Text("Original : ${imageItem.originalBitmap?.width ?: 0}x${imageItem.originalBitmap?.height ?: 0  }")
+                                Text("Original : ${imageItem.originalBitmap?.width ?: 0}x${imageItem.originalBitmap?.height ?: 0}")
 
                                 Image(
-                                    bitmap = imageItem.originalBitmap !!.asImageBitmap(),
+                                    bitmap = imageItem.originalBitmap!!.asImageBitmap(),
                                     contentDescription = "Scaled Image",
                                     modifier = Modifier
-                                        .sizeIn(minWidth = 200.dp, minHeight = 200.dp, maxHeight = 300.dp)
+                                        .sizeIn(
+                                            minWidth = 200.dp,
+                                            minHeight = 200.dp,
+                                            maxHeight = 300.dp
+                                        )
                                         .fillMaxWidth()
                                         .fillMaxHeight()
                                         .padding(1.dp),
@@ -216,18 +222,22 @@ fun ScaledImageScreen(
                             verticalArrangement = Arrangement.Center
                         ) {
                             if (imageItem.scaledBitmap != null) {
-                                Text("Scaled: ${imageItem.scaledBitmap?.width ?: 0}x${imageItem.scaledBitmap?.height ?: 0  }")
+                                Text("Scaled: ${imageItem.scaledBitmap?.width ?: 0}x${imageItem.scaledBitmap?.height ?: 0}")
                                 Image(
-                                    bitmap = imageItem.scaledBitmap !!.asImageBitmap(),
+                                    bitmap = imageItem.scaledBitmap!!.asImageBitmap(),
                                     contentDescription = "Scaled",
                                     modifier = Modifier
-                                        .sizeIn(minWidth = 200.dp, minHeight = 200.dp, maxHeight = 300.dp)
+                                        .sizeIn(
+                                            minWidth = 200.dp,
+                                            minHeight = 200.dp,
+                                            maxHeight = 300.dp
+                                        )
                                         .fillMaxWidth()
                                         .fillMaxHeight()
                                         .padding(1.dp),
                                     contentScale = ContentScale.Crop
                                 )
-                            } else if(imageItems.size>1) {
+                            } else if (imageItems.size > 1) {
                                 Text(
                                     text = "Scaling...",
                                     textAlign = TextAlign.Center
@@ -241,18 +251,21 @@ fun ScaledImageScreen(
         }
 
         if (imagesScaled) {
-            Button(
-                onClick = {
-                    onSaveClicked()
-                    saveImagesToGallery(context, imageItems)
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = "Save Scaled Images")
+            Column(modifier = Modifier.weight(1f)) {
+                Button(
+                    onClick = {
+                        onSaveClicked()
+                        saveImagesToGallery(context, imageItems)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = "Save Scaled Images")
+                }
             }
+
         }
     }
-    }
+}
 
 
 private suspend fun scaleImages(
@@ -294,7 +307,7 @@ internal fun imageDimensionsFromUri(
     }
     val originalWidth = options.outWidth
     val originalHeight = options.outHeight
-    return Pair(originalWidth,originalHeight)
+    return Pair(originalWidth, originalHeight)
 }
 
 private fun saveImagesToGallery(context: Context, imageItems: List<ImageItem>) {
@@ -364,7 +377,6 @@ private fun saveImagesToGallery(context: Context, imageItems: List<ImageItem>) {
         }
     }
 }
-
 
 
 @Composable

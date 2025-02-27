@@ -21,14 +21,12 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -56,7 +54,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.image.resizer.compose.theme.AppTheme
 import java.io.File
 import java.io.FileOutputStream
@@ -185,77 +182,7 @@ fun HomeScreenPreview() {
     HomeScreen()
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun MyTopAppBar(
-    selectedImageUris: List<Uri>,
-    context: Context,
-    viewModel: ScaleImageViewModel,
-    onUndo: () -> Unit,
-    onShowScalePopup: () -> Unit, // Callback to trigger the popup
-    onCompress: (List<Uri>) -> Unit,
-    ) {
-    TopAppBar(
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            titleContentColor = MaterialTheme.colorScheme.primary
-        ),
-        title = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceAround,
-            ) {
-                Text(
-                    text = "Gallery App",
-                    modifier = Modifier
-                        .weight(1f),
-                    textAlign = TextAlign.Center
-                )
-                Row(
-                    modifier = Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    IconButton(enabled = selectedImageUris.isNotEmpty(), onClick = {
-                        val compressedUris = compressAndSaveImages(selectedImageUris, context)
-                        onCompress(compressedUris)
-                    }) {
-                        Icon(
-                            painterResource(id = R.drawable.ic_compress_24dp),
-                            contentDescription = "Compress",
-                        )
-                    }
-                    IconButton(
-                        onClick = {
-                            onShowScalePopup() // Trigger the popup via the callback
-                        }, enabled = selectedImageUris.isNotEmpty()
-                    ) {
-                        Icon(
-                            painterResource(id = R.drawable.ic_compress_24dp),
-                            contentDescription = "Scale",
-                        )
-                    }
-                    IconButton(
-                        enabled = selectedImageUris.isNotEmpty(),
-                        onClick = { cropImage(selectedImageUris) }) {
-                        Icon(
-                            painterResource(id = R.drawable.ic_compress_24dp),
-                            contentDescription = "Crop",
-                        )
-                    }
-                    IconButton(enabled = selectedImageUris.isNotEmpty(), onClick = {
-                        val compressedUris = compressAndSaveImages(selectedImageUris, context)
-                        onUndo()
-                    }) {
-                        Icon(
-                            painterResource(id = R.drawable.ic_compress_24dp),
-                            contentDescription = "Undo",
-                        )
-                    }
-                }
-            }
-        },
-    )
-}
+
 
 
 @Composable
