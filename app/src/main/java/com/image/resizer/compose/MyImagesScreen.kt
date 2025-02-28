@@ -428,7 +428,7 @@ fun ImageCard(
                 contentDescription = "Compressed Image",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(150.dp),
+                    .height(250.dp),
                 contentScale = ContentScale.Crop,
             ) {
                 val state = painter.state

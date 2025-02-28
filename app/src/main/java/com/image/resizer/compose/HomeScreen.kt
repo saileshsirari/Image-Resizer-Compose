@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
+import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -99,6 +100,28 @@ fun HomeScreen() {
     var showScalePopup by remember { mutableStateOf(false) }
     var showScaledImages by remember { mutableStateOf(false) }
     var imagesDimensions by remember { mutableStateOf(listOf<Pair<Int, Int>>()) }
+
+    var showCropDialog by remember { mutableStateOf(false) }
+    var imageToCrop by remember { mutableStateOf<Uri?>(null) }
+    var croppedBitmapUri by remember { mutableStateOf<Uri?>(null) }
+    var showToast by remember { mutableStateOf(false) }
+    var imagesTransformed by remember { mutableStateOf(false) }
+    val cropImageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val data: Intent? = result.data
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                croppedBitmapUri =
+                    data?.getParcelableExtra(CropScreen.CROPPED_IMAGE_BITMAP_URI, Uri::class.java)
+            } else {
+                croppedBitmapUri =
+                    data?.getParcelableExtra<Uri>(CropScreen.CROPPED_IMAGE_BITMAP_URI)
+            }
+        }
+        showCropDialog = false
+    }
+
     val multiplePhotoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(),
         onResult = { uris ->
@@ -108,47 +131,33 @@ fun HomeScreen() {
             }
         }
     )
-    var showCropDialog by remember { mutableStateOf(false) }
-    var imageToCrop by remember { mutableStateOf<Uri?>(null) }
-    var croppedBitmapUri by remember { mutableStateOf<Uri?>(null) }
-    var showToast by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-    val cropImageLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val data: Intent? = result.data
-            croppedBitmapUri = data?.getParcelableExtra<Uri>(CropScreen.CROPPED_IMAGE_BITMAP_URI)
-
-        }
-        showCropDialog = false
-
+    LaunchedEffect(imagePairs,showScaledImages,croppedBitmapUri)  {
+        imagesTransformed = imagePairs.isNotEmpty() || showScaledImages ||croppedBitmapUri!=null
     }
-
-    // State to pass to the popup
     Scaffold(
         topBar = {
             HomeScreenTopAppBar(
-                selectedImageUris,
-                context,
-                viewModel,
+                imagesTransformed = imagesTransformed,
+                selectedImageUris = selectedImageUris,
+                context = context,
+                viewModel = viewModel,
                 onShowScalePopup = {
                     showScalePopup = !showScalePopup
                 },
                 onCrop = { show, uri ->
-                    // Show the crop dialog when the crop button is clicked
                     showCropDialog = show
-                    // Choose only the first selected image for cropping.
                     if (selectedImageUris.isNotEmpty()) {
                         imageToCrop = uri
+                        val intent = Intent(context, CropScreen::class.java)
+                        intent.putExtra(CropScreen.IMAGE_TO_CROP, imageToCrop)
+                        cropImageLauncher.launch(intent)
                     }
-                    val intent = Intent(context, CropScreen::class.java)
-                    intent.putExtra(CropScreen.IMAGE_TO_CROP, imageToCrop)
-                    cropImageLauncher.launch(intent)
+
                 },
                 onUndo = {
                     imagePairs = emptyList()
                     showScaledImages = false
+                    croppedBitmapUri= null
                 }
             ) { compressedUris ->
                 imagePairs = selectedImageUris.zip(compressedUris) { original, compressed ->
@@ -173,8 +182,6 @@ fun HomeScreen() {
                         } else {
                             showRationale = true
                         }
-                        ///
-
                     },
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -202,16 +209,18 @@ fun HomeScreen() {
 
                 if (croppedBitmapUri != null) {
                     croppedBitmapUri?.let {
-                        CroppedImageComponent(it){
-                            getBitmapFromUri(it,context)?.let {
-                                saveImagesToGallery(context, listOf(ImageItem(uri =  croppedBitmapUri!!, scaledBitmap = it)))
+                        CroppedImageComponent(it) {
+                            getBitmapFromUri(it, context)?.let {
+                                saveImagesToGallery(
+                                    context,
+                                    listOf(ImageItem(uri = croppedBitmapUri!!, scaledBitmap = it))
+                                )
                                 showToast = true
                             }
 
                         }
                     }
-                }
-                else
+                } else
                     if (showScaledImages) {
                         val imageItems = selectedImageUris.map { ImageItem(it) }
                         ScaledImageScreen(imageItems = imageItems, scaledParams, onSaveClicked = {
@@ -224,8 +233,7 @@ fun HomeScreen() {
                             GalleryImagesComponent(selectedImageUris)
                         }
 
-            }//Spacer(modifier = Modifier.weight(1f))
-
+            }
         }
     }
 
@@ -306,7 +314,7 @@ fun CroppedImageComponentPreview() {
 }
 
 @Composable
-fun CroppedImageComponent(uri: Uri, onSaveClicked: () -> Unit){
+fun CroppedImageComponent(uri: Uri, onSaveClicked: () -> Unit) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center // Center content in the Box
@@ -321,7 +329,8 @@ fun CroppedImageComponent(uri: Uri, onSaveClicked: () -> Unit){
             AsyncImage(
                 model = uri,
                 contentDescription = null,
-                modifier = Modifier.Companion.weight(4f))
+                modifier = Modifier.Companion.weight(4f)
+            )
             Spacer(modifier = Modifier.weight(1f))
             Column(modifier = Modifier.weight(1f)) {
                 Button(
@@ -337,6 +346,7 @@ fun CroppedImageComponent(uri: Uri, onSaveClicked: () -> Unit){
 
     }
 }
+
 @Preview
 @Composable
 fun GalleryImagesComponentPreview() {
@@ -377,11 +387,10 @@ private fun GalleryImagesComponent(selectedImageUris: List<Uri>) {
 }
 
 
-
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreenTopAppBar(
+    imagesTransformed: Boolean = false,
     selectedImageUris: List<Uri>,
     context: Context,
     viewModel: ScaleImageViewModel,
@@ -391,6 +400,7 @@ fun HomeScreenTopAppBar(
     onCompress: (List<Uri>) -> Unit,
 
     ) {
+
 
     TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
@@ -449,7 +459,8 @@ fun HomeScreenTopAppBar(
                         text = "Scale"
                     )
                     OverflowMenu(
-                        selectedImageUris,
+                        imagesTransformed,
+                        if(selectedImageUris.isNotEmpty()){ selectedImageUris.first() } else null,
                         context,
                         onUndo,
                         onCrop
@@ -500,7 +511,8 @@ fun ActionButtonWithText(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OverflowMenu(
-    selectedImageUris: List<Uri>,
+    imagesShow: Boolean =false,
+    croppedImageUri: Uri?=null,
     context: Context,
     onUndo: () -> Unit,
     onCrop: (Boolean, Uri?) -> Unit
@@ -543,8 +555,8 @@ fun OverflowMenu(
                 onClick = {
                     expanded = false
                     onCrop(
-                        true, if (selectedImageUris.isNotEmpty()) {
-                            selectedImageUris.first()
+                        true, if (croppedImageUri!=null) {
+                            croppedImageUri
                         } else null
                     )
 
@@ -552,7 +564,7 @@ fun OverflowMenu(
                 leadingIcon = {
                     Icon(painterResource(id = R.drawable.ic_crop_24dp), "Crop")
                 },
-                enabled = selectedImageUris.size == 1
+                enabled = croppedImageUri!=null
             )
             DropdownMenuItem(
                 text = { Text("Undo") },
@@ -562,7 +574,8 @@ fun OverflowMenu(
                 },
                 leadingIcon = {
                     Icon(painterResource(id = R.drawable.ic_undo_24dp), "Undo")
-                }
+                },
+                enabled = imagesShow
             )
         }
     }
