@@ -1,8 +1,12 @@
 package com.image.resizer.compose
 
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
+import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -24,9 +28,11 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidthIn
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -36,14 +42,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -51,16 +56,17 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -71,6 +77,8 @@ import coil.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import kotlinx.coroutines.launch
+
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
@@ -81,6 +89,7 @@ fun HomeScreen() {
     var imagePairs by remember { mutableStateOf(listOf<ImagePair>()) }
     var scaledParams by remember { mutableStateOf(listOf<ScaleParams>()) }
     val viewModel = ScaleImageViewModel()
+
     // State to control the popup's visibility
     val galleryPermissionState = rememberPermissionState(
         getStoragePermission()
@@ -99,6 +108,23 @@ fun HomeScreen() {
             }
         }
     )
+    var showCropDialog by remember { mutableStateOf(false) }
+    var imageToCrop by remember { mutableStateOf<Uri?>(null) }
+    var croppedBitmapUri by remember { mutableStateOf<Uri?>(null) }
+    var showToast by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val cropImageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val data: Intent? = result.data
+            croppedBitmapUri = data?.getParcelableExtra<Uri>(CropScreen.CROPPED_IMAGE_BITMAP_URI)
+
+        }
+        showCropDialog = false
+
+    }
+
     // State to pass to the popup
     Scaffold(
         topBar = {
@@ -109,14 +135,28 @@ fun HomeScreen() {
                 onShowScalePopup = {
                     showScalePopup = !showScalePopup
                 },
+                onCrop = { show, uri ->
+                    // Show the crop dialog when the crop button is clicked
+                    showCropDialog = show
+                    // Choose only the first selected image for cropping.
+                    if (selectedImageUris.isNotEmpty()) {
+                        imageToCrop = uri
+                    }
+                    val intent = Intent(context, CropScreen::class.java)
+                    intent.putExtra(CropScreen.IMAGE_TO_CROP, imageToCrop)
+                    cropImageLauncher.launch(intent)
+                },
                 onUndo = {
                     imagePairs = emptyList()
+                    showScaledImages = false
                 }
             ) { compressedUris ->
                 imagePairs = selectedImageUris.zip(compressedUris) { original, compressed ->
                     ImagePair(original, compressed)
                 }
             }
+
+
         },
         floatingActionButton = {
             // Custom position for the FloatingActionButton
@@ -151,31 +191,51 @@ fun HomeScreen() {
 
         ) {
             Column(
-                modifier = Modifier.Companion
-                    .fillMaxSize()
-                    .padding(bottom = 64.dp),
+                modifier = Modifier
+                    .fillMaxSize() // Fill the available space
+                    .padding(bottom = 64.dp), // Add padding at the bottom for the FAB
                 verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.Companion.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally // Center items horizontally
             ) {
-                if (showScaledImages) {
-                    val imageItems = selectedImageUris.map { ImageItem(it) }
-                    ScaledImageScreen(imageItems = imageItems, scaledParams, onSaveClicked = {
-                        showScaledImages = false
-                    })
-                } else
-                    if (imagePairs.isNotEmpty()) {
-                        ImageComparisonGrid(imagePairs)
-                    } else if (selectedImageUris.isNotEmpty()) {
-                        GalleryImagesComponent(selectedImageUris)
-                    }
 
-            }
+                //Spacer(modifier = Modifier.weight(1f))
+
+                if (croppedBitmapUri != null) {
+                    croppedBitmapUri?.let {
+                        CroppedImageComponent(it){
+                            getBitmapFromUri(it,context)?.let {
+                                saveImagesToGallery(context, listOf(ImageItem(uri =  croppedBitmapUri!!, scaledBitmap = it)))
+                                showToast = true
+                            }
+
+                        }
+                    }
+                }
+                else
+                    if (showScaledImages) {
+                        val imageItems = selectedImageUris.map { ImageItem(it) }
+                        ScaledImageScreen(imageItems = imageItems, scaledParams, onSaveClicked = {
+                            showScaledImages = false
+                        })
+                    } else
+                        if (imagePairs.isNotEmpty()) {
+                            ImageComparisonGrid(imagePairs)
+                        } else if (selectedImageUris.isNotEmpty()) {
+                            GalleryImagesComponent(selectedImageUris)
+                        }
+
+            }//Spacer(modifier = Modifier.weight(1f))
 
         }
     }
 
     // Conditionally display the popup
-
+    if (showToast) {
+        LaunchedEffect(key1 = true) {
+            Toast.makeText(context, "Image saved", Toast.LENGTH_SHORT).show()
+            showToast = false // Reset the state after showing the toast
+        }
+    }
     if (showRationale) {
         AlertDialog(
             onDismissRequest = {
@@ -234,7 +294,49 @@ fun HomeScreen() {
 
 }
 
+@Preview
+@Composable
+fun CroppedImageComponentPreview() {
+    val sampleUri = "content://media/external/file/54".toUri()
 
+    CroppedImageComponent(uri = sampleUri, onSaveClicked = {
+        // Handle save click
+        println("Save button clicked")
+    })
+}
+
+@Composable
+fun CroppedImageComponent(uri: Uri, onSaveClicked: () -> Unit){
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center // Center content in the Box
+    ) {
+        Column(
+            modifier = Modifier.Companion
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally, // Align items horizontally
+            verticalArrangement = Arrangement.spacedBy(16.dp) // Add vertical spacing between the image and button
+        ) { // Centering the content within the column
+            AsyncImage(
+                model = uri,
+                contentDescription = null,
+                modifier = Modifier.Companion.weight(4f))
+            Spacer(modifier = Modifier.weight(1f))
+            Column(modifier = Modifier.weight(1f)) {
+                Button(
+                    onClick = {
+                        onSaveClicked()
+                    },
+                    modifier = Modifier.fillMaxWidth() // Make the button take up the full width of the parent
+                ) {
+                    Text(text = "Save Cropped Image")
+                }
+            }
+        }
+
+    }
+}
 @Preview
 @Composable
 fun GalleryImagesComponentPreview() {
@@ -274,31 +376,7 @@ private fun GalleryImagesComponent(selectedImageUris: List<Uri>) {
     }
 }
 
-@Preview
-@Composable
-fun HomeScreenTopAppBarPreview() {
-    val context = LocalContext.current
-    val viewModel = ScaleImageViewModel()
-    val selectedImageUris = listOf<Uri>(
-        "content://media/external/file/54".toUri(),
-        "content://media/external/file/54".toUri()
-    )
 
-    HomeScreenTopAppBar(
-        selectedImageUris = selectedImageUris,
-        context = context,
-        viewModel = viewModel,
-        onUndo = {
-            // Handle undo action here if needed
-        },
-        onShowScalePopup = {
-            // Handle show scale popup action here if needed
-        },
-        onCompress = {
-            // Handle compress action here if needed
-        }
-    )
-}
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -309,8 +387,11 @@ fun HomeScreenTopAppBar(
     viewModel: ScaleImageViewModel,
     onUndo: () -> Unit,
     onShowScalePopup: () -> Unit,
+    onCrop: (Boolean, Uri?) -> Unit,
     onCompress: (List<Uri>) -> Unit,
-) {
+
+    ) {
+
     TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -335,47 +416,50 @@ fun HomeScreenTopAppBar(
                 ) // Changed here
                 Spacer(modifier = Modifier.weight(1f))
                 Row(
-                    modifier = Modifier.then(
-                        Modifier
-                            .then(Modifier.requiredWidthIn(min = 1.dp))
-                            .width(IntrinsicSize.Max)
-                    )
-                       .wrapContentWidth() // Changed here
+                    modifier = Modifier
+                        .then(
+                            Modifier
+                                .then(Modifier.requiredWidthIn(min = 1.dp))
+                                .width(IntrinsicSize.Max)
+                        )
+                        .wrapContentWidth() // Changed here
                         .fillMaxHeight() // Changed here
                         .padding(end = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,// Changed here
                     horizontalArrangement = Arrangement.End// Changed here
 
                 ) {
-                    ActionButtonWithText( //Changed here
-                        enabled = selectedImageUris.isNotEmpty() ,
+                    ActionButtonWithText(
+                        enabled = selectedImageUris.isNotEmpty(),
                         onClick = {
                             val compressedUris = compressAndSaveImages(selectedImageUris, context)
                             onCompress(compressedUris)
                         },
                         iconId = R.drawable.ic_compress_24dp,
-                        modifier=Modifier.padding(end = 8.dp),
+                        modifier = Modifier.padding(end = 8.dp),
                         text = "Compress"
-                    ) //Changed here
+                    )
                     ActionButtonWithText(
                         onClick = {
                             onShowScalePopup()
                         },
                         enabled = selectedImageUris.isNotEmpty(),
                         iconId = R.drawable.ic_compress_24dp,
-                        modifier=Modifier.padding(end = 8.dp),
+                        modifier = Modifier.padding(end = 8.dp),
                         text = "Scale"
                     )
                     OverflowMenu(
                         selectedImageUris,
                         context,
                         onUndo,
+                        onCrop
                     )
                 }
             }
         },
     )
 }
+
 
 @Composable
 fun ActionButtonWithText(
@@ -385,24 +469,25 @@ fun ActionButtonWithText(
     text: String,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier
+    Column(
+        modifier = modifier
             .padding(horizontal = 0.dp, vertical = 0.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
     ) {
-            IconButton(
-                onClick = { onClick() },
-                enabled = enabled,
-                modifier = Modifier.size(24.dp),
+        IconButton(
+            onClick = { onClick() },
+            enabled = enabled,
+            modifier = Modifier.size(24.dp),
 
             ) {
-                Icon(
-                    painter = painterResource(id = iconId),
-                    contentDescription = null,
-                )
-            }
+            Icon(
+                painter = painterResource(id = iconId),
+                contentDescription = null,
+            )
+        }
         Text(
-          text = text,
+            text = text,
             style = MaterialTheme.typography.titleSmall,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 2.dp),
@@ -414,26 +499,34 @@ fun ActionButtonWithText(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OverflowMenu(selectedImageUris: List<Uri>, context: Context, onUndo: () -> Unit) {
+fun OverflowMenu(
+    selectedImageUris: List<Uri>,
+    context: Context,
+    onUndo: () -> Unit,
+    onCrop: (Boolean, Uri?) -> Unit
+) {
     var expanded by remember { mutableStateOf(false) }
-
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     Box {
-        Column(modifier = Modifier
-            .padding(horizontal = 0.dp, vertical = 0.dp),
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 0.dp, vertical = 0.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
-        ){
+        ) {
 
-                IconButton(onClick = { expanded = true }, modifier = Modifier.size(24.dp),) {
-                    Icon(
+            IconButton(onClick = { expanded = true }, modifier = Modifier.size(24.dp)) {
+                Icon(
 
-                        painterResource(id = R.drawable.ic_more_horiz_24dp),
-                        contentDescription = "More",
-                    )
-                }
+                    painterResource(id = R.drawable.ic_more_horiz_24dp),
+                    contentDescription = "More",
+                )
+            }
 
 
-            Text(style = MaterialTheme.typography.titleSmall,
+            Text(
+                style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.padding(top = 4.dp),
                 text = "More",
                 textAlign = TextAlign.Center,
@@ -449,11 +542,17 @@ fun OverflowMenu(selectedImageUris: List<Uri>, context: Context, onUndo: () -> U
                 text = { Text("Crop") },
                 onClick = {
                     expanded = false
-                    cropImage(selectedImageUris)
+                    onCrop(
+                        true, if (selectedImageUris.isNotEmpty()) {
+                            selectedImageUris.first()
+                        } else null
+                    )
+
                 },
                 leadingIcon = {
                     Icon(painterResource(id = R.drawable.ic_crop_24dp), "Crop")
-                }
+                },
+                enabled = selectedImageUris.size == 1
             )
             DropdownMenuItem(
                 text = { Text("Undo") },

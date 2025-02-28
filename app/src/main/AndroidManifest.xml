@@ -30,6 +30,15 @@
                     <category android:name="android.intent.category.LAUNCHER" />
                 </intent-filter>
             </activity>
+            <activity
+                android:name=".CropScreen"
+                android:exported="false"
+                android:theme="@style/Theme.AppCompat">
+            </activity>
+            <activity
+                android:name="com.canhub.cropper.CropImageActivity"
+                android:theme="@style/Base.Theme.AppCompat"
+                tools:replace="android:theme"/>
         </application>
 
     </manifest>

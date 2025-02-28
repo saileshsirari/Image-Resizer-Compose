@@ -63,13 +63,13 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-
-    implementation("androidx.compose.material:material-icons-extended") //added this
-    implementation("com.google.accompanist:accompanist-permissions:0.31.3-beta")// added this
-    implementation("io.coil-kt:coil-compose:2.5.0")// added this
+//    implementation(libs.compose.cropper)
+//    implementation ("com.github.SmartToolFactory:Compose-Cropper:Tag")
+    implementation(libs.androidx.material.icons.extended)
+    implementation(libs.vanniktech.android.image.cropper)
     val nav_version = "2.8.6"
 
     // Jetpack Compose integration
-    implementation("androidx.navigation:navigation-compose:$nav_version")
-    implementation ("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
+    implementation(libs.androidx.navigation.compose)
+    implementation (libs.androidx.lifecycle.viewmodel.compose)
 }

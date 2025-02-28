@@ -344,7 +344,7 @@ internal fun imageDimensionsFromUri(
     return Pair(originalWidth, originalHeight)
 }
 
-private fun saveImagesToGallery(context: Context, imageItems: List<ImageItem>) {
+internal fun saveImagesToGallery(context: Context, imageItems: List<ImageItem>) {
     val customDirectoryName = "ScaledImages"
     val resolver = context.contentResolver
 

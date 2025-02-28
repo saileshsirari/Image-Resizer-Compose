@@ -1,5 +1,8 @@
 [versions]
 agp = "8.10.0-alpha02"
+androidImageCropper = "4.9.1"
+androidImageCropperVersion = "4.6.0"
+composeBomVersion = "2025.02.00"
 kotlin = "2.0.21"
 coreKtx = "1.10.1"
 junit = "4.13.2"
@@ -13,9 +16,17 @@ lifecycleRuntimeKtxVersion = "2.8.7"
 activityComposeVersion = "1.10.0"
 coilCompose = "2.6.0"
 accompanistPermissions = "0.37.0"
+lifecycleViewmodelCompose = "2.8.7"
+navigationCompose = "2.8.6"
+uiTestJunit4 = "1.7.8"
+uiTooling = "1.7.8"
 
 [libraries]
+android-image-cropper = { module = "com.github.CanHub:Android-Image-Cropper", version.ref = "androidImageCropper" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleViewmodelCompose" }
+androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
+androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -34,6 +45,7 @@ lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtim
 activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityComposeVersion" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coilCompose" }
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanistPermissions" }
+vanniktech-android-image-cropper = { module = "com.vanniktech:android-image-cropper", version.ref = "androidImageCropperVersion" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

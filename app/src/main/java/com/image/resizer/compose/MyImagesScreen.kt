@@ -26,14 +26,18 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidthIn
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -77,6 +81,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImagePainter
@@ -206,22 +212,66 @@ fun MyImagesScreen() {
             TopAppBar(
                 title = {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(IntrinsicSize.Min), // Changed here
+                        horizontalArrangement = Arrangement.Start, // Changed here
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(modifier = Modifier.weight(1f)) {
-                            Text(// title
-                                stringResource(R.string.my_images),
-                                style = MaterialTheme.typography.titleLarge
+                        Text(
+                            text = "Gallery App",
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 8.dp), // Changed here
+                            textAlign = TextAlign.Start,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        Row(
+                            modifier = Modifier.then(
+                                Modifier
+                                    .then(Modifier.requiredWidthIn(min = 1.dp))
+                                    .width(IntrinsicSize.Max)
                             )
-                        }
-                        // Action Items (Moved to the Left)
-                        Row(modifier = Modifier.weight(3f)) {
+                                .wrapContentWidth()
+                                .fillMaxHeight()
+                                .padding(end = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.End
+
+                        ){
                             if (showMenuItems) {
                                 var expanded by remember { mutableStateOf(false) }
+                                ActionButtonWithText(
+                                    enabled = true ,
+                                    onClick = {
+                                        selectAll = !selectAll
+                                        imageSelectionMode = true
+                                        if (selectAll) {
+                                            selectedImages.addAll(actualImageUris.filterNotNull())
+                                        } else {
+                                            selectedImages.clear()
+                                        }
+                                    },
+                                    iconId = R.drawable.ic_compress_24dp,
+                                    modifier=Modifier.padding(end = 8.dp),
+                                    text = stringResource(R.string.select_all)
+                                )
+
+                                ActionButtonWithText(
+                                    enabled = anyImageSelected ,
+                                    onClick = {
+                                        showShareSheet = true
+                                    },
+                                    iconId = R.drawable.ic_compress_24dp,
+                                    modifier=Modifier.padding(end = 8.dp),
+                                    text = stringResource(R.string.share)
+                                )
+
 
                                 Box(
-                                    modifier = Modifier.wrapContentWidth(),
+                                    modifier = Modifier.fillMaxWidth(),
                                 ) {
                                     IconButton(onClick = { expanded = true }) {
                                         Icon(
@@ -247,43 +297,10 @@ fun MyImagesScreen() {
                                             },
                                             enabled = anyImageSelected
                                         )
-                                        DropdownMenuItem(
-                                            text = { Text(stringResource(R.string.share)) },
-                                            onClick = {
-                                                showShareSheet = true
-                                                expanded = false
-                                            },
-                                            leadingIcon = {
-                                                Icon(
-                                                    Icons.Filled.Share,
-                                                    contentDescription = stringResource(R.string.share)
-                                                )
-                                            },
-                                            enabled = anyImageSelected
-                                        )
+
                                     }
                                 }
-                                IconButton(onClick = {
-                                    selectAll = !selectAll
-                                    imageSelectionMode = true
-                                    if (selectAll) {
-                                        selectedImages.addAll(actualImageUris.filterNotNull())
-                                    } else {
-                                        selectedImages.clear()
-                                    }
-                                }) {
-                                    Row(
-                                        modifier = Modifier.wrapContentWidth(),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(id = if (selectAll) R.drawable.ic_compress_24dp else R.drawable.ic_compress_24dp),
-                                            contentDescription = stringResource(R.string.select_all),
-                                        )
-                                        Spacer(modifier = Modifier.size(8.dp))
-                                        Text(stringResource(R.string.select_all))
-                                    }
-                                }
+
                             }
                         }
                     }
