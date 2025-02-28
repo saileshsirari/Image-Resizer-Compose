@@ -214,15 +214,15 @@ fun MyImagesScreen() {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(IntrinsicSize.Min), // Changed here
-                        horizontalArrangement = Arrangement.Start, // Changed here
+                            .height(IntrinsicSize.Min),
+                        horizontalArrangement = Arrangement.Start,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = "Gallery App",
                             modifier = Modifier
                                 .weight(1f)
-                                .padding(end = 8.dp), // Changed here
+                                .padding(end = 8.dp),
                             textAlign = TextAlign.Start,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis

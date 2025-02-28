@@ -204,9 +204,6 @@ fun HomeScreen() {
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally // Center items horizontally
             ) {
-
-                //Spacer(modifier = Modifier.weight(1f))
-
                 if (croppedBitmapUri != null) {
                     croppedBitmapUri?.let {
                         CroppedImageComponent(it) {
@@ -359,27 +356,25 @@ fun GalleryImagesComponentPreview() {
 
 @Composable
 private fun GalleryImagesComponent(selectedImageUris: List<Uri>) {
+    val columns = if( selectedImageUris.size>1){
+        GridCells.Fixed(2)
+    }else {
+        GridCells.Fixed(1)
+    }
     LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+        columns = columns,
         contentPadding = PaddingValues(1.dp),
         verticalArrangement = Arrangement.spacedBy(1.dp),
         horizontalArrangement = Arrangement.spacedBy(1.dp)
     ) {
-        //content://media/external/file/54
         items(selectedImageUris) { uri ->
-
             AsyncImage(
                 model = uri,
                 contentDescription = null,
                 modifier = Modifier.Companion
                     .padding(4.dp)
-                    .size(200.dp)
+                    .fillMaxWidth()
                     .clip(RoundedCornerShape(1.dp))
-                    .border(
-                        1.dp,
-                        Color.Companion.Gray,
-                        androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
-                    )
 
             )
         }
@@ -411,19 +406,19 @@ fun HomeScreenTopAppBar(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(IntrinsicSize.Min), // Changed here
-                horizontalArrangement = Arrangement.Start, // Changed here
+                    .height(IntrinsicSize.Min),
+                horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "Gallery App",
                     modifier = Modifier
                         .weight(1f)
-                        .padding(end = 8.dp), // Changed here
+                        .padding(end = 8.dp),
                     textAlign = TextAlign.Start,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
-                ) // Changed here
+                ) 
                 Spacer(modifier = Modifier.weight(1f))
                 Row(
                     modifier = Modifier
@@ -432,8 +427,8 @@ fun HomeScreenTopAppBar(
                                 .then(Modifier.requiredWidthIn(min = 1.dp))
                                 .width(IntrinsicSize.Max)
                         )
-                        .wrapContentWidth() // Changed here
-                        .fillMaxHeight() // Changed here
+                        .wrapContentWidth()
+                        .fillMaxHeight()
                         .padding(end = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,// Changed here
                     horizontalArrangement = Arrangement.End// Changed here
@@ -446,7 +441,7 @@ fun HomeScreenTopAppBar(
                             onCompress(compressedUris)
                         },
                         iconId = R.drawable.ic_compress_24dp,
-                        modifier = Modifier.padding(end = 8.dp),
+                        modifier = Modifier.padding(end = 15.dp),
                         text = "Compress"
                     )
                     ActionButtonWithText(
@@ -455,12 +450,24 @@ fun HomeScreenTopAppBar(
                         },
                         enabled = selectedImageUris.isNotEmpty(),
                         iconId = R.drawable.ic_compress_24dp,
-                        modifier = Modifier.padding(end = 8.dp),
+                        modifier = Modifier.padding(end = 15.dp),
                         text = "Scale"
                     )
+                    if(selectedImageUris.size==1 ) {
+                        ActionButtonWithText(
+                            onClick = {
+                                onCrop(
+                                    true,selectedImageUris.first()
+                                )
+                            },
+                            iconId = R.drawable.ic_compress_24dp,
+                            modifier = Modifier.padding(end = 15.dp),
+                            text = "Crop"
+                        )
+                    }
                     OverflowMenu(
                         imagesTransformed,
-                        if(selectedImageUris.isNotEmpty()){ selectedImageUris.first() } else null,
+                        if(selectedImageUris.size==1){ selectedImageUris.first() } else null,
                         context,
                         onUndo,
                         onCrop
@@ -523,7 +530,7 @@ fun OverflowMenu(
     Box {
         Column(
             modifier = Modifier
-                .padding(horizontal = 0.dp, vertical = 0.dp),
+                .padding(start = 10.dp, end = 0.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
@@ -550,7 +557,7 @@ fun OverflowMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            DropdownMenuItem(
+           /* DropdownMenuItem(
                 text = { Text("Crop") },
                 onClick = {
                     expanded = false
@@ -565,7 +572,7 @@ fun OverflowMenu(
                     Icon(painterResource(id = R.drawable.ic_crop_24dp), "Crop")
                 },
                 enabled = croppedImageUri!=null
-            )
+            )*/
             DropdownMenuItem(
                 text = { Text("Undo") },
                 onClick = {

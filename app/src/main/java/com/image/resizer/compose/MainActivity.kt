@@ -199,6 +199,7 @@ internal fun ImageComparisonGrid(imagePairs: List<ImagePair>) {
                 horizontalArrangement = Arrangement.SpaceEvenly // Distribute space evenly
             ) {
                 Column(
+                    modifier = Modifier.weight(1f),
                     horizontalAlignment = Alignment.CenterHorizontally // Center items horizontally
                 ) {
                     Text(
@@ -210,11 +211,11 @@ internal fun ImageComparisonGrid(imagePairs: List<ImagePair>) {
                         contentDescription = "Compressed Image",
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .size(150.dp)
-                            .border(1.dp, Color.Gray, RoundedCornerShape(2.dp))
+                            .fillMaxWidth()
                     )
                 }
                 Column(
+                    modifier = Modifier.weight(1f),
                     horizontalAlignment = Alignment.CenterHorizontally // Center items horizontally
                 ) {
                     Text(
@@ -225,7 +226,7 @@ internal fun ImageComparisonGrid(imagePairs: List<ImagePair>) {
                         model = pair.originalUri,
                         contentDescription = "Original Image",
                         modifier = Modifier
-                            .size(150.dp)
+                            .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
                     )
                 }
@@ -245,14 +246,7 @@ fun getStoragePermission(): String {
 
 // Placeholder functions (replace with your actual image processing logic)
 
-fun cropImage(imageUris: List<Uri>) {
-    // Implement image cropping logic here
-    println("Cropping images: $imageUris")
-    // Example of iterating uris:
-    for (uri in imageUris) {
-        println(uri)
-    }
-}
+
 
 fun compressAndSaveImages(imageUris: List<Uri>, context: Context): List<Uri> {
     val compressedUris = mutableListOf<Uri>()
