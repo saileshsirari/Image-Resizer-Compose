@@ -152,7 +152,6 @@ fun HomeScreen() {
                         intent.putExtra(CropScreen.IMAGE_TO_CROP, imageToCrop)
                         cropImageLauncher.launch(intent)
                     }
-
                 },
                 onUndo = {
                     imagePairs = emptyList()
@@ -333,8 +332,7 @@ fun CroppedImageComponent(uri: Uri, onSaveClicked: () -> Unit) {
                 Button(
                     onClick = {
                         onSaveClicked()
-                    },
-                    modifier = Modifier.fillMaxWidth() // Make the button take up the full width of the parent
+                    }
                 ) {
                     Text(text = "Save Cropped Image")
                 }
@@ -434,44 +432,54 @@ fun HomeScreenTopAppBar(
                     horizontalArrangement = Arrangement.End// Changed here
 
                 ) {
-                    ActionButtonWithText(
-                        enabled = selectedImageUris.isNotEmpty(),
-                        onClick = {
-                            val compressedUris = compressAndSaveImages(selectedImageUris, context)
-                            onCompress(compressedUris)
-                        },
-                        iconId = R.drawable.ic_compress_24dp,
-                        modifier = Modifier.padding(end = 15.dp),
-                        text = "Compress"
-                    )
-                    ActionButtonWithText(
-                        onClick = {
-                            onShowScalePopup()
-                        },
-                        enabled = selectedImageUris.isNotEmpty(),
-                        iconId = R.drawable.ic_compress_24dp,
-                        modifier = Modifier.padding(end = 15.dp),
-                        text = "Scale"
-                    )
-                    if(selectedImageUris.size==1 ) {
+                    if(selectedImageUris.isNotEmpty()) {
                         ActionButtonWithText(
+                            enabled = selectedImageUris.isNotEmpty(),
                             onClick = {
-                                onCrop(
-                                    true,selectedImageUris.first()
-                                )
+                                val compressedUris =
+                                    compressAndSaveImages(selectedImageUris, context)
+                                onCompress(compressedUris)
                             },
                             iconId = R.drawable.ic_compress_24dp,
                             modifier = Modifier.padding(end = 15.dp),
-                            text = "Crop"
+                            text = "Compress"
+                        )
+                        ActionButtonWithText(
+                            onClick = {
+                                onShowScalePopup()
+                            },
+                            enabled = selectedImageUris.isNotEmpty(),
+                            iconId = R.drawable.ic_compress_24dp,
+                            modifier = Modifier.padding(end = 15.dp),
+                            text = "Scale"
+                        )
+                        if (selectedImageUris.size == 1) {
+                            ActionButtonWithText(
+                                onClick = {
+                                    onCrop(
+                                        true, selectedImageUris.first()
+                                    )
+                                },
+                                iconId = R.drawable.ic_compress_24dp,
+                                modifier = Modifier.padding(end = 15.dp),
+                                text = "Crop"
+                            )
+
+
+                        }
+
+
+                    }
+                    if(imagesTransformed){
+                        ActionButtonWithText(
+                            onClick = {
+                                onUndo()
+                            },
+                            iconId = R.drawable.ic_undo_24dp,
+                            modifier = Modifier.padding(end = 15.dp),
+                            text = "Undo"
                         )
                     }
-                    OverflowMenu(
-                        imagesTransformed,
-                        if(selectedImageUris.size==1){ selectedImageUris.first() } else null,
-                        context,
-                        onUndo,
-                        onCrop
-                    )
                 }
             }
         },
