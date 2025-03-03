@@ -1,9 +1,14 @@
 package com.image.resizer.compose
 
+import android.net.Uri
+import androidx.activity.result.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 data class ScaleOption(val label: String, val scaleFactor: Float? = null)
@@ -12,6 +17,8 @@ data class PredefinedDimension(val width: Int, val height: Int) {
         return "${width}x${height}"
     }
 }
+
+
 
 data class ScaleParams(
     val newWidth: Int,
@@ -198,4 +205,6 @@ class ScaleImageViewModel : ViewModel() {
     fun resetSelectedPredefinedDimension() {
         selectedPredefinedDimension = PredefinedDimension(-1, -1)
     }
+
+
 }

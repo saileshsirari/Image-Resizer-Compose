@@ -161,22 +161,6 @@ fun ScaledImageScreen(
                 ScaledImagesGrid( modifier = Modifier
                     .fillMaxSize()
                     .padding(bottom = 80.dp), scaledImages, imageItems)
-
-
-            if (imagesScaled) {
-                Column() {
-                    Button(
-                        onClick = {
-                            onSaveClicked()
-                            saveImagesToGallery(context, imageItems)
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(text = "Save Scaled Images")
-                    }
-                }
-
-            }
         }
         // Save button at the bottom, above the FAB
         if (imagesScaled) {
@@ -188,7 +172,10 @@ fun ScaledImageScreen(
                     .background(Color.LightGray) // Background for better visibility
             ) {
                 Button(
-                    onClick = onSaveClicked,
+                    onClick = {
+                        saveImagesToGallery(context, imageItems)
+                        onSaveClicked()
+                    },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(text = "Save Scaled Images")
@@ -197,6 +184,7 @@ fun ScaledImageScreen(
         }
     }
 }
+
 
 @Composable
 private fun ScaledImagesGrid(
@@ -302,7 +290,7 @@ private fun ScaledImagesGrid(
 }
 
 
-private suspend fun scaleImages(
+private  fun scaleImages(
     imageItems: List<ImageItem>,
     scaleParamsList: List<ScaleParams>,
     context: Context,
@@ -344,14 +332,15 @@ internal fun imageDimensionsFromUri(
     return Pair(originalWidth, originalHeight)
 }
 
-internal fun saveImagesToGallery(context: Context, imageItems: List<ImageItem>) {
-    val customDirectoryName = "ScaledImages"
+internal fun saveImagesToGallery(context: Context, imageItems: List<ImageItem>,
+                                 customDirectoryName: String="ImageResizer") {
+    val customDirectoryName = customDirectoryName
     val resolver = context.contentResolver
 
     imageItems.forEach { imageItem ->
         imageItem.scaledBitmap?.let { bitmap ->
             val displayName =
-                "Scaled_${
+                "ImageResizer_Scaled_${
                     SimpleDateFormat(
                         "yyyyMMdd_HHmmss",
                         Locale.getDefault()

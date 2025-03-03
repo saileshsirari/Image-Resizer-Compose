@@ -2,17 +2,14 @@ package com.image.resizer.compose
 
 import android.content.Context
 import android.net.Uri
-import com.image.resizer.compose.getRealCompressedImageUris
-import com.image.resizer.compose.getTotalCompressedImagesCount
-import kotlinx.coroutines.flow.Flow
 
-class ImageRepositoryImpl(private val context: Context) : ImageRepository {
+class ImageRepositoryImpl(private val context: Context,val imageHelper: ImageHelper) : ImageRepository {
     override fun getTotalCompressedImagesCount(): Int {
-        return getTotalCompressedImagesCount(context)
+        return getTotalTransformedImagesCount(context)
     }
 
     override suspend fun getRealCompressedImageUris(imageIndexes: List<Int>): List<Uri?> {
-        return getRealCompressedImageUris(context, imageIndexes)
+        return imageHelper.getRealCompressedImageUris(context, imageIndexes)
     }
 
     override fun deleteImages(images: List<Uri>) {

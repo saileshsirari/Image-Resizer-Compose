@@ -17,7 +17,6 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -36,7 +35,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidthIn
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -47,8 +45,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.SelectAll
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -79,7 +75,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -88,6 +83,7 @@ import androidx.core.content.ContextCompat
 import coil.compose.AsyncImagePainter
 import coil.compose.SubcomposeAsyncImage
 import coil.compose.SubcomposeAsyncImageContent
+import com.image.resizer.compose.ImageHelper.getRealCompressedImageUris
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.min
@@ -105,7 +101,7 @@ const val IMAGES_PER_PAGE = 6
 fun MyImagesScreen() {
     val context = LocalContext.current
 
-    val totalImagesCount = getTotalCompressedImagesCount(context)
+    val totalImagesCount = getTotalTransformedImagesCount(context)
 
     var loadingImages by remember {
         mutableStateOf(mutableSetOf<Int>())
@@ -478,7 +474,7 @@ fun ShareBottomSheet(selectedImages: List<Uri>, context: Context, onDismiss: () 
 }
 
 fun getActualImageUris(context: Context, placeholders: List<Nothing?>): List<Uri?> {
-    val totalImagesCount = getTotalCompressedImagesCount(context)
+    val totalImagesCount = getTotalTransformedImagesCount(context)
     val imageUris = mutableListOf<Uri?>()
 
     val projection = arrayOf(
@@ -573,51 +569,18 @@ fun deleteSelectedImages(
     }
 }
 
-fun getRealCompressedImageUris(context: Context, indexesToLoad: List<Int>): List<Uri?> {
-    val compressedImageUris = mutableListOf<Uri?>()
-    if (indexesToLoad.isEmpty()) return compressedImageUris
 
+fun getTotalTransformedImagesCount(context: Context): Int {
     val projection = arrayOf(
         MediaStore.Images.Media._ID,
         MediaStore.Images.Media.DISPLAY_NAME,
         MediaStore.Images.Media.SIZE
     )
+    val  customDirectoryName: String="ImageResizer"
     val selection = "${MediaStore.Images.Media.DISPLAY_NAME} LIKE ?"
-    val selectionArgs = arrayOf("compressed_image_%")
-    val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
-    val queryUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-    val contentResolver = context.contentResolver
-    val cursor = contentResolver.query(
-        queryUri,
-        projection,
-        selection,
-        selectionArgs,
-        sortOrder
-    )
-    cursor?.use {
-        val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-        val imageIds = MutableList<Long?>(indexesToLoad.size) { null }
-        val totalCount = cursor.count
-        if (totalCount == 0) {
-            return emptyList()
-        }
-        while (cursor.moveToNext()) {
-            val id = cursor.getLong(idColumn)
-            val contentUri = ContentUris.withAppendedId(queryUri, id)
-            compressedImageUris.add(contentUri)
-        }
-    }
-    return compressedImageUris
-}
+//    val selectionArgs = arrayOf("%$customDirectoryName/%")
+    val selectionArgs = arrayOf("ImageResizer_Scaled_%")
 
-fun getTotalCompressedImagesCount(context: Context): Int {
-    val projection = arrayOf(
-        MediaStore.Images.Media._ID,
-        MediaStore.Images.Media.DISPLAY_NAME,
-        MediaStore.Images.Media.SIZE
-    )
-    val selection = "${MediaStore.Images.Media.DISPLAY_NAME} LIKE ?"
-    val selectionArgs = arrayOf("compressed_image_%")
     val queryUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
     val contentResolver = context.contentResolver
     var imageCount = 0
