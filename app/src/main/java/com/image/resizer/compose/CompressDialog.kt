@@ -26,7 +26,7 @@ fun CompressDialog(
     onDismiss: () -> Unit,
     onConfirm: (Int) -> Unit
 ) {
-    var desiredFileSize by remember { mutableStateOf("") }
+    var desiredFileSize by remember { mutableStateOf("100") }
 
     AlertDialog(
         onDismissRequest = onDismiss,

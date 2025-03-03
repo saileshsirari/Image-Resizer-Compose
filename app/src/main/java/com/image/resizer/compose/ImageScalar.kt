@@ -9,7 +9,6 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
-import android.util.Log.e
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -19,22 +18,21 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class ImageScaler(private val context: Context) {
+class ImageScalar(private val context: Context) {
 
     companion object {
         private const val TAG = "ImageScaler"
         private const val TARGET_FILE_SIZE_KB = 100
     }
 
-    suspend fun scaleImagesToTargetSize(imageUris: List<Uri>,sizeInKb:Int = TARGET_FILE_SIZE_KB): List<Uri?> =
+    suspend fun compressImagesToTargetSize(imageUris: List<Uri>, sizeInKb:Int = TARGET_FILE_SIZE_KB): List<ImageItem?> =
         withContext(Dispatchers.IO) {
-            val scaledImageUris = mutableListOf<Uri?>()
-
+            val compressedImageUris = mutableListOf<ImageItem?>()
             imageUris.forEach { imageUri ->
                 var bitmap = loadBitmapFromUri(imageUri) ?: return@forEach
+                val imageItem = ImageItem(uri = imageUri, originalBitmap = bitmap.config?.let { bitmap.copy(it, true) })
                 var currentFileSizeKB = getFileSize(imageUri)
                 var scaleFactor = 1.0f
-
                 while (currentFileSizeKB > sizeInKb) {
                     scaleFactor *= 0.9f // Decrease scale factor
                     val newWidth = (bitmap.width * scaleFactor).toInt()
@@ -53,10 +51,11 @@ class ImageScaler(private val context: Context) {
                 }
 
                 // Save the scaled bitmap and add its Uri to the list
-                val savedUri = saveImageToGallery(bitmap)
-                scaledImageUris.add(savedUri)
+                imageItem.scaledBitmap = bitmap
+              //  val savedUri = saveImageToGallery(bitmap)
+                compressedImageUris.add(imageItem)
             }
-            return@withContext scaledImageUris
+            return@withContext compressedImageUris
         }
 
     private fun loadBitmapFromUri(imageUri: Uri): Bitmap? {

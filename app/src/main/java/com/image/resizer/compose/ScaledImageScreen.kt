@@ -332,12 +332,12 @@ internal fun imageDimensionsFromUri(
     return Pair(originalWidth, originalHeight)
 }
 
-internal fun saveImagesToGallery(context: Context, imageItems: List<ImageItem>,
+internal fun saveImagesToGallery(context: Context, imageItems: List<ImageItem?>,
                                  customDirectoryName: String="ImageResizer") {
     val customDirectoryName = customDirectoryName
     val resolver = context.contentResolver
 
-    imageItems.forEach { imageItem ->
+    imageItems.filterNotNull().forEach { imageItem ->
         imageItem.scaledBitmap?.let { bitmap ->
             val displayName =
                 "ImageResizer_Scaled_${

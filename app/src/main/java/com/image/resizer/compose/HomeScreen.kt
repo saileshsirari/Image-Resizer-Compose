@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -54,8 +53,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -69,19 +70,20 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
-fun HomeScreen() {
+fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
     val TAG = "HomeScreen"
-    var selectedImageUris by remember { mutableStateOf(emptyList<Uri>()) }
     val context = LocalContext.current
     var imagePairs by remember { mutableStateOf(listOf<ImagePair>()) }
     var scaledParams by remember { mutableStateOf(listOf<ScaleParams>()) }
@@ -99,6 +101,17 @@ fun HomeScreen() {
     var showCompressedImages by remember { mutableStateOf(false) }
     var showScaledImages by remember { mutableStateOf(false) }
     var imagesDimensions by remember { mutableStateOf(listOf<Pair<Int, Int>>()) }
+    //states
+    val cropState by homeScreenViewModel.cropState.collectAsState()
+    val compressState by homeScreenViewModel.compressState.collectAsState()
+    val scaleState by homeScreenViewModel.scaleState.collectAsState()
+    val galleryState by homeScreenViewModel.galleryState.collectAsState()
+
+    var selectedImageUris by remember { mutableStateOf(emptyList<Uri>()) }
+    val showImages by remember {
+        derivedStateOf { galleryState is GalleryState.Success }
+    }
+
 
     var showCropDialog by remember { mutableStateOf(false) }
     var imageToCrop by remember { mutableStateOf<Uri?>(null) }
@@ -106,6 +119,7 @@ fun HomeScreen() {
     var showToast by remember { mutableStateOf(false) }
     var imagesTransformed by remember { mutableStateOf(false) }
     var sizeInKb by remember { mutableStateOf(100) }
+    var galleryImagesVisible by remember { mutableStateOf(false) }
     val cropImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -125,9 +139,11 @@ fun HomeScreen() {
     val multiplePhotoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(),
         onResult = { uris ->
-            selectedImageUris = uris
-            imagesDimensions = selectedImageUris.map {
-                imageDimensionsFromUri(context, ImageItem(it))
+            if (uris.isNotEmpty()) {
+                homeScreenViewModel.onGalleryImagesSelected(uris)
+                imagesDimensions = uris.map {
+                    imageDimensionsFromUri(context, ImageItem(it))
+                }
             }
         }
     )
@@ -138,7 +154,7 @@ fun HomeScreen() {
         topBar = {
             HomeScreenTopAppBar(
                 imagesTransformed = imagesTransformed,
-                selectedImageUris = selectedImageUris,
+                galleryState = galleryState,
                 onShowScalePopup = {
                     showScalePopup = !showScalePopup
                     //scale = true
@@ -153,12 +169,9 @@ fun HomeScreen() {
                     }
                 },
                 onUndo = {
-                    imagePairs = emptyList()
-                    showScaledImages = false
-                    croppedBitmapUri = null
+                    homeScreenViewModel.onUndo()
                 }, onShowCompress = {
-                    showCompressPopup = !showCompressPopup
-
+                    homeScreenViewModel.onShowCompressPopup()
                 }
 
                 /* ,  = { compressedUris ->
@@ -205,6 +218,130 @@ fun HomeScreen() {
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+
+                val currentGalleryState = galleryState
+                when (currentGalleryState) {
+                    is GalleryState.Success -> {
+                        AnimatedVisibility(visible =showImages, enter = fadeIn(animationSpec = tween(durationMillis = 3000)) , exit = fadeOut(animationSpec = tween(durationMillis = 3000)) ) {
+                            val data = currentGalleryState.data
+                            GalleryImagesComponent(data.imageUris)//can get data from gallery state
+                        }
+                    }
+
+                    is GalleryState.Error, GalleryState.Idle,GalleryState.Loading -> {
+                        AnimatedVisibility(visible =showImages, enter = fadeIn(animationSpec = tween(durationMillis = 3000)) , exit = fadeOut(animationSpec = tween(durationMillis = 3000)) ) {
+                            val data =emptyList<Uri>()
+                            GalleryImagesComponent(data)//can get data from gallery state
+                        }
+                    }
+
+                }
+                val currentCropState = cropState
+                when (currentCropState) {
+                    is CropState.Success -> {
+                        CroppedImageComponent(currentCropState.data.croppedImageUri) {
+                            getBitmapFromUri(currentCropState.data.croppedImageUri, context)?.let {
+                                saveImagesToGallery(
+                                    context,
+                                    listOf(
+                                        ImageItem(
+                                            uri = currentCropState.data.croppedImageUri,
+                                            scaledBitmap = it
+                                        )
+                                    )
+                                )
+                                showToast = true
+                            }
+                        }
+                    }
+
+                    is CropState.Loading -> {
+                        Text("Crop loading...")
+                    }
+
+                    is CropState.Error -> {
+                        Text("Crop error: ${currentCropState.message}")
+                    }
+
+                    is CropState.Idle -> {
+
+                    }
+                }
+                val currentScaleState = scaleState
+                when (currentScaleState) {
+                    is ScaleState.Idle -> {
+
+                    }
+
+                    is ScaleState.Loading -> {
+                        Text("Scale loading...")
+                    }
+
+                    is ScaleState.Success -> {
+                        if (homeScreenViewModel.selectedImageUris.isNotEmpty()) {
+                            val imageItems =
+                                homeScreenViewModel.selectedImageUris.map { ImageItem(it) }
+                                ScaledImageScreen(
+                                    imageItems = imageItems,
+                                    currentScaleState.data.scaleParamsList,
+                                    onSaveClicked = {
+                                        showScaledImages = false
+                                    })
+                            }
+
+                    }
+
+                    is ScaleState.Error -> {
+
+                    }
+
+                }
+                val currentCompressState = compressState
+                when (currentCompressState) {
+                    is CompressState.Success -> {
+                        val compressedUris = currentCompressState.data.compressedImageUris
+                        val imagePairs =
+                            selectedImageUris.zip(compressedUris) { original, compressed ->
+                                ImagePair(original, compressed)
+                            }
+                        ImageComparisonGrid(imagePairs)
+                    }
+                    is CompressState.ImagesSaved->{
+                        LaunchedEffect(key1 = true) {
+                            homeScreenViewModel.showSelectedImages()
+                        }
+                    }
+
+                    is CompressState.PopupShown -> {
+                        CompressDialog(onDismiss = {
+                            homeScreenViewModel.onCompressCancel()
+                        }, onConfirm = {
+                            homeScreenViewModel.onCompressShowImages()
+                            showCompressedImages = true
+                            sizeInKb = it
+                        })
+                    }
+
+                    is CompressState.ImagesShown -> {
+                        if (homeScreenViewModel.selectedImageUris.isNotEmpty()) {
+                            CompressToKbImageScreen(
+                                images = homeScreenViewModel.selectedImageUris,
+                                onSaveClicked = {
+                                    saveImagesToGallery(context, it)
+                                    showToast = true
+                                    homeScreenViewModel.onCompressImagesSaved()
+                                })
+                        }
+                    }
+
+                    is CompressState.Idle -> {
+
+                    }
+
+                    is CompressState.Error -> {
+                        Text("Compress error: ${currentCompressState.message}")
+                    }
+                }
                 if (croppedBitmapUri != null) {
                     croppedBitmapUri?.let { croppedBitmapUri ->
                         CroppedImageComponent(croppedBitmapUri) {
@@ -214,22 +351,18 @@ fun HomeScreen() {
                                     listOf(ImageItem(uri = croppedBitmapUri, scaledBitmap = it))
                                 )
                                 showToast = true
+
                             }
                         }
                     }
                 } else if (showCompressedImages) {
-                    CompressToKbImageScreen(images = selectedImageUris, onSaveClicked = {
-                        //  saveImagesToGallery(context,)
-                    })
+
                 } else if (showScaledImages) {
-                    val imageItems = selectedImageUris.map { ImageItem(it) }
-                    ScaledImageScreen(imageItems = imageItems, scaledParams, onSaveClicked = {
-                        showScaledImages = false
-                    })
+
                 } else if (imagePairs.isNotEmpty()) {
-                    ImageComparisonGrid(imagePairs)
+
                 } else if (selectedImageUris.isNotEmpty()) {
-                    GalleryImagesComponent(selectedImageUris)
+                    // GalleryImagesComponent(selectedImageUris)
                 }
 
             }
@@ -271,17 +404,6 @@ fun HomeScreen() {
             }
         )
     }
-    if (showCompressPopup) {
-        CompressDialog(onDismiss = {
-            showCompressPopup = false
-        }, onConfirm = {
-            showCompressPopup = false
-            showCompressedImages = true
-            sizeInKb = it
-
-
-        })
-    }
 
     if (showScalePopup) {
         val originalDimensions = imagesDimensions
@@ -300,12 +422,12 @@ fun HomeScreen() {
             ScaleImagePopup(showScalePopup, onDismiss = {
                 showScalePopup = false
             }, originalDimensions, viewModel = viewModel, onScale = {
-                it.forEachIndexed { index, it ->
-                    Log.d(TAG, " $it here  ${originalDimensions[index]} ")
-                }
+                //  it.forEachIndexed { index, it ->
+                //  Log.d(TAG, " $it here  ${originalDimensions[index]} ")
+                //  }
                 showScaledImages = true
                 scaledParams = it
-
+                homeScreenViewModel.onScalePopup(it)
             })
         }
     }
@@ -317,17 +439,17 @@ fun HomeScreen() {
 fun CompressToKbImageScreen(
     images: List<Uri>,
     sizeInKb: Int = 100,
-    onSaveClicked: (List<Uri>) -> Unit
+    onSaveClicked: (List<ImageItem?>) -> Unit
 ) {
     var imagesScaled by remember { mutableStateOf(false) }
-    var scaledImages by remember { mutableStateOf(listOf<Uri?>()) }
+    var scaledImages by remember { mutableStateOf(listOf<ImageItem?>()) }
     val context = LocalContext.current
     LaunchedEffect(sizeInKb) {
         imagesScaled = false
         withContext(Dispatchers.IO) {
-            val imageScaler = ImageScaler(context)
+            val imageScalar = ImageScalar(context)
             val scaledUris = withContext(Dispatchers.IO) {
-                imageScaler.scaleImagesToTargetSize(images, sizeInKb = sizeInKb)
+                imageScalar.compressImagesToTargetSize(images, sizeInKb = sizeInKb)
             }
             imagesScaled = true
             scaledImages = scaledUris
@@ -343,12 +465,8 @@ fun CompressToKbImageScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.Companion.CenterHorizontally
         ) {
-
-            val imagePairs = scaledImages.filterNotNull().mapIndexed { index, uri ->
-                ImagePair(originalUri = images[index], compressedUri = uri)
-            }
             if (imagesScaled) {
-                ImageComparisonGrid(imagePairs, onSaveClicked)
+                ImageComparisonGrid(scaledImages.filterNotNull(), onSaveClicked)
             }
         }
 
@@ -357,8 +475,8 @@ fun CompressToKbImageScreen(
 
 @Composable
 internal fun ImageComparisonGrid(
-    imagePairs: List<ImagePair>,
-    onSaveClicked: (List<Uri>) -> Unit
+    imageItems: List<ImageItem>,
+    onSaveClicked: (List<ImageItem?>) -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -369,7 +487,7 @@ internal fun ImageComparisonGrid(
             columns = GridCells.Fixed(1),
             contentPadding = PaddingValues(8.dp),
         ) {
-            items(imagePairs) { pair ->
+            items(imageItems) { pair ->
                 Row(
                     modifier = Modifier
                         .padding(8.dp)
@@ -385,7 +503,7 @@ internal fun ImageComparisonGrid(
                             textAlign = TextAlign.Center
                         )
                         AsyncImage(
-                            model = pair.compressedUri,
+                            model = pair?.scaledBitmap,
                             contentDescription = "Compressed Image",
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
@@ -401,7 +519,7 @@ internal fun ImageComparisonGrid(
                             textAlign = TextAlign.Center
                         )
                         AsyncImage(
-                            model = pair.originalUri,
+                            model = pair?.originalBitmap,
                             contentDescription = "Original Image",
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -413,7 +531,7 @@ internal fun ImageComparisonGrid(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = { onSaveClicked(imagePairs.map { it.compressedUri }) }) {
+        Button(onClick = { onSaveClicked(imageItems) }) {
             Text("Save Kb Scaled Images")
         }
     }
@@ -503,12 +621,13 @@ private fun GalleryImagesComponent(selectedImageUris: List<Uri>) {
 @Composable
 fun HomeScreenTopAppBar(
     imagesTransformed: Boolean = false,
-    selectedImageUris: List<Uri>,
+    galleryState: GalleryState,
     onUndo: () -> Unit,
     onShowScalePopup: () -> Unit,
     onCrop: (Boolean, Uri?) -> Unit,
     onShowCompress: () -> Unit,
 ) {
+
 
     TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
@@ -547,40 +666,59 @@ fun HomeScreenTopAppBar(
                     horizontalArrangement = Arrangement.End// Changed here
 
                 ) {
-                    if (selectedImageUris.isNotEmpty()) {
-                        ActionButtonWithText(
-                            enabled = selectedImageUris.isNotEmpty(),
-                            onClick = {
-                                onShowCompress()
 
-                            },
-                            iconId = R.drawable.ic_compress_24dp,
-                            modifier = Modifier.padding(end = 15.dp),
-                            text = "Compress"
-                        )
-                        ActionButtonWithText(
-                            onClick = {
-                                onShowScalePopup()
-                            },
-                            enabled = selectedImageUris.isNotEmpty(),
-                            iconId = R.drawable.ic_compress_24dp,
-                            modifier = Modifier.padding(end = 15.dp),
-                            text = "Scale"
-                        )
-                        if (selectedImageUris.size == 1) {
-                            ActionButtonWithText(
-                                onClick = {
-                                    onCrop(
-                                        true, selectedImageUris.first()
+                    when (galleryState) {
+                        is GalleryState.Success -> {
+                            val selectedImageUris = galleryState.data.imageUris
+                            if (selectedImageUris.isNotEmpty()) {
+                                ActionButtonWithText(
+                                    enabled = selectedImageUris.isNotEmpty(),
+                                    onClick = {
+                                        onShowCompress()
+                                    },
+                                    iconId = R.drawable.ic_compress_24dp,
+                                    modifier = Modifier.padding(end = 15.dp),
+                                    text = "Compress"
+                                )
+                                ActionButtonWithText(
+                                    onClick = {
+                                        onShowScalePopup()
+                                    },
+                                    enabled = selectedImageUris.isNotEmpty(),
+                                    iconId = R.drawable.ic_compress_24dp,
+                                    modifier = Modifier.padding(end = 15.dp),
+                                    text = "Scale"
+                                )
+                                if (selectedImageUris.size == 1) {
+                                    ActionButtonWithText(
+                                        onClick = {
+                                            onCrop(
+                                                true, selectedImageUris.first()
+                                            )
+                                        },
+                                        iconId = R.drawable.ic_compress_24dp,
+                                        modifier = Modifier.padding(end = 15.dp),
+                                        text = "Crop"
                                     )
-                                },
-                                iconId = R.drawable.ic_compress_24dp,
-                                modifier = Modifier.padding(end = 15.dp),
-                                text = "Crop"
-                            )
+                                }
+
+                            }
                         }
 
+                        is GalleryState.Error -> {
+
+                        }
+
+                        GalleryState.Idle -> {
+
+                        }
+
+                        GalleryState.Loading -> {
+
+                        }
                     }
+
+
                     if (imagesTransformed) {
                         ActionButtonWithText(
                             onClick = {
