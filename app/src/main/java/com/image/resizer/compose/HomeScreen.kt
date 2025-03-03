@@ -15,9 +15,11 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -63,6 +65,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
@@ -76,7 +79,6 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 
@@ -108,17 +110,19 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
     val galleryState by homeScreenViewModel.galleryState.collectAsState()
 
     var selectedImageUris by remember { mutableStateOf(emptyList<Uri>()) }
-    val showImages by remember {
-        derivedStateOf { galleryState is GalleryState.Success }
-    }
-
 
     var showCropDialog by remember { mutableStateOf(false) }
     var imageToCrop by remember { mutableStateOf<Uri?>(null) }
     var croppedBitmapUri by remember { mutableStateOf<Uri?>(null) }
     var showToast by remember { mutableStateOf(false) }
-    var imagesTransformed by remember { mutableStateOf(false) }
-    var sizeInKb by remember { mutableStateOf(100) }
+    val showImages by remember {
+        derivedStateOf { galleryState is GalleryState.Success }
+    }
+    val imagesTransformed by remember {
+        derivedStateOf { cropState is CropState.Success || scaleState is ScaleState.Success ||
+                compressState is CompressState.Success}
+    }
+
     var galleryImagesVisible by remember { mutableStateOf(false) }
     val cropImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -147,17 +151,14 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
             }
         }
     )
-    LaunchedEffect(imagePairs, showScaledImages, croppedBitmapUri) {
-        imagesTransformed = imagePairs.isNotEmpty() || showScaledImages || croppedBitmapUri != null
-    }
+
     Scaffold(
         topBar = {
             HomeScreenTopAppBar(
                 imagesTransformed = imagesTransformed,
                 galleryState = galleryState,
                 onShowScalePopup = {
-                    showScalePopup = !showScalePopup
-                    //scale = true
+                    homeScreenViewModel.onShowScalePopup()
                 },
                 onCrop = { show, uri ->
                     showCropDialog = show
@@ -219,23 +220,8 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-                val currentGalleryState = galleryState
-                when (currentGalleryState) {
-                    is GalleryState.Success -> {
-                        AnimatedVisibility(visible =showImages, enter = fadeIn(animationSpec = tween(durationMillis = 3000)) , exit = fadeOut(animationSpec = tween(durationMillis = 3000)) ) {
-                            val data = currentGalleryState.data
-                            GalleryImagesComponent(data.imageUris)//can get data from gallery state
-                        }
-                    }
+                handleGalleryState(galleryState, showImages)
 
-                    is GalleryState.Error, GalleryState.Idle,GalleryState.Loading -> {
-                        AnimatedVisibility(visible =showImages, enter = fadeIn(animationSpec = tween(durationMillis = 3000)) , exit = fadeOut(animationSpec = tween(durationMillis = 3000)) ) {
-                            val data =emptyList<Uri>()
-                            GalleryImagesComponent(data)//can get data from gallery state
-                        }
-                    }
-
-                }
                 val currentCropState = cropState
                 when (currentCropState) {
                     is CropState.Success -> {
@@ -268,26 +254,51 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                     }
                 }
                 val currentScaleState = scaleState
+                val showPopup = currentScaleState is ScaleState.ShowPopup
                 when (currentScaleState) {
-                    is ScaleState.Idle -> {
+                    is ScaleState.Idle, is ScaleState.Loading -> {
 
                     }
 
-                    is ScaleState.Loading -> {
-                        Text("Scale loading...")
+                    is ScaleState.ShowPopup -> {
+                        val originalDimensions = imagesDimensions
+                        // Implement image scaling logic here
+                        AnimatedVisibility(
+                            visible = showPopup,
+                            enter = fadeIn(animationSpec = tween(durationMillis = 2000)) + expandVertically(
+                                expandFrom = Alignment.Companion.CenterVertically,
+                                animationSpec = tween(durationMillis = 1300)
+                            ),
+                            exit = fadeOut(animationSpec = tween(durationMillis = 2000)) + shrinkVertically(
+                                shrinkTowards = Alignment.Companion.CenterVertically,
+                                animationSpec = tween(durationMillis = 1300)
+                            ),
+                        ) {
+                            ScaleImagePopup(showPopup, onDismiss = {
+                                showScalePopup = false
+                            }, originalDimensions, viewModel = viewModel, onScale = {
+                                //  it.forEachIndexed { index, it ->
+                                //  Log.d(TAG, " $it here  ${originalDimensions[index]} ")
+                                //  }
+                                // showScaledImages = true
+                                scaledParams = it
+                                homeScreenViewModel.onImagesScaled(it)
+                            })
+                        }
                     }
 
                     is ScaleState.Success -> {
                         if (homeScreenViewModel.selectedImageUris.isNotEmpty()) {
                             val imageItems =
                                 homeScreenViewModel.selectedImageUris.map { ImageItem(it) }
-                                ScaledImageScreen(
-                                    imageItems = imageItems,
-                                    currentScaleState.data.scaleParamsList,
-                                    onSaveClicked = {
-                                        showScaledImages = false
-                                    })
-                            }
+                            ScaledImageScreen(
+                                imageItems = imageItems,
+                                currentScaleState.data.scaleParamsList,
+                                onSaveClicked = {
+                                    showToast = true
+                                    homeScreenViewModel.showSelectedImages()
+                                })
+                        }
 
                     }
 
@@ -299,14 +310,19 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                 val currentCompressState = compressState
                 when (currentCompressState) {
                     is CompressState.Success -> {
-                        val compressedUris = currentCompressState.data.compressedImageUris
-                        val imagePairs =
-                            selectedImageUris.zip(compressedUris) { original, compressed ->
-                                ImagePair(original, compressed)
-                            }
-                        ImageComparisonGrid(imagePairs)
+                        if (homeScreenViewModel.selectedImageUris.isNotEmpty()) {
+                            CompressToKbImageScreen(
+                                images = homeScreenViewModel.selectedImageUris,
+                                sizeInKb = currentCompressState.data.size,
+                                onSaveClicked = {
+                                    saveImagesToGallery(context, it)
+                                    showToast = true
+                                    homeScreenViewModel.onCompressImagesSaved()
+                                })
+                        }
                     }
-                    is CompressState.ImagesSaved->{
+
+                    is CompressState.ImagesSaved -> {
                         LaunchedEffect(key1 = true) {
                             homeScreenViewModel.showSelectedImages()
                         }
@@ -316,23 +332,12 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                         CompressDialog(onDismiss = {
                             homeScreenViewModel.onCompressCancel()
                         }, onConfirm = {
-                            homeScreenViewModel.onCompressShowImages()
+                            homeScreenViewModel.onCompressShowImages(it)
                             showCompressedImages = true
-                            sizeInKb = it
                         })
                     }
 
-                    is CompressState.ImagesShown -> {
-                        if (homeScreenViewModel.selectedImageUris.isNotEmpty()) {
-                            CompressToKbImageScreen(
-                                images = homeScreenViewModel.selectedImageUris,
-                                onSaveClicked = {
-                                    saveImagesToGallery(context, it)
-                                    showToast = true
-                                    homeScreenViewModel.onCompressImagesSaved()
-                                })
-                        }
-                    }
+
 
                     is CompressState.Idle -> {
 
@@ -406,33 +411,42 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
     }
 
     if (showScalePopup) {
-        val originalDimensions = imagesDimensions
-        // Implement image scaling logic here
-        AnimatedVisibility(
-            visible = showScalePopup,
-            enter = fadeIn(animationSpec = tween(durationMillis = 2000)) + expandVertically(
-                expandFrom = Alignment.Companion.CenterVertically,
-                animationSpec = tween(durationMillis = 1300)
-            ),
-            exit = fadeOut(animationSpec = tween(durationMillis = 2000)) + shrinkVertically(
-                shrinkTowards = Alignment.Companion.CenterVertically,
-                animationSpec = tween(durationMillis = 1300)
-            ),
-        ) {
-            ScaleImagePopup(showScalePopup, onDismiss = {
-                showScalePopup = false
-            }, originalDimensions, viewModel = viewModel, onScale = {
-                //  it.forEachIndexed { index, it ->
-                //  Log.d(TAG, " $it here  ${originalDimensions[index]} ")
-                //  }
-                showScaledImages = true
-                scaledParams = it
-                homeScreenViewModel.onScalePopup(it)
-            })
-        }
+
     }
 
 
+}
+
+@Composable
+private fun ColumnScope.handleGalleryState(
+    galleryState: GalleryState,
+    showImages: Boolean
+) {
+    val currentGalleryState = galleryState
+    when (currentGalleryState) {
+        is GalleryState.Success -> {
+            AnimatedVisibility(
+                visible = showImages,
+                enter = fadeIn(animationSpec = tween(durationMillis = 3000)),
+                exit = fadeOut(animationSpec = tween(durationMillis = 3000))
+            ) {
+                val data = currentGalleryState.data
+                GalleryImagesComponent(data.imageUris)//can get data from gallery state
+            }
+        }
+
+        is GalleryState.Error, GalleryState.Idle, GalleryState.Loading -> {
+            AnimatedVisibility(
+                visible = showImages,
+                enter = fadeIn(animationSpec = tween(durationMillis = 3000)),
+                exit = fadeOut(animationSpec = tween(durationMillis = 3000))
+            ) {
+                val data = emptyList<Uri>()
+                GalleryImagesComponent(data)//can get data from gallery state
+            }
+        }
+
+    }
 }
 
 @Composable
@@ -442,8 +456,12 @@ fun CompressToKbImageScreen(
     onSaveClicked: (List<ImageItem?>) -> Unit
 ) {
     var imagesScaled by remember { mutableStateOf(false) }
-    var scaledImages by remember { mutableStateOf(listOf<ImageItem?>()) }
+    var scaledImages by remember { mutableStateOf(listOf<ImageItem>()) }
     val context = LocalContext.current
+    val imageItems =
+        images.map {
+            ImageItem(it)
+        }
     LaunchedEffect(sizeInKb) {
         imagesScaled = false
         withContext(Dispatchers.IO) {
@@ -452,10 +470,52 @@ fun CompressToKbImageScreen(
                 imageScalar.compressImagesToTargetSize(images, sizeInKb = sizeInKb)
             }
             imagesScaled = true
-            scaledImages = scaledUris
+            scaledImages = scaledUris.filterNotNull()
         }
     }
     Box(
+        modifier = Modifier
+            .fillMaxSize()
+    ) {
+        Column(
+            modifier = Modifier.Companion
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.Companion.CenterHorizontally
+        ) {
+            if (imagesScaled) {
+
+                ScaledImagesGrid(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 80.dp), scaledImages, imageItems
+                )
+            } else {
+                Text("Scaling...")
+            }
+        }
+        // Save button at the bottom, above the FAB
+        if (imagesScaled) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp) // Padding around the button
+                    .background(Color.LightGray) // Background for better visibility
+            ) {
+                Button(
+                    onClick = {
+
+                        onSaveClicked(scaledImages)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = "Save Images")
+                }
+            }
+        }
+    }
+   /* Box(
         modifier = Modifier
             .fillMaxSize()
     ) {
@@ -470,7 +530,7 @@ fun CompressToKbImageScreen(
             }
         }
 
-    }
+    }*/
 }
 
 @Composable

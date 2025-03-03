@@ -1,8 +1,6 @@
 package com.image.resizer.compose
 
 import android.net.Uri
-import android.util.Log
-import androidx.compose.ui.geometry.Size
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,17 +40,15 @@ class HomeScreenViewModel() : ViewModel() {
         }
     }
 
-    fun onCompressDone(list: List<Uri>) {
-        viewModelScope.launch {
-            _compressState.value = CompressState.Success(CompressStateData(list))
-        }
+
+    fun onShowScalePopup() {
+        _scaleState.value = ScaleState.ShowPopup
     }
 
-    fun onScalePopup(scaleParamsList: List<ScaleParams>) {
-        viewModelScope.launch {
-            _scaleState.value = ScaleState.Loading
-            _scaleState.value = ScaleState.Success(ScaleStateData(scaleParamsList))
-        }
+    fun onImagesScaled(scaleParamsList: List<ScaleParams>) {
+        onReset()
+        _scaleState.value = ScaleState.Loading
+        _scaleState.value = ScaleState.Success(ScaleStateData(scaleParamsList))
     }
 
     fun onGalleryImagesSelected(imageUris: List<Uri>) {
@@ -77,6 +73,7 @@ class HomeScreenViewModel() : ViewModel() {
         _scaleState.value = ScaleState.Idle
         _galleryState.value = GalleryState.Success(GalleryStateData(selectedImageUris))
     }
+
     fun onCompressImagesSaved() {
         viewModelScope.launch {
             _compressState.value = CompressState.ImagesSaved
@@ -98,10 +95,10 @@ class HomeScreenViewModel() : ViewModel() {
         }
     }
 
-    fun onCompressShowImages() {
+    fun onCompressShowImages(size:Int) {
         viewModelScope.launch {
             onReset()
-            _compressState.value = CompressState.ImagesShown
+            _compressState.value = CompressState.Success(CompressStateData(size))
         }
     }
 

@@ -66,6 +66,7 @@ import java.io.FileOutputStream
 import kotlin.io.path.exists
 import androidx.core.net.toUri
 import androidx.core.graphics.createBitmap
+import kotlinx.coroutines.delay
 
 
 data class ImageItem(
@@ -134,13 +135,12 @@ fun ScaledImageScreen(
 ) {
     var imagesScaled by remember { mutableStateOf(false) }
     var scaledImages by remember { mutableStateOf(listOf<ImageItem>()) }
-
     val context = LocalContext.current
-
     LaunchedEffect(scaleParamsList) {
         if (scaleParamsList.isNotEmpty()) {
             imagesScaled = false
             withContext(Dispatchers.IO) {
+                delay(200)
                 scaleImages(imageItems, scaleParamsList, context) {
                     imagesScaled = true
                     scaledImages = imageItems
@@ -157,10 +157,15 @@ fun ScaledImageScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.Companion.CenterHorizontally
         ) {
-
-                ScaledImagesGrid( modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = 80.dp), scaledImages, imageItems)
+             if(imagesScaled) {
+                 ScaledImagesGrid(
+                     modifier = Modifier
+                         .fillMaxSize()
+                         .padding(bottom = 80.dp), scaledImages, imageItems
+                 )
+             }else{
+                 Text("Scaling...")
+             }
         }
         // Save button at the bottom, above the FAB
         if (imagesScaled) {
@@ -187,7 +192,7 @@ fun ScaledImageScreen(
 
 
 @Composable
-private fun ScaledImagesGrid(
+internal fun ScaledImagesGrid(
     modifier: Modifier,
     scaledImages: List<ImageItem>,
     imageItems: List<ImageItem>
