@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class HomeScreenViewModel() : ViewModel() {
+    private  val _showToast = MutableStateFlow(false)
+    val showToast: StateFlow<Boolean> = _showToast
     private val _cropState = MutableStateFlow<CropState>(CropState.Idle)
     val cropState: StateFlow<CropState> = _cropState
 
@@ -27,6 +29,9 @@ class HomeScreenViewModel() : ViewModel() {
             onReset()
             _cropState.value = CropState.Success(CropStateData(croppedUri))
         }
+    }
+    fun showToast(value: Boolean){
+        _showToast.value = value
     }
     fun onCropScreenLaunched() {
         viewModelScope.launch {

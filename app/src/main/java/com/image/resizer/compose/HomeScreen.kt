@@ -120,8 +120,10 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
         derivedStateOf { galleryState is GalleryState.Success }
     }
     val imagesTransformed by remember {
-        derivedStateOf { cropState is CropState.Success || scaleState is ScaleState.Success ||
-                compressState is CompressState.Success}
+        derivedStateOf {
+            cropState is CropState.Success || scaleState is ScaleState.Success ||
+                    compressState is CompressState.Success
+        }
     }
 
     var galleryImagesVisible by remember { mutableStateOf(false) }
@@ -130,10 +132,10 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             val data: Intent? = result.data
-           val croppedBitmapUri= if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    data?.getParcelableExtra(CropScreen.CROPPED_IMAGE_BITMAP_URI, Uri::class.java)
+            val croppedBitmapUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                data?.getParcelableExtra(CropScreen.CROPPED_IMAGE_BITMAP_URI, Uri::class.java)
             } else {
-                    data?.getParcelableExtra<Uri>(CropScreen.CROPPED_IMAGE_BITMAP_URI)
+                data?.getParcelableExtra<Uri>(CropScreen.CROPPED_IMAGE_BITMAP_URI)
             }
             homeScreenViewModel.onCropSuccess(croppedBitmapUri!!)
         }
@@ -218,18 +220,19 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
 
                 val currentCropState = cropState
                 when (currentCropState) {
-                    is CropState.PopupShown->{
-                        Log.d(TAG,"CropState.PopupShown")
-                       if( homeScreenViewModel.selectedImageUris.isNotEmpty()) {
-                           val intent = Intent(context, CropScreen::class.java)
-                           intent.putExtra(
-                               CropScreen.IMAGE_TO_CROP,
-                               homeScreenViewModel.selectedImageUris.first()
-                           )
-                           cropImageLauncher.launch(intent)
-                           homeScreenViewModel.onCropScreenLaunched()
-                       }
+                    is CropState.PopupShown -> {
+                        Log.d(TAG, "CropState.PopupShown")
+                        if (homeScreenViewModel.selectedImageUris.isNotEmpty()) {
+                            val intent = Intent(context, CropScreen::class.java)
+                            intent.putExtra(
+                                CropScreen.IMAGE_TO_CROP,
+                                homeScreenViewModel.selectedImageUris.first()
+                            )
+                            cropImageLauncher.launch(intent)
+                            homeScreenViewModel.onCropScreenLaunched()
+                        }
                     }
+
                     is CropState.Success -> {
                         currentCropState.data.croppedImageUri?.let {
                             CroppedImageComponent(currentCropState.data.croppedImageUri) {
@@ -319,56 +322,10 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
 
                 }
                 val currentCompressState = compressState
-                when (currentCompressState) {
-                    is CompressState.Success -> {
-                        if (homeScreenViewModel.selectedImageUris.isNotEmpty()) {
-                            CompressToKbImageScreen(
-                                images = homeScreenViewModel.selectedImageUris,
-                                sizeInKb = currentCompressState.data.size,
-                                onSaveClicked = {
-                                    saveImagesToGallery(context, it)
-                                    showToast = true
-                                    homeScreenViewModel.onCompressImagesSaved()
-                                })
-                        }
-                    }
-
-                    is CompressState.ImagesSaved -> {
-                        LaunchedEffect(key1 = true) {
-                            homeScreenViewModel.showSelectedImages()
-                        }
-                    }
-
-                    is CompressState.PopupShown -> {
-                        CompressDialog(onDismiss = {
-                            homeScreenViewModel.onCompressCancel()
-                        }, onConfirm = {
-                            homeScreenViewModel.onCompressShowImages(it)
-                            showCompressedImages = true
-                        })
-                    }
-
-
-
-                    is CompressState.Idle -> {
-
-                    }
-
-                    is CompressState.Error -> {
-                        Text("Compress error: ${currentCompressState.message}")
-                    }
-                }
-
-                  if (showCompressedImages) {
-
-                } else if (showScaledImages) {
-
-                } else if (imagePairs.isNotEmpty()) {
-
-                } else if (selectedImageUris.isNotEmpty()) {
-                    // GalleryImagesComponent(selectedImageUris)
-                }
-
+                handleCompressState(
+                    currentCompressState,
+                    homeScreenViewModel,
+                )
             }
         }
     }
@@ -414,6 +371,50 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
     }
 
 
+}
+
+@Composable
+private fun handleCompressState(
+    currentCompressState: CompressState,
+    homeScreenViewModel: HomeScreenViewModel,
+) {
+    val context = LocalContext.current
+    when (currentCompressState) {
+        is CompressState.Success -> {
+            if (homeScreenViewModel.selectedImageUris.isNotEmpty()) {
+                CompressToKbImageScreen(
+                    images = homeScreenViewModel.selectedImageUris,
+                    sizeInKb = currentCompressState.data.size,
+                    onSaveClicked = {
+                        saveImagesToGallery(context, it)
+                        homeScreenViewModel.showToast(true)
+                        homeScreenViewModel.onCompressImagesSaved()
+                    })
+            }
+        }
+
+        is CompressState.ImagesSaved -> {
+            LaunchedEffect(key1 = true) {
+                homeScreenViewModel.showSelectedImages()
+            }
+        }
+
+        is CompressState.PopupShown -> {
+            CompressDialog(onDismiss = {
+                homeScreenViewModel.onCompressCancel()
+            }, onConfirm = {
+                homeScreenViewModel.onCompressShowImages(it)
+            })
+        }
+
+        is CompressState.Idle -> {
+
+        }
+
+        is CompressState.Error -> {
+            Text("Compress error: ${currentCompressState.message}")
+        }
+    }
 }
 
 @Composable
@@ -514,22 +515,22 @@ fun CompressToKbImageScreen(
             }
         }
     }
-   /* Box(
-        modifier = Modifier
-            .fillMaxSize()
-    ) {
-        Column(
-            modifier = Modifier.Companion
-                .fillMaxWidth(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.Companion.CenterHorizontally
-        ) {
-            if (imagesScaled) {
-                ImageComparisonGrid(scaledImages.filterNotNull(), onSaveClicked)
-            }
-        }
+    /* Box(
+         modifier = Modifier
+             .fillMaxSize()
+     ) {
+         Column(
+             modifier = Modifier.Companion
+                 .fillMaxWidth(),
+             verticalArrangement = Arrangement.Center,
+             horizontalAlignment = Alignment.Companion.CenterHorizontally
+         ) {
+             if (imagesScaled) {
+                 ImageComparisonGrid(scaledImages.filterNotNull(), onSaveClicked)
+             }
+         }
 
-    }*/
+     }*/
 }
 
 @Composable
