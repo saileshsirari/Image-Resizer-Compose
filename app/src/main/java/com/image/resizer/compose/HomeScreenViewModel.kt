@@ -22,11 +22,18 @@ class HomeScreenViewModel() : ViewModel() {
 
     var selectedImageUris: List<Uri> = emptyList()
 
-    fun onCropSuccess(croppedUri: Uri) {
+    fun onCropSuccess(croppedUri: Uri?) {
         viewModelScope.launch {
+            onReset()
             _cropState.value = CropState.Success(CropStateData(croppedUri))
         }
     }
+    fun onCropScreenLaunched() {
+        viewModelScope.launch {
+            _cropState.value = CropState.Idle
+        }
+    }
+
 
     fun onCropError(message: String) {
         viewModelScope.launch {
@@ -100,6 +107,10 @@ class HomeScreenViewModel() : ViewModel() {
             onReset()
             _compressState.value = CompressState.Success(CompressStateData(size))
         }
+    }
+
+    fun onShowCropPopup() {
+        _cropState.value = CropState.PopupShown
     }
 
 }

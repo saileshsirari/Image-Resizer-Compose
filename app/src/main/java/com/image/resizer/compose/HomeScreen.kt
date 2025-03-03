@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -129,15 +130,14 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             val data: Intent? = result.data
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                croppedBitmapUri =
+           val croppedBitmapUri= if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     data?.getParcelableExtra(CropScreen.CROPPED_IMAGE_BITMAP_URI, Uri::class.java)
             } else {
-                croppedBitmapUri =
                     data?.getParcelableExtra<Uri>(CropScreen.CROPPED_IMAGE_BITMAP_URI)
             }
+            homeScreenViewModel.onCropSuccess(croppedBitmapUri!!)
         }
-        showCropDialog = false
+
     }
 
     val multiplePhotoPickerLauncher = rememberLauncherForActivityResult(
@@ -161,13 +161,7 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                     homeScreenViewModel.onShowScalePopup()
                 },
                 onCrop = { show, uri ->
-                    showCropDialog = show
-                    if (selectedImageUris.isNotEmpty()) {
-                        imageToCrop = uri
-                        val intent = Intent(context, CropScreen::class.java)
-                        intent.putExtra(CropScreen.IMAGE_TO_CROP, imageToCrop)
-                        cropImageLauncher.launch(intent)
-                    }
+                    homeScreenViewModel.onShowCropPopup()
                 },
                 onUndo = {
                     homeScreenViewModel.onUndo()
@@ -224,25 +218,42 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
 
                 val currentCropState = cropState
                 when (currentCropState) {
+                    is CropState.PopupShown->{
+                        Log.d(TAG,"CropState.PopupShown")
+                       if( homeScreenViewModel.selectedImageUris.isNotEmpty()) {
+                           val intent = Intent(context, CropScreen::class.java)
+                           intent.putExtra(
+                               CropScreen.IMAGE_TO_CROP,
+                               homeScreenViewModel.selectedImageUris.first()
+                           )
+                           cropImageLauncher.launch(intent)
+                           homeScreenViewModel.onCropScreenLaunched()
+                       }
+                    }
                     is CropState.Success -> {
-                        CroppedImageComponent(currentCropState.data.croppedImageUri) {
-                            getBitmapFromUri(currentCropState.data.croppedImageUri, context)?.let {
-                                saveImagesToGallery(
-                                    context,
-                                    listOf(
-                                        ImageItem(
-                                            uri = currentCropState.data.croppedImageUri,
-                                            scaledBitmap = it
+                        currentCropState.data.croppedImageUri?.let {
+                            CroppedImageComponent(currentCropState.data.croppedImageUri) {
+                                getBitmapFromUri(
+                                    currentCropState.data.croppedImageUri,
+                                    context
+                                )?.let {
+                                    saveImagesToGallery(
+                                        context,
+                                        listOf(
+                                            ImageItem(
+                                                uri = currentCropState.data.croppedImageUri,
+                                                scaledBitmap = it
+                                            )
                                         )
                                     )
-                                )
-                                showToast = true
+                                    showToast = true
+                                    homeScreenViewModel.showSelectedImages()
+                                }
                             }
                         }
                     }
 
                     is CropState.Loading -> {
-                        Text("Crop loading...")
                     }
 
                     is CropState.Error -> {
@@ -347,20 +358,8 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                         Text("Compress error: ${currentCompressState.message}")
                     }
                 }
-                if (croppedBitmapUri != null) {
-                    croppedBitmapUri?.let { croppedBitmapUri ->
-                        CroppedImageComponent(croppedBitmapUri) {
-                            getBitmapFromUri(croppedBitmapUri, context)?.let {
-                                saveImagesToGallery(
-                                    context,
-                                    listOf(ImageItem(uri = croppedBitmapUri, scaledBitmap = it))
-                                )
-                                showToast = true
 
-                            }
-                        }
-                    }
-                } else if (showCompressedImages) {
+                  if (showCompressedImages) {
 
                 } else if (showScaledImages) {
 

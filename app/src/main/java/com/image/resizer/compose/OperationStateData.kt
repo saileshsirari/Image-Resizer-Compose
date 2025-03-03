@@ -14,10 +14,11 @@ sealed class OperationState {
 }
 
 // Crop
-data class CropStateData(val croppedImageUri: Uri) : OperationStateData
+data class CropStateData(val croppedImageUri: Uri?) : OperationStateData
 sealed class CropState : OperationState() {
     data object Idle : CropState()
     data object Loading : CropState()
+    data object PopupShown : CropState()
     data class Success(val data: CropStateData) : CropState()
     data class Error(val message: String) : CropState()
 }
