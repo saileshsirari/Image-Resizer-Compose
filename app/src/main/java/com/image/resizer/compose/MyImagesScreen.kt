@@ -579,7 +579,7 @@ fun getTotalTransformedImagesCount(context: Context): Int {
     val  customDirectoryName: String="ImageResizer"
     val selection = "${MediaStore.Images.Media.DISPLAY_NAME} LIKE ?"
 //    val selectionArgs = arrayOf("%$customDirectoryName/%")
-    val selectionArgs = arrayOf("ImageResizer_Scaled_%")
+    val selectionArgs = arrayOf("imageResizer_%")
 
     val queryUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
     val contentResolver = context.contentResolver

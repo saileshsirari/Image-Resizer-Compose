@@ -31,11 +31,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredWidthIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -72,12 +69,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import com.image.resizer.compose.ImageHelper.getFileNameAndSize
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -100,7 +97,7 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
     )
     var showRationale by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(true) }
-    var imagesDimensions by remember { mutableStateOf(listOf<Pair<Int, Int>>()) }
+//    var imagesDimensions by remember { mutableStateOf(listOf<Pair<Int, Int>>()) }
     //states
     val cropState by homeScreenViewModel.cropState.collectAsState()
     val compressState by homeScreenViewModel.compressState.collectAsState()
@@ -136,10 +133,12 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
         contract = ActivityResultContracts.PickMultipleVisualMedia(),
         onResult = { uris ->
             if (uris.isNotEmpty()) {
-                homeScreenViewModel.onGalleryImagesSelected(uris)
-                imagesDimensions = uris.map {
-                    imageDimensionsFromUri(context, ImageItem(it))
+                val selectedImageItems = uris.map { uri ->
+                    val (imageName, fileSize) = getFileNameAndSize(context, uri)
+                    val imagesDimensions= imageDimensionsFromUri(context, uri)
+                    ImageItem(uri, imageName = imageName, fileSize = fileSize, imageDimension = imagesDimensions)
                 }
+                homeScreenViewModel.onGalleryImagesSelected(selectedImageItems)
             }
         }
     )
@@ -206,11 +205,11 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                 when (currentCropState) {
                     is CropState.PopupShown -> {
                         Log.d(TAG, "CropState.PopupShown")
-                        if (homeScreenViewModel.selectedImageUris.isNotEmpty()) {
+                        if (homeScreenViewModel.selectedImageItems.isNotEmpty()) {
                             val intent = Intent(context, CropScreen::class.java)
                             intent.putExtra(
                                 CropScreen.IMAGE_TO_CROP,
-                                homeScreenViewModel.selectedImageUris.first()
+                                homeScreenViewModel.selectedImageItems.first().uri
                             )
                             cropImageLauncher.launch(intent)
                             homeScreenViewModel.onCropScreenLaunched()
@@ -258,7 +257,8 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                     }
 
                     is ScaleState.ShowPopup -> {
-                        val originalDimensions = imagesDimensions
+                        val originalDimensions =
+                            homeScreenViewModel.selectedImageItems.map { it.imageDimension }.filterNotNull()
                         // Implement image scaling logic here
                         AnimatedVisibility(
                             visible = true,
@@ -285,9 +285,9 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                     }
 
                     is ScaleState.Success -> {
-                        if (homeScreenViewModel.selectedImageUris.isNotEmpty()) {
+                        if (homeScreenViewModel.selectedImageItems.isNotEmpty()) {
                             val imageItems =
-                                homeScreenViewModel.selectedImageUris.map { ImageItem(it) }
+                                homeScreenViewModel.selectedImageItems
                             ScaledImageScreen(
                                 imageItems = imageItems,
                                 currentScaleState.data.scaleParamsList,
@@ -359,9 +359,9 @@ private fun HandleCompressState(
     val context = LocalContext.current
     when (currentCompressState) {
         is CompressState.Success -> {
-            if (homeScreenViewModel.selectedImageUris.isNotEmpty()) {
+            if (homeScreenViewModel.selectedImageItems.isNotEmpty()) {
                 CompressToKbImageScreen(
-                    images = homeScreenViewModel.selectedImageUris,
+                    imageItems = homeScreenViewModel.selectedImageItems,
                     sizeInKb = currentCompressState.data.size,
                     onSaveClicked = {
                         saveImagesToGallery(context, it)
@@ -407,7 +407,7 @@ private fun HandleGalleryState(
                 exit = fadeOut(animationSpec = tween(durationMillis = 3000))
             ) {
                 val data = currentGalleryState.data
-                GalleryImagesComponent(data.imageUris)//can get data from gallery state
+                GalleryImagesComponent(data.imageItems)//can get data from gallery state
             }
         }
 
@@ -427,23 +427,20 @@ private fun HandleGalleryState(
 
 @Composable
 fun CompressToKbImageScreen(
-    images: List<Uri>,
+    imageItems: List<ImageItem>,
     sizeInKb: Int = 100,
     onSaveClicked: (List<ImageItem?>) -> Unit
 ) {
     var imagesScaled by remember { mutableStateOf(false) }
     var scaledImages by remember { mutableStateOf(listOf<ImageItem>()) }
     val context = LocalContext.current
-    val imageItems =
-        images.map {
-            ImageItem(it)
-        }
+
     LaunchedEffect(sizeInKb) {
         imagesScaled = false
         withContext(Dispatchers.IO) {
             val imageScalar = ImageScalar(context)
             val scaledUris = withContext(Dispatchers.IO) {
-                imageScalar.compressImagesToTargetSize(images, sizeInKb = sizeInKb)
+                imageScalar.compressImagesToTargetSize(imageItems, sizeInKb = sizeInKb)
             }
             imagesScaled = true
             scaledImages = scaledUris.filterNotNull()
@@ -474,17 +471,13 @@ fun CompressToKbImageScreen(
         if (imagesScaled) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
                     .align(Alignment.BottomCenter)
                     .padding(16.dp) // Padding around the button
-                    .background(Color.LightGray) // Background for better visibility
             ) {
                 Button(
                     onClick = {
-
                         onSaveClicked(scaledImages)
                     },
-                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(text = "Save Images")
                 }
@@ -574,7 +567,7 @@ private fun GalleryImagesComponent(selectedImageUris: List<Uri>) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreenTopAppBarPreview() {
-    val galleryState = GalleryState.Success(GalleryStateData(listOf(Uri.EMPTY)))
+    val galleryState = GalleryState.Success(GalleryStateData(listOf()))
     val imagesTransformed = true
     val onUndo: () -> Unit = {
 
@@ -642,7 +635,7 @@ fun HomeScreenTopAppBar(
 
                     when (galleryState) {
                         is GalleryState.Success -> {
-                            val selectedImageUris = galleryState.data.imageUris
+                            val selectedImageUris = galleryState.data.imageItems
                             if (selectedImageUris.isNotEmpty()) {
                                 ActionButtonWithText(
                                     enabled = true,
@@ -666,7 +659,7 @@ fun HomeScreenTopAppBar(
                                     ActionButtonWithText(
                                         onClick = {
                                             onCrop(
-                                                true, selectedImageUris.first()
+                                                true, selectedImageUris.first().uri
                                             )
                                         },
                                         iconId = R.drawable.ic_crop_24dp,

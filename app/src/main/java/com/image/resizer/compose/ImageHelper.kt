@@ -6,10 +6,26 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import android.provider.OpenableColumns
 import android.util.Log
 import java.io.File
 
 object ImageHelper {
+
+    fun getFileNameAndSize(context: Context, uri: Uri): Pair<String, Long> {
+        val contentResolver = context.contentResolver
+        val cursor = contentResolver.query(uri, null, null, null, null)
+        cursor?.use {
+            if (it.moveToFirst()) {
+                val nameIndex = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                val sizeIndex = it.getColumnIndex(OpenableColumns.SIZE)
+                val name = it.getString(nameIndex)
+                val size = it.getLong(sizeIndex)
+                return Pair(name, size)
+            }
+        }
+        return Pair("", 0L)
+    }
 
     internal fun getRealCompressedImageUris(context: Context, indexesToLoad: List<Int>): List<Uri?> {
         val compressedImageUris = mutableListOf<Uri?>()
@@ -22,7 +38,7 @@ object ImageHelper {
         )
         val  customDirectoryName: String="ImageResizer"
         val selection = "${MediaStore.Images.Media.DISPLAY_NAME} LIKE ?"
-        val selectionArgs = arrayOf("ImageResizer_Scaled_%")
+        val selectionArgs = arrayOf("imageResizer_%")
 //    val selectionArgs = arrayOf("%$customDirectoryName/%")
         val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
         val queryUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI

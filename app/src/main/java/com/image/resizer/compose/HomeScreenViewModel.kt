@@ -22,7 +22,7 @@ class HomeScreenViewModel() : ViewModel() {
     private val _galleryState = MutableStateFlow<GalleryState>(GalleryState.Idle)
     val galleryState: StateFlow<GalleryState> = _galleryState
 
-    var selectedImageUris: List<Uri> = emptyList()
+    var selectedImageItems: List<ImageItem> = emptyList()
 
     fun onCropSuccess(croppedUri: Uri?) {
         viewModelScope.launch {
@@ -62,12 +62,12 @@ class HomeScreenViewModel() : ViewModel() {
         _scaleState.value = ScaleState.Success(ScaleStateData(scaleParamsList))
     }
 
-    fun onGalleryImagesSelected(imageUris: List<Uri>) {
+    fun onGalleryImagesSelected(imageItems: List<ImageItem>) {
         viewModelScope.launch {
             onReset()
-            selectedImageUris = imageUris
+            selectedImageItems = imageItems
             _galleryState.value = GalleryState.Loading
-            _galleryState.value = GalleryState.Success(GalleryStateData(imageUris))
+            _galleryState.value = GalleryState.Success(GalleryStateData(imageItems))
         }
     }
 
@@ -75,14 +75,14 @@ class HomeScreenViewModel() : ViewModel() {
         _cropState.value = CropState.Idle
         _compressState.value = CompressState.Idle
         _scaleState.value = ScaleState.Idle
-        _galleryState.value = GalleryState.Success(GalleryStateData(selectedImageUris))
+        _galleryState.value = GalleryState.Success(GalleryStateData(selectedImageItems))
     }
 
     fun showSelectedImages() {
         _cropState.value = CropState.Idle
         _compressState.value = CompressState.Idle
         _scaleState.value = ScaleState.Idle
-        _galleryState.value = GalleryState.Success(GalleryStateData(selectedImageUris))
+        _galleryState.value = GalleryState.Success(GalleryStateData(selectedImageItems))
     }
 
     fun onCompressImagesSaved() {
@@ -102,7 +102,7 @@ class HomeScreenViewModel() : ViewModel() {
         viewModelScope.launch {
             onReset()
             _compressState.value = CompressState.Idle
-            _galleryState.value = GalleryState.Success(GalleryStateData(selectedImageUris))
+            _galleryState.value = GalleryState.Success(GalleryStateData(selectedImageItems))
         }
     }
 

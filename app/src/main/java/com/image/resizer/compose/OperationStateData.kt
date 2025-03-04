@@ -44,7 +44,7 @@ sealed class ScaleState : OperationState() {
 }
 
 // Gallery
-data class GalleryStateData(val imageUris: List<Uri>) : OperationStateData
+data class GalleryStateData(val imageItems: List<ImageItem>) : OperationStateData
 sealed class GalleryState : OperationState() {
     data object Idle : GalleryState()
     data object Loading : GalleryState()

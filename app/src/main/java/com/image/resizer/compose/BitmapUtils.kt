@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
+import androidx.annotation.RequiresApi
 
 object BitmapUtils {
     private const val TAG = "BitmapUtils"
@@ -35,5 +36,22 @@ object BitmapUtils {
             Log.e(TAG, "Error getting Bitmap from URI: $uri", e)
             null
         }
+    }
+
+    fun getBitmapSize(bitmap: Bitmap): Long {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR1) {
+            getBitmapSizeApi12(bitmap)
+        } else {
+            getBitmapSizePreApi12(bitmap)
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.HONEYCOMB_MR1)
+    private fun getBitmapSizeApi12(bitmap: Bitmap): Long {
+        return bitmap.byteCount.toLong()
+    }
+
+    private fun getBitmapSizePreApi12(bitmap: Bitmap): Long {
+        return( bitmap.rowBytes * bitmap.height).toLong()
     }
 }

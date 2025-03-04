@@ -1,6 +1,5 @@
 package com.image.resizer.compose
 
-import android.R.attr.bottom
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
@@ -27,14 +26,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -51,7 +46,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
@@ -64,17 +58,21 @@ import androidx.core.graphics.scale
 import coil.compose.AsyncImage
 import java.io.File
 import java.io.FileOutputStream
-import kotlin.io.path.exists
 import androidx.core.net.toUri
 import androidx.core.graphics.createBitmap
-import kotlinx.coroutines.delay
 
 
 data class ImageItem(
     val uri: Uri,
     var scaledBitmap: Bitmap? = null,
-    var originalBitmap: Bitmap? = null
-)
+    var originalBitmap: Bitmap? = null,
+    val fileSize: Long? = null, // Size in bytes
+    val imageName: String? = null,// Original name of the image file
+    val imageDimension: Pair<Int, Int>?=null,
+    var scaledImageDimension: Pair<Int, Int>?=null,
+    var scaledFileSize: Long?=null,
+
+    )
 
 
 @Preview
@@ -133,7 +131,6 @@ fun ScaledImageScreen(
     imageItems: List<ImageItem>,
     scaleParamsList: List<ScaleParams>,
     onSaveClicked: () -> Unit,
-    modifier: Modifier = Modifier
 ) {
     var imagesScaled by remember { mutableStateOf(false) }
     var scaledImages by remember { mutableStateOf(listOf<ImageItem>()) }
@@ -246,12 +243,13 @@ fun GalleryImagesComponentPreview1() {
 
 
 @Composable
-private fun GalleryImagesComponent(imageItems: List<ImageItem>) {
+ fun GalleryImagesComponent(imageItems: List<ImageItem>) {
     val columns = if (imageItems.size > 1) {
         GridCells.Fixed(2)
     } else {
         GridCells.Fixed(1)
     }
+    Spacer(modifier = Modifier.height(20.dp))
     LazyVerticalGrid(
         columns = columns,
         contentPadding = PaddingValues(1.dp),
@@ -267,11 +265,19 @@ private fun GalleryImagesComponent(imageItems: List<ImageItem>) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceAround
             ) {
+
+                imageItem.imageDimension?.let {
+                    Text(" ${it.first}x${it.second}"  )
+                }
+                imageItem.fileSize?.let {
+                    Text("${it / 1024} kb", maxLines = 1)
+                }
+
                 Spacer(modifier = Modifier.height(4.dp))
 
                 AsyncImage(
                     placeholder = painterResource(R.drawable.ic_undo_24dp),
-                    model = imageItem.originalBitmap,
+                    model = imageItem.uri,
                     contentDescription = null,
                     modifier = Modifier.Companion
                         .align(Alignment.CenterHorizontally)
@@ -280,8 +286,6 @@ private fun GalleryImagesComponent(imageItems: List<ImageItem>) {
                         .sizeIn(minWidth = 100.dp, minHeight = 200.dp)
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(1.dp))
-                        .background(Color.Yellow)
-
                 )
             }
         }
@@ -326,9 +330,16 @@ internal fun ScaledImagesGrid(
                         horizontalAlignment = Alignment.CenterHorizontally, // Center image
                         verticalArrangement = Arrangement.SpaceBetween
                     ) {
+
                         if (imageItem.originalBitmap != null) {
                             Text("Original : ${imageItem.originalBitmap?.width ?: 0}x${imageItem.originalBitmap?.height ?: 0}")
-
+                            imageItem.fileSize?.let {
+                                val fileSizeInKb = it / 1024
+                                val fileSizeText = if (fileSizeInKb > 1000) {
+                                    "${fileSizeInKb / 1024} mb"
+                                } else "$fileSizeInKb kb"
+                                Text(fileSizeText, maxLines = 1)
+                            }
                             Image(
                                 bitmap = imageItem.originalBitmap!!.asImageBitmap(),
                                 contentDescription = "Scaled Image",
@@ -364,7 +375,13 @@ internal fun ScaledImagesGrid(
                     ) {
                         if (imageItem.scaledBitmap != null) {
                             Text("Scaled : ${imageItem.scaledBitmap?.width ?: 0}x${imageItem.scaledBitmap?.height ?: 0}")
-
+                            imageItem.scaledFileSize?.let {
+                                val fileSizeInKb = it / 1024
+                                val fileSizeText = if (fileSizeInKb > 1000) {
+                                    "${fileSizeInKb / 1024} mb"
+                                } else "$fileSizeInKb kb"
+                                Text(fileSizeText, maxLines = 1)
+                            }
                             Image(
                                 bitmap = imageItem.scaledBitmap!!.asImageBitmap(),
                                 contentDescription = "Scaled Image",
@@ -414,6 +431,12 @@ private  fun scaleImages(
         val scaledBitmap = context.contentResolver.openInputStream(imageItem.uri)?.use {
             BitmapFactory.decodeStream(it)?.scale(scaledWidth, scaledHeight, false)
         }
+        scaledBitmap?.let {
+            val sizeInBytes = BitmapUtils.getBitmapSize(scaledBitmap)
+            imageItem.scaledFileSize = sizeInBytes
+        }
+
+        imageItem.scaledImageDimension = Pair(scaledWidth,scaledHeight)
         imageItem.scaledBitmap = scaledBitmap
     }
     onComplete()
@@ -421,13 +444,13 @@ private  fun scaleImages(
 
 internal fun imageDimensionsFromUri(
     context: Context,
-    imageItem: ImageItem
+    uri: Uri
 ): Pair<Int, Int> {
     val options = BitmapFactory.Options().apply {
         inJustDecodeBounds = true
     }
 
-    context.contentResolver.openInputStream(imageItem.uri)?.use {
+    context.contentResolver.openInputStream(uri)?.use {
         BitmapFactory.decodeStream(it, null, options)
     }
     val originalWidth = options.outWidth
@@ -443,9 +466,9 @@ internal fun saveImagesToGallery(context: Context, imageItems: List<ImageItem?>,
     imageItems.filterNotNull().forEach { imageItem ->
         imageItem.scaledBitmap?.let { bitmap ->
             val displayName =
-                "ImageResizer_Scaled_${
+                "imageResizer_${
                     SimpleDateFormat(
-                        "yyyyMMdd_HHmmss",
+                        "MMdd_HHmm",
                         Locale.getDefault()
                     ).format(Date())
                 }.jpg"

@@ -60,7 +60,7 @@ import java.io.FileOutputStream
 import java.io.OutputStream
 
 // Data class to hold original and compressed image URIs
-data class ImagePair(val originalUri: Uri, val compressedUri: Uri)
+data class ImagePair(val originalImageItem: ImageItem, val transFormedImageItem: ImageItem)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -151,7 +151,7 @@ fun SettingsScreen() {
 }
 
 
-@Composable
+/*@Composable
 internal fun ImageComparisonGrid(imagePairs: List<ImagePair>) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(1),
@@ -200,7 +200,7 @@ internal fun ImageComparisonGrid(imagePairs: List<ImagePair>) {
             }
         }
     }
-}
+}*/
 
 fun getStoragePermission(): String {
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

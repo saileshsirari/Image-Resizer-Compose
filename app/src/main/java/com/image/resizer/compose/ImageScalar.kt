@@ -1,19 +1,15 @@
 package com.image.resizer.compose
 
-import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.os.Build
 import android.os.Environment
-import android.provider.MediaStore
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -25,12 +21,13 @@ class ImageScalar(private val context: Context) {
         private const val TARGET_FILE_SIZE_KB = 100
     }
 
-    suspend fun compressImagesToTargetSize(imageUris: List<Uri>, sizeInKb:Int = TARGET_FILE_SIZE_KB): List<ImageItem?> =
+    suspend fun compressImagesToTargetSize(imageItems: List<ImageItem>, sizeInKb:Int = TARGET_FILE_SIZE_KB): List<ImageItem?> =
         withContext(Dispatchers.IO) {
             val compressedImageUris = mutableListOf<ImageItem?>()
-            imageUris.forEach { imageUri ->
+            imageItems.forEach { imageItem ->
+                val imageUri = imageItem.uri
                 var bitmap = loadBitmapFromUri(imageUri) ?: return@forEach
-                val imageItem = ImageItem(uri = imageUri, originalBitmap = bitmap.config?.let { bitmap.copy(it, true) })
+                imageItem.originalBitmap =  bitmap.config?.let { bitmap.copy(it, true)}
                 var currentFileSizeKB = getFileSize(imageUri)
                 var scaleFactor = 1.0f
                 while (currentFileSizeKB > sizeInKb) {
@@ -87,51 +84,4 @@ class ImageScalar(private val context: Context) {
         return File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir)
     }
 
-    fun saveImageToGallery(scaledBitmap: Bitmap,folderName : String=  "ImageResizer"): Uri? {
-        val imageName =
-            "ImageResizer_Scaled_${
-                SimpleDateFormat(
-                    "yyyyMMdd_HHmmss",
-                    Locale.getDefault()
-                ).format(Date())
-            }.jpg"
-
-        val resolver = context.contentResolver
-        val contentValues = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, imageName)
-            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                put(
-                    MediaStore.MediaColumns.RELATIVE_PATH,
-                    Environment.DIRECTORY_PICTURES + File.separator + folderName
-                )
-            }
-        }
-
-        var imageUri: Uri? = null
-        var outputStream: OutputStream? = null
-
-        try {
-            val insertedUri =
-                resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-            if (insertedUri != null) {
-                imageUri = insertedUri
-                outputStream = resolver.openOutputStream(insertedUri)
-                if (outputStream != null) {
-                    scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                    Log.d(TAG, "Image saved to gallery: $imageUri")
-                } else {
-                    Log.e(TAG, "Error: Failed to open output stream for: $insertedUri")
-                }
-            } else {
-                Log.e(TAG, "Error: Failed to insert image into MediaStore")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error saving image to gallery: ", e)
-        } finally {
-            outputStream?.close()
-        }
-
-        return imageUri
-    }
 }
