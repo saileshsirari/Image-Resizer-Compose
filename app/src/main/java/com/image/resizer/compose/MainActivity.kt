@@ -92,8 +92,7 @@ fun BottomNavigationBar(navController: NavHostController) {
     val currentRoute = navBackStackEntry?.destination?.route
     val items = listOf(
         Screen.Home,
-        Screen.MyImages,
-        Screen.Settings
+        Screen.MyImages
     )
     NavigationBar {
         items.forEach { item ->
@@ -136,32 +135,9 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
         composable(Screen.MyImages.route) {
             MyImagesScreen()
         }
-        composable(Screen.Settings.route) {
-            SettingsScreen()
-        }
+
     }
 }
-
-
-fun getTotalCompressedImagesCount1(context: Context): Int {
-    val projection = arrayOf(MediaStore.Images.Media._ID)
-    val selection = "${MediaStore.Images.Media.DISPLAY_NAME} LIKE ?"
-    val selectionArgs = arrayOf("compressed_image_%")
-
-    val query = context.contentResolver.query(
-        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-        projection,
-        selection,
-        selectionArgs,
-        null
-    )
-
-    query?.use { cursor ->
-        return cursor.count
-    }
-    return 0
-}
-
 
 @Composable
 fun SettingsScreen() {

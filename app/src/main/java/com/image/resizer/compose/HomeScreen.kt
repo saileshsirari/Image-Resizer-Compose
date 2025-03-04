@@ -372,9 +372,7 @@ private fun HandleCompressState(
         }
 
         is CompressState.ImagesSaved -> {
-            LaunchedEffect(key1 = true) {
                 homeScreenViewModel.showSelectedImages()
-            }
         }
 
         is CompressState.PopupShown -> {
@@ -544,7 +542,7 @@ private fun GalleryImagesComponent(selectedImageUris: List<Uri>) {
         horizontalArrangement = Arrangement.spacedBy(1.dp)
     ) {
         items(selectedImageUris) { uri ->
-            Column   (
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
@@ -612,8 +610,6 @@ fun HomeScreenTopAppBar(
     onCrop: (Boolean, Uri?) -> Unit,
     onShowCompress: () -> Unit,
 ) {
-
-
     TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -629,7 +625,8 @@ fun HomeScreenTopAppBar(
             ) {
                 Text(
                     text = "Image Resizer",
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
                         .padding(end = 8.dp),
                     textAlign = TextAlign.Start,
                     maxLines = 1,
@@ -730,7 +727,7 @@ fun ActionButtonWithText(
             onClick = { onClick() },
             enabled = enabled,
             modifier = Modifier.size(24.dp),
-            ) {
+        ) {
             Icon(
                 painter = painterResource(id = iconId),
                 contentDescription = null,
