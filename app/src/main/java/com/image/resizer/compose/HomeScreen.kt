@@ -71,6 +71,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -79,10 +81,15 @@ import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+
+@Composable
+fun HomeScreenPreview1() {
+    HomeScreen()
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
-
 
     val context = LocalContext.current
     var scaledParams by remember { mutableStateOf(listOf<ScaleParams>()) }
@@ -153,12 +160,6 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                 }, onShowCompress = {
                     homeScreenViewModel.onShowCompressPopup()
                 }
-
-                /* ,  = { compressedUris ->
-                     imagePairs = selectedImageUris.zip(compressedUris) { original, compressed ->
-                         ImagePair(original, compressed)
-                     }
-                 }*/
             )
         },
         floatingActionButton = {
@@ -571,6 +572,36 @@ private fun GalleryImagesComponent(selectedImageUris: List<Uri>) {
 }
 
 
+@Preview
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeScreenTopAppBarPreview() {
+    val galleryState = GalleryState.Success(GalleryStateData(listOf(Uri.EMPTY)))
+    val imagesTransformed = true
+    val onUndo: () -> Unit = {
+
+    }
+    val onShowScalePopup: () -> Unit = {
+
+    }
+
+    val onCrop: (Boolean, Uri?) -> Unit = { _, _ ->
+
+    }
+    val onShowCompress: () -> Unit = {
+
+    }
+    HomeScreenTopAppBar(
+        imagesTransformed = imagesTransformed,
+        galleryState = galleryState,
+        onUndo = onUndo,
+        onShowScalePopup = onShowScalePopup,
+        onCrop = onCrop,
+        onShowCompress = onShowCompress
+    )
+}
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreenTopAppBar(
@@ -593,31 +624,22 @@ fun HomeScreenTopAppBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(IntrinsicSize.Min),
-                horizontalArrangement = Arrangement.Start,
+                horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Gallery App",
-                    modifier = Modifier
-                        .weight(1f)
+                    text = "Image Resizer",
+                    modifier = Modifier.weight(1f)
                         .padding(end = 8.dp),
                     textAlign = TextAlign.Start,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(modifier = Modifier.weight(1f))
                 Row(
                     modifier = Modifier
-                        .then(
-                            Modifier
-                                .then(Modifier.requiredWidthIn(min = 1.dp))
-                                .width(IntrinsicSize.Max)
-                        )
-                        .wrapContentWidth()
-                        .fillMaxHeight()
                         .padding(end = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,// Changed here
-                    horizontalArrangement = Arrangement.End// Changed here
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
 
                 ) {
 
@@ -631,7 +653,7 @@ fun HomeScreenTopAppBar(
                                         onShowCompress()
                                     },
                                     iconId = R.drawable.ic_compress_24dp,
-                                    modifier = Modifier.padding(end = 15.dp),
+                                    modifier = Modifier.padding(end = 10.dp),
                                     text = "Compress"
                                 )
                                 ActionButtonWithText(
@@ -639,8 +661,8 @@ fun HomeScreenTopAppBar(
                                         onShowScalePopup()
                                     },
                                     enabled = true,
-                                    iconId = R.drawable.ic_compress_24dp,
-                                    modifier = Modifier.padding(end = 15.dp),
+                                    iconId = R.drawable.ic_scale_24dp,
+                                    modifier = Modifier.padding(end = 10.dp),
                                     text = "Scale"
                                 )
                                 if (selectedImageUris.size == 1) {
@@ -650,8 +672,8 @@ fun HomeScreenTopAppBar(
                                                 true, selectedImageUris.first()
                                             )
                                         },
-                                        iconId = R.drawable.ic_compress_24dp,
-                                        modifier = Modifier.padding(end = 15.dp),
+                                        iconId = R.drawable.ic_crop_24dp,
+                                        modifier = Modifier.padding(end = 10.dp),
                                         text = "Crop"
                                     )
                                 }
@@ -702,13 +724,12 @@ fun ActionButtonWithText(
         modifier = modifier
             .padding(horizontal = 0.dp, vertical = 0.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Top
+        verticalArrangement = Arrangement.SpaceAround
     ) {
         IconButton(
             onClick = { onClick() },
             enabled = enabled,
             modifier = Modifier.size(24.dp),
-
             ) {
             Icon(
                 painter = painterResource(id = iconId),

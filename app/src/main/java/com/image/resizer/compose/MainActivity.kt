@@ -175,16 +175,6 @@ fun SettingsScreen() {
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Preview
-@Composable
-fun HomeScreenPreview() {
-    HomeScreen()
-}
-
-
-
-
 @Composable
 internal fun ImageComparisonGrid(imagePairs: List<ImagePair>) {
     LazyVerticalGrid(
