@@ -59,7 +59,6 @@ class HomeScreenViewModel() : ViewModel() {
 
     fun onImagesScaled(scaleParamsList: List<ScaleParams>) {
         onReset()
-        _scaleState.value = ScaleState.Loading
         _scaleState.value = ScaleState.Success(ScaleStateData(scaleParamsList))
     }
 
@@ -116,6 +115,10 @@ class HomeScreenViewModel() : ViewModel() {
 
     fun onShowCropPopup() {
         _cropState.value = CropState.PopupShown
+    }
+
+    fun dismissScalePopup() {
+        _scaleState.value = ScaleState.Idle
     }
 
 }

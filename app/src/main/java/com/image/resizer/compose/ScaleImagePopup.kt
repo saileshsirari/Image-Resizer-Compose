@@ -81,7 +81,7 @@ fun ScaleImagePopup(
             }
 
             AlertDialog(
-                onDismissRequest = onDismiss,
+                onDismissRequest = {  },
                 title = { Text("Scale Image") },
                 modifier = modifier,
                 text = {
@@ -127,15 +127,12 @@ fun ScaleImagePopup(
                 confirmButton = {
                     Button(onClick = {
                         viewModel.onScaleForList(onScale)
-                        onDismiss()
-
                     }, enabled = isButtonEnabled) {
                         Text("Apply")
                     }
                 },
                 dismissButton = {
                     Button(onClick = onDismiss) {
-                        Text("Cancel")
                     }
                 },
 //            properties = PopupProperties(focusable = true)

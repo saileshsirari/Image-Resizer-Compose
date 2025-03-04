@@ -17,6 +17,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +33,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidthIn
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -73,6 +75,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.createBitmap
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
@@ -99,7 +102,6 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
     )
     var showRationale by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(true) }
-    var showScalePopup by remember { mutableStateOf(false) }
     var showCompressPopup by remember { mutableStateOf(false) }
     var showCompressedImages by remember { mutableStateOf(false) }
     var showScaledImages by remember { mutableStateOf(false) }
@@ -288,8 +290,8 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                                 animationSpec = tween(durationMillis = 1300)
                             ),
                         ) {
-                            ScaleImagePopup(showPopup, onDismiss = {
-                                showScalePopup = false
+                            ScaleImagePopup(true, onDismiss = {
+                                homeScreenViewModel.dismissScalePopup()
                             }, originalDimensions, viewModel = viewModel, onScale = {
                                 //  it.forEachIndexed { index, it ->
                                 //  Log.d(TAG, " $it here  ${originalDimensions[index]} ")
@@ -365,11 +367,6 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
             }
         )
     }
-
-    if (showScalePopup) {
-
-    }
-
 
 }
 
@@ -597,14 +594,14 @@ internal fun ImageComparisonGrid(
     }
 }
 
-@Preview
+/*@Preview
 @Composable
 fun CroppedImageComponentPreview() {
     val sampleUri = "content://media/external/file/54".toUri()
     CroppedImageComponent(uri = sampleUri, onSaveClicked = {
         println("Save button clicked")
     })
-}
+}*/
 
 @Composable
 fun CroppedImageComponent(uri: Uri, onSaveClicked: () -> Unit) {
@@ -644,7 +641,9 @@ fun CroppedImageComponent(uri: Uri, onSaveClicked: () -> Unit) {
 fun GalleryImagesComponentPreview() {
     val sampleUris = listOf<Uri>(
         "content://media/external/file/54".toUri(),
-        "content://media/external/file/54".toUri()
+        "content://media/external/file/54".toUri(),
+        "content://media/external/file/54".toUri(),
+        "content://media/external/file/53".toUri()
     )
     GalleryImagesComponent(selectedImageUris = sampleUris)
 }
@@ -663,15 +662,29 @@ private fun GalleryImagesComponent(selectedImageUris: List<Uri>) {
         horizontalArrangement = Arrangement.spacedBy(1.dp)
     ) {
         items(selectedImageUris) { uri ->
-            AsyncImage(
-                model = uri,
-                contentDescription = null,
-                modifier = Modifier.Companion
-                    .padding(4.dp)
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(1.dp))
+            Column   (
+                modifier = Modifier
+                    .fillMaxSize()
+                    .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+                    .padding(4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceAround
+            ) {
+                Spacer(modifier = Modifier.height(4.dp))
 
-            )
+                AsyncImage(
+                    model = uri,
+                    contentDescription = null,
+                    modifier = Modifier.Companion
+                        .align(Alignment.CenterHorizontally)
+                        .fillMaxHeight()
+                        .padding(4.dp)
+                        .sizeIn(minWidth = 100.dp, minHeight = 200.dp)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(1.dp))
+
+                )
+            }
         }
     }
 }

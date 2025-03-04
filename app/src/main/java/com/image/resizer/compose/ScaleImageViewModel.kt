@@ -19,12 +19,11 @@ data class PredefinedDimension(val width: Int, val height: Int) {
 }
 
 
-
 data class ScaleParams(
     val newWidth: Int,
     val newHeight: Int,
-    val scaleFactor: Float? =null,
-    val keepAspectRatio: Boolean =true
+    val scaleFactor: Float? = null,
+    val keepAspectRatio: Boolean = true
 )
 
 class ScaleImageViewModel : ViewModel() {
@@ -74,16 +73,16 @@ class ScaleImageViewModel : ViewModel() {
 
     fun updateWidth(newWidth: String) {
         width = newWidth
-      /*  if (keepAspectRatio) {
-            updateHeightBasedOnWidth()
-        }*/
+        /*  if (keepAspectRatio) {
+              updateHeightBasedOnWidth()
+          }*/
     }
 
     fun updateHeight(newHeight: String) {
         height = newHeight
-       /* if (keepAspectRatio) {
-            updateWidthBasedOnHeight()
-        }*/
+        /* if (keepAspectRatio) {
+             updateWidthBasedOnHeight()
+         }*/
     }
 
     fun toggleKeepAspectRatio(newKeepAspectRatio: Boolean) {
@@ -92,24 +91,24 @@ class ScaleImageViewModel : ViewModel() {
 
     fun selectPredefinedDimension(dimension: PredefinedDimension, index: Int) {
         selectedPredefinedDimension = dimension
-        if(selectedPredefinedDimension.width!=-1 && selectedPredefinedDimension.height!=-1){
-          //  width = selectedPredefinedDimension.width.toString()
-         //   height = selectedPredefinedDimension.height.toString()
+        if (selectedPredefinedDimension.width != -1 && selectedPredefinedDimension.height != -1) {
+            //  width = selectedPredefinedDimension.width.toString()
+            //   height = selectedPredefinedDimension.height.toString()
         }
-       /* if (keepAspectRatio) {
-            if (aspectRatio[0] > 1) {
-                width = selectedPredefinedDimension.width.toString()
-                height =
-                    (selectedPredefinedDimension.width / aspectRatio[0]).roundToInt().toString()
-            } else {
-                height = selectedPredefinedDimension.height.toString()
-                width =
-                    (selectedPredefinedDimension.height * aspectRatio[0]).roundToInt().toString()
-            }
-        } else {
-            width = selectedPredefinedDimension.width.toString()
-            height = selectedPredefinedDimension.height.toString()
-        }*/
+        /* if (keepAspectRatio) {
+             if (aspectRatio[0] > 1) {
+                 width = selectedPredefinedDimension.width.toString()
+                 height =
+                     (selectedPredefinedDimension.width / aspectRatio[0]).roundToInt().toString()
+             } else {
+                 height = selectedPredefinedDimension.height.toString()
+                 width =
+                     (selectedPredefinedDimension.height * aspectRatio[0]).roundToInt().toString()
+             }
+         } else {
+             width = selectedPredefinedDimension.width.toString()
+             height = selectedPredefinedDimension.height.toString()
+         }*/
     }
 
     fun toggleDropdown() {
@@ -136,12 +135,12 @@ class ScaleImageViewModel : ViewModel() {
         val resultList = mutableListOf<ScaleParams>()
 
         if (mode == "custom") {
-            if(selectedPredefinedDimension.width!=-1 && selectedPredefinedDimension.height!=-1){
+            if (selectedPredefinedDimension.width != -1 && selectedPredefinedDimension.height != -1) {
                 width = selectedPredefinedDimension.width.toString()
                 height = selectedPredefinedDimension.height.toString()
             }
-            if(keepAspectRatio ){
-                if(width.isNotEmpty()){
+            if (keepAspectRatio) {
+                if (width.isNotEmpty()) {
                     val newWidth = width.toInt()
                     originalDimensions.forEach { (width, height) ->
                         //original aspect ratio
@@ -155,14 +154,14 @@ class ScaleImageViewModel : ViewModel() {
                             )
                         )
                     }
-                }else if(height.isNotEmpty()){
+                } else if (height.isNotEmpty()) {
                     val newHeight = height.toInt()
                     originalDimensions.forEach { (width, height) ->
                         //original aspect ratio
                         val aspect = width.toFloat() / height.toFloat()
                         resultList.add(
                             ScaleParams(
-                                (newHeight* aspect).roundToInt(),
+                                (newHeight * aspect).roundToInt(),
                                 newHeight,
                                 null,
                                 keepAspectRatio
@@ -171,19 +170,19 @@ class ScaleImageViewModel : ViewModel() {
                     }
                 }
             }
-            if(!keepAspectRatio && width.isNotEmpty() && height.isNotEmpty()) {
+            if (!keepAspectRatio && width.isNotEmpty() && height.isNotEmpty()) {
                 val newWidth = width.toInt()
                 val newHeight = height.toInt()
-                    originalDimensions.forEach { (_, _) ->
-                        resultList.add(
-                            ScaleParams(
-                                newWidth,
-                                newHeight,
-                                null,
-                                keepAspectRatio
-                            )
+                originalDimensions.forEach { (_, _) ->
+                    resultList.add(
+                        ScaleParams(
+                            newWidth,
+                            newHeight,
+                            null,
+                            keepAspectRatio
                         )
-                    }
+                    )
+                }
             }
 
         } else {

@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -125,6 +126,7 @@ fun ScaledImageScreenPreview() {
         }
     )
 }
+const val TAG = "ScaledImageScreen"
 
 @Composable
 fun ScaledImageScreen(
@@ -140,7 +142,6 @@ fun ScaledImageScreen(
         if (scaleParamsList.isNotEmpty()) {
             imagesScaled = false
             withContext(Dispatchers.IO) {
-                delay(200)
                 scaleImages(imageItems, scaleParamsList, context) {
                     imagesScaled = true
                     scaledImages = imageItems
@@ -157,11 +158,12 @@ fun ScaledImageScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.Companion.CenterHorizontally
         ) {
+            Log.d(TAG,"ScaledImageScreen $imagesScaled ${scaleParamsList?.size}" )
              if(imagesScaled) {
                  ScaledImagesGrid(
                      modifier = Modifier
                          .fillMaxSize()
-                         .padding(bottom = 80.dp), scaledImages, imageItems
+                         .padding(bottom = 10.dp), scaledImages, imageItems
                  )
              }else{
                  Text("Scaling...")
@@ -191,6 +193,101 @@ fun ScaledImageScreen(
 }
 
 
+@Preview
+@Composable
+fun ScaledImagesGridPreview() {
+    val uri = "content://media/external/file/25".toUri()
+    val imageItems = listOf(
+        ImageItem(
+            uri = uri,
+            scaledBitmap = createBitmap(300, 300),
+            originalBitmap = createBitmap(100, 200)
+        ),
+        ImageItem(
+            uri = uri, scaledBitmap = null,
+            originalBitmap = createBitmap(100, 100)
+        ),
+        ImageItem(
+            uri = uri, scaledBitmap = null,
+            originalBitmap = createBitmap(100, 100)
+        ),
+    )
+    ScaledImagesGrid(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(bottom = 10.dp), scaledImages = imageItems, imageItems
+    )
+}
+
+@Preview
+@Composable
+fun GalleryImagesComponentPreview1() {
+    val uri = "content://media/external/file/25".toUri()
+    val imageItems = listOf(
+        ImageItem(
+            uri = uri,
+            scaledBitmap = createBitmap(300, 300),
+            originalBitmap = createBitmap(100, 200)
+        ),
+        ImageItem(
+            uri = uri, scaledBitmap = null,
+            originalBitmap = createBitmap(100, 100)
+        ),
+        ImageItem(
+            uri = uri, scaledBitmap = null,
+            originalBitmap = createBitmap(100, 100)
+        ),
+    )
+    GalleryImagesComponent(
+        imageItems = imageItems
+    )
+}
+
+
+
+@Composable
+private fun GalleryImagesComponent(imageItems: List<ImageItem>) {
+    val columns = if (imageItems.size > 1) {
+        GridCells.Fixed(2)
+    } else {
+        GridCells.Fixed(1)
+    }
+    LazyVerticalGrid(
+        columns = columns,
+        contentPadding = PaddingValues(1.dp),
+        verticalArrangement = Arrangement.spacedBy(1.dp),
+        horizontalArrangement = Arrangement.spacedBy(1.dp)
+    ) {
+        items(imageItems) { imageItem ->
+            Column   (
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+                    .padding(4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceAround
+            ) {
+                Spacer(modifier = Modifier.height(4.dp))
+
+                AsyncImage(
+                    placeholder = painterResource(R.drawable.ic_undo_24dp),
+                    model = imageItem.originalBitmap,
+                    contentDescription = null,
+                    modifier = Modifier.Companion
+                        .align(Alignment.CenterHorizontally)
+                        .fillMaxHeight()
+                        .padding(4.dp)
+                        .sizeIn(minWidth = 100.dp, minHeight = 200.dp)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(1.dp))
+                        .background(Color.Yellow)
+
+                )
+            }
+        }
+    }
+}
+
 @Composable
 internal fun ScaledImagesGrid(
     modifier: Modifier,
@@ -205,19 +302,18 @@ internal fun ScaledImagesGrid(
     } else {
         LazyVerticalGrid(
             columns = GridCells.Fixed(1),
-            contentPadding = PaddingValues(bottom = 20.dp, top = 10.dp),
+            contentPadding = PaddingValues(bottom = 5.dp, top = 10.dp, start = 5.dp, end = 5.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
             horizontalArrangement = Arrangement.spacedBy(5.dp),
             modifier = modifier
-                .border(10.dp, Color.Yellow, RoundedCornerShape(8.dp))
         ) {
             items(scaledImages.size) { index ->
                 val imageItem = scaledImages[index]
                 Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .border(1.dp, Color.Red),
-                    horizontalArrangement = Arrangement.Center, // Center columns
+                        .fillMaxSize()
+                        .border(1.dp, Color.Gray),
+                    horizontalArrangement = Arrangement.SpaceBetween, // Center columns
                     verticalAlignment = Alignment.CenterVertically // Center vertically
                 ) {
                     // First Column
@@ -228,7 +324,7 @@ internal fun ScaledImagesGrid(
                             .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
                             .padding(4.dp),
                         horizontalAlignment = Alignment.CenterHorizontally, // Center image
-                        verticalArrangement = Arrangement.Center
+                        verticalArrangement = Arrangement.SpaceBetween
                     ) {
                         if (imageItem.originalBitmap != null) {
                             Text("Original : ${imageItem.originalBitmap?.width ?: 0}x${imageItem.originalBitmap?.height ?: 0}")
@@ -249,7 +345,7 @@ internal fun ScaledImagesGrid(
                             )
                         } else {
                             Text(
-                                text = "Scaling...",
+                                text = "loading ...",
                                 textAlign = TextAlign.Center
                             )
                         }
@@ -261,15 +357,17 @@ internal fun ScaledImagesGrid(
                         modifier = Modifier
                             .weight(1f) // Equal weight for both columns
                             .fillMaxWidth()
+                            .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
                             .padding(4.dp),
                         horizontalAlignment = Alignment.CenterHorizontally, // Center image
-                        verticalArrangement = Arrangement.Center
+                        verticalArrangement = Arrangement.SpaceBetween
                     ) {
                         if (imageItem.scaledBitmap != null) {
-                            Text("Scaled: ${imageItem.scaledBitmap?.width ?: 0}x${imageItem.scaledBitmap?.height ?: 0}")
+                            Text("Scaled : ${imageItem.scaledBitmap?.width ?: 0}x${imageItem.scaledBitmap?.height ?: 0}")
+
                             Image(
                                 bitmap = imageItem.scaledBitmap!!.asImageBitmap(),
-                                contentDescription = "Scaled",
+                                contentDescription = "Scaled Image",
                                 modifier = Modifier
                                     .sizeIn(
                                         minWidth = 200.dp,
@@ -281,9 +379,9 @@ internal fun ScaledImagesGrid(
                                     .padding(1.dp),
                                 contentScale = ContentScale.Crop
                             )
-                        } else if (imageItems.size > 1) {
+                        } else {
                             Text(
-                                text = "Scaling...",
+                                text = "loading ...",
                                 textAlign = TextAlign.Center
                             )
                         }
