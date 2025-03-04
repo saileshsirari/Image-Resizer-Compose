@@ -1,7 +1,8 @@
+@file:Suppress("DEPRECATION")
+
 package com.image.resizer.compose
 
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -21,7 +22,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -44,8 +44,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -59,11 +57,10 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -73,10 +70,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.createBitmap
-import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -85,38 +79,26 @@ import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
-    val TAG = "HomeScreen"
+
+
     val context = LocalContext.current
-    var imagePairs by remember { mutableStateOf(listOf<ImagePair>()) }
     var scaledParams by remember { mutableStateOf(listOf<ScaleParams>()) }
     val viewModel = ScaleImageViewModel()
-    var scaledToKb by remember { mutableStateOf(listOf<ImagePair>()) }
-
     // State to control the popup's visibility
     val galleryPermissionState = rememberPermissionState(
         getStoragePermission()
     )
     var showRationale by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(true) }
-    var showCompressPopup by remember { mutableStateOf(false) }
-    var showCompressedImages by remember { mutableStateOf(false) }
-    var showScaledImages by remember { mutableStateOf(false) }
     var imagesDimensions by remember { mutableStateOf(listOf<Pair<Int, Int>>()) }
     //states
     val cropState by homeScreenViewModel.cropState.collectAsState()
     val compressState by homeScreenViewModel.compressState.collectAsState()
     val scaleState by homeScreenViewModel.scaleState.collectAsState()
     val galleryState by homeScreenViewModel.galleryState.collectAsState()
-
-    var selectedImageUris by remember { mutableStateOf(emptyList<Uri>()) }
-
-    var showCropDialog by remember { mutableStateOf(false) }
-    var imageToCrop by remember { mutableStateOf<Uri?>(null) }
-    var croppedBitmapUri by remember { mutableStateOf<Uri?>(null) }
     var showToast by remember { mutableStateOf(false) }
     val showImages by remember {
         derivedStateOf { galleryState is GalleryState.Success }
@@ -128,7 +110,6 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
         }
     }
 
-    var galleryImagesVisible by remember { mutableStateOf(false) }
     val cropImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -218,7 +199,7 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-                handleGalleryState(galleryState, showImages)
+                HandleGalleryState(galleryState, showImages)
 
                 val currentCropState = cropState
                 when (currentCropState) {
@@ -270,7 +251,6 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                     }
                 }
                 val currentScaleState = scaleState
-                val showPopup = currentScaleState is ScaleState.ShowPopup
                 when (currentScaleState) {
                     is ScaleState.Idle, is ScaleState.Loading -> {
 
@@ -280,7 +260,7 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                         val originalDimensions = imagesDimensions
                         // Implement image scaling logic here
                         AnimatedVisibility(
-                            visible = showPopup,
+                            visible = true,
                             enter = fadeIn(animationSpec = tween(durationMillis = 2000)) + expandVertically(
                                 expandFrom = Alignment.Companion.CenterVertically,
                                 animationSpec = tween(durationMillis = 1300)
@@ -324,7 +304,7 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
 
                 }
                 val currentCompressState = compressState
-                handleCompressState(
+                HandleCompressState(
                     currentCompressState,
                     homeScreenViewModel,
                 )
@@ -371,7 +351,7 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
 }
 
 @Composable
-private fun handleCompressState(
+private fun HandleCompressState(
     currentCompressState: CompressState,
     homeScreenViewModel: HomeScreenViewModel,
 ) {
@@ -415,7 +395,7 @@ private fun handleCompressState(
 }
 
 @Composable
-private fun ColumnScope.handleGalleryState(
+private fun HandleGalleryState(
     galleryState: GalleryState,
     showImages: Boolean
 ) {
@@ -512,96 +492,8 @@ fun CompressToKbImageScreen(
             }
         }
     }
-    /* Box(
-         modifier = Modifier
-             .fillMaxSize()
-     ) {
-         Column(
-             modifier = Modifier.Companion
-                 .fillMaxWidth(),
-             verticalArrangement = Arrangement.Center,
-             horizontalAlignment = Alignment.Companion.CenterHorizontally
-         ) {
-             if (imagesScaled) {
-                 ImageComparisonGrid(scaledImages.filterNotNull(), onSaveClicked)
-             }
-         }
-
-     }*/
 }
 
-@Composable
-internal fun ImageComparisonGrid(
-    imageItems: List<ImageItem>,
-    onSaveClicked: (List<ImageItem?>) -> Unit
-) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(1),
-            contentPadding = PaddingValues(8.dp),
-        ) {
-            items(imageItems) { pair ->
-                Row(
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly // Distribute space evenly
-                ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        horizontalAlignment = Alignment.CenterHorizontally // Center items horizontally
-                    ) {
-                        Text(
-                            "Compressed",
-                            textAlign = TextAlign.Center
-                        )
-                        AsyncImage(
-                            model = pair?.scaledBitmap,
-                            contentDescription = "Compressed Image",
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .fillMaxWidth()
-                        )
-                    }
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        horizontalAlignment = Alignment.CenterHorizontally // Center items horizontally
-                    ) {
-                        Text(
-                            "Original",
-                            textAlign = TextAlign.Center
-                        )
-                        AsyncImage(
-                            model = pair?.originalBitmap,
-                            contentDescription = "Original Image",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                        )
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = { onSaveClicked(imageItems) }) {
-            Text("Save Kb Scaled Images")
-        }
-    }
-}
-
-/*@Preview
-@Composable
-fun CroppedImageComponentPreview() {
-    val sampleUri = "content://media/external/file/54".toUri()
-    CroppedImageComponent(uri = sampleUri, onSaveClicked = {
-        println("Save button clicked")
-    })
-}*/
 
 @Composable
 fun CroppedImageComponent(uri: Uri, onSaveClicked: () -> Unit) {
@@ -636,17 +528,6 @@ fun CroppedImageComponent(uri: Uri, onSaveClicked: () -> Unit) {
     }
 }
 
-@Preview
-@Composable
-fun GalleryImagesComponentPreview() {
-    val sampleUris = listOf<Uri>(
-        "content://media/external/file/54".toUri(),
-        "content://media/external/file/54".toUri(),
-        "content://media/external/file/54".toUri(),
-        "content://media/external/file/53".toUri()
-    )
-    GalleryImagesComponent(selectedImageUris = sampleUris)
-}
 
 @Composable
 private fun GalleryImagesComponent(selectedImageUris: List<Uri>) {
@@ -745,7 +626,7 @@ fun HomeScreenTopAppBar(
                             val selectedImageUris = galleryState.data.imageUris
                             if (selectedImageUris.isNotEmpty()) {
                                 ActionButtonWithText(
-                                    enabled = selectedImageUris.isNotEmpty(),
+                                    enabled = true,
                                     onClick = {
                                         onShowCompress()
                                     },
@@ -757,7 +638,7 @@ fun HomeScreenTopAppBar(
                                     onClick = {
                                         onShowScalePopup()
                                     },
-                                    enabled = selectedImageUris.isNotEmpty(),
+                                    enabled = true,
                                     iconId = R.drawable.ic_compress_24dp,
                                     modifier = Modifier.padding(end = 15.dp),
                                     text = "Scale"
@@ -811,11 +692,11 @@ fun HomeScreenTopAppBar(
 
 @Composable
 fun ActionButtonWithText(
+    modifier: Modifier = Modifier,
     enabled: Boolean = true,
     onClick: () -> Unit,
     iconId: Int,
-    text: String,
-    modifier: Modifier = Modifier
+    text: String
 ) {
     Column(
         modifier = modifier
@@ -835,85 +716,13 @@ fun ActionButtonWithText(
             )
         }
         Text(
+            modifier = Modifier.padding(top = 2.dp),
             text = text,
             style = MaterialTheme.typography.titleSmall,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 2.dp),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun OverflowMenu(
-    imagesShow: Boolean = false,
-    croppedImageUri: Uri? = null,
-    context: Context,
-    onUndo: () -> Unit,
-    onCrop: (Boolean, Uri?) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-    Box {
-        Column(
-            modifier = Modifier
-                .padding(start = 10.dp, end = 0.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top
-        ) {
-
-            IconButton(onClick = { expanded = true }, modifier = Modifier.size(24.dp)) {
-                Icon(
-
-                    painterResource(id = R.drawable.ic_more_horiz_24dp),
-                    contentDescription = "More",
-                )
-            }
-
-
-            Text(
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.padding(top = 4.dp),
-                text = "More",
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            /* DropdownMenuItem(
-                 text = { Text("Crop") },
-                 onClick = {
-                     expanded = false
-                     onCrop(
-                         true, if (croppedImageUri!=null) {
-                             croppedImageUri
-                         } else null
-                     )
-
-                 },
-                 leadingIcon = {
-                     Icon(painterResource(id = R.drawable.ic_crop_24dp), "Crop")
-                 },
-                 enabled = croppedImageUri!=null
-             )*/
-            DropdownMenuItem(
-                text = { Text("Undo") },
-                onClick = {
-                    expanded = false
-                    onUndo()
-                },
-                leadingIcon = {
-                    Icon(painterResource(id = R.drawable.ic_undo_24dp), "Undo")
-                },
-                enabled = imagesShow
-            )
-        }
-    }
-}
