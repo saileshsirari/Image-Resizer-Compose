@@ -1,5 +1,6 @@
 package com.image.resizer.compose
 
+import android.R.attr.onClick
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
@@ -10,9 +11,16 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +36,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.material3.Button
@@ -45,6 +54,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -60,6 +70,8 @@ import java.io.File
 import java.io.FileOutputStream
 import androidx.core.net.toUri
 import androidx.core.graphics.createBitmap
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 
 
 data class ImageItem(
@@ -71,7 +83,7 @@ data class ImageItem(
     val imageDimension: Pair<Int, Int>?=null,
     var scaledImageDimension: Pair<Int, Int>?=null,
     var scaledFileSize: Long?=null,
-
+    var scaledUri: Uri ? =null
     )
 
 
@@ -298,109 +310,148 @@ internal fun ScaledImagesGrid(
     scaledImages: List<ImageItem>,
     imageItems: List<ImageItem>
 ) {
+    val context = LocalContext.current
+    var selectedImageItem by remember { mutableStateOf<ImageItem?>(null) }
+    val lazyGridState = rememberLazyGridState()
+    var showComparisonView by remember { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                showComparisonView = false
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+    }
     if (imageItems.isEmpty()) {
         Text(
             text = "No images selected.",
             textAlign = TextAlign.Center
         )
     } else {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(1),
-            contentPadding = PaddingValues(bottom = 5.dp, top = 10.dp, start = 5.dp, end = 5.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            horizontalArrangement = Arrangement.spacedBy(5.dp),
-            modifier = modifier
-        ) {
-            items(scaledImages.size) { index ->
-                val imageItem = scaledImages[index]
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .border(1.dp, Color.Gray),
-                    horizontalArrangement = Arrangement.SpaceBetween, // Center columns
-                    verticalAlignment = Alignment.CenterVertically // Center vertically
-                ) {
-                    // First Column
-                    Column(
-                        modifier = Modifier
-                            .weight(1f) // Equal weight for both columns
-                            .fillMaxWidth()
-                            .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
-                            .padding(4.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally, // Center image
-                        verticalArrangement = Arrangement.SpaceBetween
-                    ) {
+        if (showComparisonView && selectedImageItem != null) {
 
-                        if (imageItem.originalBitmap != null) {
-                            Text("Original : ${imageItem.originalBitmap?.width ?: 0}x${imageItem.originalBitmap?.height ?: 0}")
-                            imageItem.fileSize?.let {
-                                val fileSizeInKb = it / 1024
-                                val fileSizeText = if (fileSizeInKb > 1000) {
-                                    "${fileSizeInKb / 1024} mb"
-                                } else "$fileSizeInKb kb"
-                                Text(fileSizeText, maxLines = 1)
+            AnimatedVisibility(
+                visible = showComparisonView,
+                enter = slideInHorizontally(
+                    initialOffsetX = { fullWidth -> fullWidth },
+                    animationSpec = tween(durationMillis = 1500)
+                ) + fadeIn(),
+                exit = slideOutHorizontally(
+                    targetOffsetX = { fullWidth -> fullWidth },
+                    animationSpec = tween(durationMillis = 1500)
+                ) + fadeOut()
+            ) {
+                ImageComparisonView(imageItem = selectedImageItem!!)
+            }
+        }else if(!showComparisonView) {
+            LazyVerticalGrid(
+                state = lazyGridState,
+                columns = GridCells.Fixed(1),
+                contentPadding = PaddingValues(
+                    bottom = 5.dp,
+                    top = 10.dp,
+                    start = 5.dp,
+                    end = 5.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                modifier = modifier
+            ) {
+                items(scaledImages, key = { item -> item.uri.hashCode() }) { imageItem ->
+                    Row(
+                        modifier = Modifier
+                            .clickable(onClick = {
+                                selectedImageItem = saveBitmapToTempAndGetUri(context, imageItem)
+                                showComparisonView = true
+                            })
+                            .fillMaxSize()
+                            .border(1.dp, Color.Gray),
+                        horizontalArrangement = Arrangement.SpaceBetween, // Center columns
+                        verticalAlignment = Alignment.CenterVertically // Center vertically
+                    ) {
+                        // First Column
+                        Column(
+                            modifier = Modifier
+                                .weight(1f) // Equal weight for both columns
+                                .fillMaxWidth()
+                                .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+                                .padding(4.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally, // Center image
+                            verticalArrangement = Arrangement.SpaceBetween
+                        ) {
+
+                            if (imageItem.originalBitmap != null) {
+                                Text("Original : ${imageItem.originalBitmap?.width ?: 0}x${imageItem.originalBitmap?.height ?: 0}")
+                                imageItem.fileSize?.let {
+                                    val fileSizeInKb = it / 1024
+                                    val fileSizeText = if (fileSizeInKb > 1000) {
+                                        "${fileSizeInKb / 1024} mb"
+                                    } else "$fileSizeInKb kb"
+                                    Text(fileSizeText, maxLines = 1)
+                                }
+                                Image(
+                                    bitmap = imageItem.originalBitmap!!.asImageBitmap(),
+                                    contentDescription = "Scaled Image",
+                                    modifier = Modifier
+                                        .sizeIn(
+                                            minWidth = 200.dp,
+                                            minHeight = 200.dp,
+                                            maxHeight = 300.dp
+                                        )
+                                        .fillMaxWidth()
+                                        .fillMaxHeight()
+                                        .padding(1.dp),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Text(
+                                    text = "loading ...",
+                                    textAlign = TextAlign.Center
+                                )
                             }
-                            Image(
-                                bitmap = imageItem.originalBitmap!!.asImageBitmap(),
-                                contentDescription = "Scaled Image",
-                                modifier = Modifier
-                                    .sizeIn(
-                                        minWidth = 200.dp,
-                                        minHeight = 200.dp,
-                                        maxHeight = 300.dp
-                                    )
-                                    .fillMaxWidth()
-                                    .fillMaxHeight()
-                                    .padding(1.dp),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Text(
-                                text = "loading ...",
-                                textAlign = TextAlign.Center
-                            )
                         }
-                    }
 
 
-                    // Second Column
-                    Column(
-                        modifier = Modifier
-                            .weight(1f) // Equal weight for both columns
-                            .fillMaxWidth()
-                            .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
-                            .padding(4.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally, // Center image
-                        verticalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        if (imageItem.scaledBitmap != null) {
-                            Text("Scaled : ${imageItem.scaledBitmap?.width ?: 0}x${imageItem.scaledBitmap?.height ?: 0}")
-                            imageItem.scaledFileSize?.let {
-                                val fileSizeInKb = it / 1024
-                                val fileSizeText = if (fileSizeInKb > 1000) {
-                                    "${fileSizeInKb / 1024} mb"
-                                } else "$fileSizeInKb kb"
-                                Text(fileSizeText, maxLines = 1)
+                        // Second Column
+                        Column(
+                            modifier = Modifier
+                                .weight(1f) // Equal weight for both columns
+                                .fillMaxWidth()
+                                .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+                                .padding(4.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally, // Center image
+                            verticalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            if (imageItem.scaledBitmap != null) {
+                                Text("Scaled : ${imageItem.scaledBitmap?.width ?: 0}x${imageItem.scaledBitmap?.height ?: 0}")
+                                imageItem.scaledFileSize?.let {
+                                    val fileSizeInKb = it / 1024
+                                    val fileSizeText = if (fileSizeInKb > 1000) {
+                                        "${fileSizeInKb / 1024} mb"
+                                    } else "$fileSizeInKb kb"
+                                    Text(fileSizeText, maxLines = 1)
+                                }
+                                Image(
+                                    bitmap = imageItem.scaledBitmap!!.asImageBitmap(),
+                                    contentDescription = "Scaled Image",
+                                    modifier = Modifier
+                                        .sizeIn(
+                                            minWidth = 200.dp,
+                                            minHeight = 200.dp,
+                                            maxHeight = 300.dp
+                                        )
+                                        .fillMaxWidth()
+                                        .fillMaxHeight()
+                                        .padding(1.dp),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Text(
+                                    text = "loading ...",
+                                    textAlign = TextAlign.Center
+                                )
                             }
-                            Image(
-                                bitmap = imageItem.scaledBitmap!!.asImageBitmap(),
-                                contentDescription = "Scaled Image",
-                                modifier = Modifier
-                                    .sizeIn(
-                                        minWidth = 200.dp,
-                                        minHeight = 200.dp,
-                                        maxHeight = 300.dp
-                                    )
-                                    .fillMaxWidth()
-                                    .fillMaxHeight()
-                                    .padding(1.dp),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Text(
-                                text = "loading ...",
-                                textAlign = TextAlign.Center
-                            )
                         }
                     }
                 }

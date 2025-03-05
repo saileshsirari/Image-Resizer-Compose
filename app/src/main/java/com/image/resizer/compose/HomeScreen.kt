@@ -75,6 +75,8 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.image.resizer.compose.ImageHelper.getFileNameAndSize
+import com.image.resizer.compose.ImageReplacer.deleteImage
+import com.image.resizer.compose.ImageReplacer.deleteSelectedImages
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -238,7 +240,7 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                                             )
                                         )
                                     )
-                                    homeScreenViewModel.showToast(true)
+                                    homeScreenViewModel.showToast()
                                     homeScreenViewModel.showSelectedImages()
                                 }
                             }
@@ -299,7 +301,7 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                                 imageItems = imageItems,
                                 currentScaleState.data.scaleParamsList,
                                 onSaveClicked = {
-                                    homeScreenViewModel.showToast(true)
+                                    homeScreenViewModel.showToast()
                                     homeScreenViewModel.showSelectedImages()
                                 })
                         }
@@ -321,10 +323,10 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
     }
 
     // Conditionally display the toast
-    if (showToast) {
+    if (showToast.isNotEmpty()) {
         LaunchedEffect(key1 = true) {
-            Toast.makeText(context, "Image saved", Toast.LENGTH_SHORT).show()
-            homeScreenViewModel.showToast(false) // Reset the state after showing the toast
+            Toast.makeText(context, showToast, Toast.LENGTH_SHORT).show()
+            homeScreenViewModel.showToast("") // Reset the state after showing the toast
         }
     }
     if (showRationale) {
@@ -363,7 +365,18 @@ private fun HandleCompressState(
     currentCompressState: CompressState,
     homeScreenViewModel: HomeScreenViewModel,
 ) {
+    var deleteImages by remember { mutableStateOf(false) }
+
     val context = LocalContext.current
+    if(deleteImages) {
+
+        deleteImage(context, homeScreenViewModel.selectedImageItems.map { it.uri }.first(), onDeleted = {
+
+
+        })
+        deleteImages =false
+
+    }
     when (currentCompressState) {
         is CompressState.Success -> {
             if (homeScreenViewModel.selectedImageItems.isNotEmpty()) {
@@ -371,20 +384,26 @@ private fun HandleCompressState(
                     imageItems = homeScreenViewModel.selectedImageItems,
                     sizeInKb = currentCompressState.data.size,
                     onSaveClicked = {
+//                        deleteImages =true
                         saveImagesToGallery(context, it)
-                        homeScreenViewModel.showToast(true)
+                        homeScreenViewModel.showToast()
                     },
                     onSReplaceClicked = {
+                        var replaced = true
                         it.forEach { imageItem ->
                             imageItem.scaledBitmap?.let {
-                                ImageReplacer.replaceOriginalImageWithBitmap(
+                                replaced = ImageReplacer.replaceOriginalImageWithBitmap(
                                     context,
                                     imageItem.uri,
                                     it
                                 )
                             }
                         }
-                        homeScreenViewModel.showToast(true)
+                        if(replaced) {
+                            homeScreenViewModel.showToast("Images replaced")
+                        }else{
+                            homeScreenViewModel.showToast("Error in replacing images  ")
+                        }
                     })
             }
         }

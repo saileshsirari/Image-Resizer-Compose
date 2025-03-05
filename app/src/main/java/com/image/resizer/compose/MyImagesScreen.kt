@@ -86,8 +86,10 @@ import coil.compose.AsyncImagePainter
 import coil.compose.SubcomposeAsyncImage
 import coil.compose.SubcomposeAsyncImageContent
 import com.image.resizer.compose.ImageHelper.getRealCompressedImageUris
+import com.image.resizer.compose.ImageReplacer.deleteSelectedImages
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.collections.remove
 import kotlin.math.min
 
 data class PaginationState(
@@ -134,52 +136,9 @@ fun MyImagesScreen() {
     var imageSelectionMode by remember { mutableStateOf(false) }
     var showShareSheet by remember { mutableStateOf(false) }
     var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
-    var deletePendingUris by remember {
-        mutableStateOf<List<Uri>>(
-            emptyList()
-        )
-    }
-    var deletePendingRecoverableSecurityException by remember {
-        mutableStateOf<RecoverableSecurityException?>(
-            null
-        )
-    }
+    var deleteImages by remember { mutableStateOf(false) }
 
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartIntentSenderForResult()
-    ) { result: ActivityResult ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            // Retry deletion for all uris
-            if (deletePendingRecoverableSecurityException != null) {
-                deletePendingRecoverableSecurityException?.let { exception ->
-                    deletePendingUris.forEach { uri ->
-                        try {
-                            context.contentResolver.delete(uri, null, null)
-                        } catch (e: SecurityException) {
-                            // Handle any further errors (e.g., log them)
-                            e.printStackTrace()
-                        }
-                    }
-                }
-            } else {
-                val list = actualImageItems.toMutableList()
-                selectedImages.forEach {
-                    list.remove(it)
-                }
-                actualImageItems = list
-                selectedImages.clear()
-                selectAll = false
-                imageSelectionMode = false
-                actualImageItems = getActualImageUris(context, placeholders)
-            }
 
-        } else {
-            // Handle failure or user cancellation
-            Log.e("MyImagesScreen", "Deletion failed or cancelled by user")
-        }
-        deletePendingUris = emptyList()
-        deletePendingRecoverableSecurityException = null
-    }
     //update menu status
     val anyImageSelected = selectedImages.isNotEmpty()
     val showMenuItems = totalImagesCount > 0
@@ -312,6 +271,7 @@ fun MyImagesScreen() {
             )
         }
     ) { innerPadding ->
+
         LaunchedEffect(key1 = Unit) {
             requestStoragePermission()
         }
@@ -322,7 +282,8 @@ fun MyImagesScreen() {
                 text = { Text(stringResource(R.string.delete_confirmation_message)) },
                 confirmButton = {
                     Button(onClick = {
-                        deleteSelectedImages(context, selectedImages.map { it.uri }, launcher)
+                        deleteImages= true
+
 
                         showDeleteConfirmationDialog = false
                     }) {
@@ -335,6 +296,22 @@ fun MyImagesScreen() {
                     }
                 }
             )
+        }
+        if(deleteImages) {
+
+                deleteSelectedImages(context, selectedImages.map { it.uri }, onDeleted = {
+                    val list = actualImageItems.toMutableList()
+                    selectedImages.forEach {
+                        list.remove(it)
+                    }
+                    actualImageItems = list
+                    selectedImages.clear()
+                    selectAll = false
+                    imageSelectionMode = false
+                    actualImageItems = getActualImageUris(context, placeholders)
+                    deleteImages = false
+                })
+
         }
         if (showShareSheet) {
             ModalBottomSheet(
@@ -546,58 +523,7 @@ fun getActualImageUris(context: Context, placeholders: List<Nothing?>): List<Ima
     return imageItems
 }
 
-fun deleteSelectedImages(
-    context: Context,
-    selectedImages: List<Uri>,
-    launcher: androidx.activity.result.ActivityResultLauncher<IntentSenderRequest>
-) {
-    val urisToDelete = mutableListOf<Uri>()
-    val contentResolver = context.contentResolver
 
-    val recoverableSecurityExceptions = mutableListOf<RecoverableSecurityException>()
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        val trashIntent = MediaStore.createTrashRequest(
-            contentResolver,
-            selectedImages, true
-        )
-        val intentSenderRequest = IntentSenderRequest.Builder(trashIntent).build()
-        launcher.launch(intentSenderRequest)
-
-    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-
-        selectedImages.forEach { uri ->
-            try {
-                contentResolver.delete(uri, null, null)
-            } catch (securityException: SecurityException) {
-                val recoverableSecurityException =
-                    securityException as? RecoverableSecurityException
-                if (recoverableSecurityException != null) {
-                    recoverableSecurityExceptions.add(recoverableSecurityException)
-                    urisToDelete.add(uri)
-                }
-
-            }
-        }
-        if (recoverableSecurityExceptions.isNotEmpty()) {
-            val intentSender =
-                recoverableSecurityExceptions.first().userAction.actionIntent.intentSender
-            val intentSenderRequest = IntentSenderRequest.Builder(intentSender).build()
-            launcher.launch(intentSenderRequest)
-        }
-
-    } else {
-        selectedImages.forEach { uri ->
-            try {
-                contentResolver.delete(uri, null, null)
-            } catch (securityException: SecurityException) {
-                securityException.printStackTrace()
-                // Handle the exception for pre-Q devices
-                // You can show a message to the user indicating that deletion failed.
-                // Example: Toast.makeText(context, "Deletion failed", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-}
 
 
 fun getTotalTransformedImagesCount(context: Context): Int {
