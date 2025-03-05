@@ -27,8 +27,8 @@ object ImageHelper {
         return Pair("", 0L)
     }
 
-    internal fun getRealCompressedImageUris(context: Context, indexesToLoad: List<Int>): List<Uri?> {
-        val compressedImageUris = mutableListOf<Uri?>()
+    internal fun getRealCompressedImageUris(context: Context, indexesToLoad: List<Int>): List<ImageItem?> {
+        val compressedImageUris = mutableListOf<ImageItem>()
         if (indexesToLoad.isEmpty()) return compressedImageUris
 
         val projection = arrayOf(
@@ -52,7 +52,8 @@ object ImageHelper {
         )
         cursor?.use {
             val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-            val imageIds = MutableList<Long?>(indexesToLoad.size) { null }
+            val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME)
+            val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.SIZE)
             val totalCount = cursor.count
             if (totalCount == 0) {
                 return emptyList()
@@ -60,7 +61,8 @@ object ImageHelper {
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idColumn)
                 val contentUri = ContentUris.withAppendedId(queryUri, id)
-                compressedImageUris.add(contentUri)
+                val imageItem = ImageItem(uri = contentUri, imageName = cursor.getString(nameColumn), fileSize = cursor.getLong(sizeColumn))
+                compressedImageUris.add(imageItem)
             }
         }
         return compressedImageUris

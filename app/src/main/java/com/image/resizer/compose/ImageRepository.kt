@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface ImageRepository {
     fun getTotalCompressedImagesCount(): Int
-    suspend fun getRealCompressedImageUris(imageIndexes: List<Int>): List<Uri?>
-    fun deleteImages(images: List<Uri>)
-    fun getImages(): List<Uri?>
+    suspend fun getRealCompressedImageUris(imageIndexes: List<Int>): List<ImageItem?>
+    fun deleteImages(images: List<ImageItem>)
+    fun getImages(): List<ImageItem?>
 }

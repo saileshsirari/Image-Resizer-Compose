@@ -103,7 +103,8 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
     val compressState by homeScreenViewModel.compressState.collectAsState()
     val scaleState by homeScreenViewModel.scaleState.collectAsState()
     val galleryState by homeScreenViewModel.galleryState.collectAsState()
-    var showToast by remember { mutableStateOf(false) }
+    val showToast by homeScreenViewModel.showToast.collectAsState()
+
     val showImages by remember {
         derivedStateOf { galleryState is GalleryState.Success }
     }
@@ -135,8 +136,13 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
             if (uris.isNotEmpty()) {
                 val selectedImageItems = uris.map { uri ->
                     val (imageName, fileSize) = getFileNameAndSize(context, uri)
-                    val imagesDimensions= imageDimensionsFromUri(context, uri)
-                    ImageItem(uri, imageName = imageName, fileSize = fileSize, imageDimension = imagesDimensions)
+                    val imagesDimensions = imageDimensionsFromUri(context, uri)
+                    ImageItem(
+                        uri,
+                        imageName = imageName,
+                        fileSize = fileSize,
+                        imageDimension = imagesDimensions
+                    )
                 }
                 homeScreenViewModel.onGalleryImagesSelected(selectedImageItems)
             }
@@ -232,7 +238,7 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                                             )
                                         )
                                     )
-                                    showToast = true
+                                    homeScreenViewModel.showToast(true)
                                     homeScreenViewModel.showSelectedImages()
                                 }
                             }
@@ -258,7 +264,8 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
 
                     is ScaleState.ShowPopup -> {
                         val originalDimensions =
-                            homeScreenViewModel.selectedImageItems.map { it.imageDimension }.filterNotNull()
+                            homeScreenViewModel.selectedImageItems.map { it.imageDimension }
+                                .filterNotNull()
                         // Implement image scaling logic here
                         AnimatedVisibility(
                             visible = true,
@@ -292,7 +299,7 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                                 imageItems = imageItems,
                                 currentScaleState.data.scaleParamsList,
                                 onSaveClicked = {
-                                    showToast = true
+                                    homeScreenViewModel.showToast(true)
                                     homeScreenViewModel.showSelectedImages()
                                 })
                         }
@@ -313,11 +320,11 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
         }
     }
 
-    // Conditionally display the popup
+    // Conditionally display the toast
     if (showToast) {
         LaunchedEffect(key1 = true) {
             Toast.makeText(context, "Image saved", Toast.LENGTH_SHORT).show()
-            showToast = false // Reset the state after showing the toast
+            homeScreenViewModel.showToast(false) // Reset the state after showing the toast
         }
     }
     if (showRationale) {
@@ -366,13 +373,24 @@ private fun HandleCompressState(
                     onSaveClicked = {
                         saveImagesToGallery(context, it)
                         homeScreenViewModel.showToast(true)
-                        homeScreenViewModel.onCompressImagesSaved()
+                    },
+                    onSReplaceClicked = {
+                        it.forEach { imageItem ->
+                            imageItem.scaledBitmap?.let {
+                                ImageReplacer.replaceOriginalImageWithBitmap(
+                                    context,
+                                    imageItem.uri,
+                                    it
+                                )
+                            }
+                        }
+                        homeScreenViewModel.showToast(true)
                     })
             }
         }
 
         is CompressState.ImagesSaved -> {
-                homeScreenViewModel.showSelectedImages()
+            homeScreenViewModel.showSelectedImages()
         }
 
         is CompressState.PopupShown -> {
@@ -429,7 +447,8 @@ private fun HandleGalleryState(
 fun CompressToKbImageScreen(
     imageItems: List<ImageItem>,
     sizeInKb: Int = 100,
-    onSaveClicked: (List<ImageItem?>) -> Unit
+    onSaveClicked: (List<ImageItem?>) -> Unit,
+    onSReplaceClicked: (List<ImageItem>) -> Unit,
 ) {
     var imagesScaled by remember { mutableStateOf(false) }
     var scaledImages by remember { mutableStateOf(listOf<ImageItem>()) }
@@ -461,7 +480,7 @@ fun CompressToKbImageScreen(
                 ScaledImagesGrid(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(bottom = 80.dp), scaledImages, imageItems
+                        .padding(bottom = 100.dp), scaledImages, imageItems
                 )
             } else {
                 Text("Scaling...")
@@ -480,6 +499,14 @@ fun CompressToKbImageScreen(
                     },
                 ) {
                     Text(text = "Save Images")
+                }
+
+                Button(
+                    onClick = {
+                        onSReplaceClicked(scaledImages)
+                    },
+                ) {
+                    Text(text = "Replace Images")
                 }
             }
         }

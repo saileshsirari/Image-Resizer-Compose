@@ -14,11 +14,11 @@ class MyImagesViewModel(private val imageRepository: ImageRepository) : ViewMode
     private val _loadingImages = MutableStateFlow<Set<Int>>(emptySet())
     val loadingImages: StateFlow<Set<Int>> = _loadingImages.asStateFlow()
 
-    private val _actualImageUris = MutableStateFlow<List<Uri?>>(emptyList())
-    val actualImageUris: StateFlow<List<Uri?>> = _actualImageUris.asStateFlow()
+    private val _actualImageItems = MutableStateFlow<List<ImageItem?>>(emptyList())
+    val actualImageUris: StateFlow<List<ImageItem?>> = _actualImageItems.asStateFlow()
 
-    private val _selectedImages = MutableStateFlow<List<Uri>>(emptyList())
-    val selectedImages: StateFlow<List<Uri>> = _selectedImages.asStateFlow()
+    private val _selectedImages = MutableStateFlow<List<ImageItem>>(emptyList())
+    val selectedImages: StateFlow<List<ImageItem>> = _selectedImages.asStateFlow()
 
     private val _selectAll = MutableStateFlow(false)
     val selectAll: StateFlow<Boolean> = _selectAll.asStateFlow()
@@ -51,28 +51,28 @@ class MyImagesViewModel(private val imageRepository: ImageRepository) : ViewMode
             val urisForPage = withContext(Dispatchers.IO) {
                 imageRepository.getRealCompressedImageUris(newImages.toList())
             }
-            _actualImageUris.value = urisForPage
+            _actualImageItems.value = urisForPage
         }
     }
 
-    fun deleteImages(images: List<Uri>) {
+    fun deleteImages(images: List<ImageItem>) {
         viewModelScope.launch {
-            val list = _actualImageUris.value.toMutableList()
+            val list = _actualImageItems.value.toMutableList()
             images.forEach {
                 list.remove(it)
             }
-            _actualImageUris.value = list
+            _actualImageItems.value = list
             imageRepository.deleteImages(images)
             clearSelection()
         }
     }
 
-    fun onImageSelected(uri: Uri) {
-        if (_selectedImages.value.contains(uri)) {
-            val newList = _selectedImages.value.filter { it != uri }
+    fun onImageSelected(imageItem: ImageItem) {
+        if (_selectedImages.value.contains(imageItem)) {
+            val newList = _selectedImages.value.filter { it != imageItem }
             _selectedImages.value = newList
         } else {
-            _selectedImages.value = _selectedImages.value + uri
+            _selectedImages.value = _selectedImages.value + imageItem
         }
 
     }
@@ -87,7 +87,7 @@ class MyImagesViewModel(private val imageRepository: ImageRepository) : ViewMode
         _selectAll.value = !_selectAll.value
         _imageSelectionMode.value = true
         if (_selectAll.value) {
-            _selectedImages.value = _actualImageUris.value.filterNotNull()
+            _selectedImages.value = _actualImageItems.value.filterNotNull()
         } else {
             clearSelection()
         }

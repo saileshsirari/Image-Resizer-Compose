@@ -1,6 +1,7 @@
 package com.image.resizer.compose
 
 import android.Manifest
+import android.R.attr.checked
 import android.app.Activity
 import android.app.RecoverableSecurityException
 import android.content.ContentUris
@@ -10,6 +11,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import android.text.Layout
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
@@ -109,8 +111,8 @@ fun MyImagesScreen() {
     val placeholders = remember {
         List(totalImagesCount) { null }
     }
-    var actualImageUris by remember {
-        mutableStateOf<List<Uri?>>(emptyList())
+    var actualImageItems by remember {
+        mutableStateOf<List<ImageItem>>(emptyList())
     }
     val lazyGridState = rememberLazyGridState()
     LaunchedEffect(true) {
@@ -120,14 +122,14 @@ fun MyImagesScreen() {
         }
         loadingImages.addAll(newImages)
         val urisForPage = withContext(Dispatchers.IO) {
-            getRealCompressedImageUris(context, newImages.toList())
+            getRealCompressedImageUris(context, newImages.toList()).filterNotNull()
         }
-        val list = actualImageUris.toMutableList()
+        val list = actualImageItems.toMutableList()
         list.addAll(urisForPage)
-        actualImageUris = list
+        actualImageItems = list
     }
     //image states
-    var selectedImages = remember { mutableStateListOf<Uri>() }
+    var selectedImages = remember { mutableStateListOf<ImageItem>() }
     var selectAll by remember { mutableStateOf(false) }
     var imageSelectionMode by remember { mutableStateOf(false) }
     var showShareSheet by remember { mutableStateOf(false) }
@@ -160,15 +162,15 @@ fun MyImagesScreen() {
                     }
                 }
             } else {
-                val list = actualImageUris.toMutableList()
+                val list = actualImageItems.toMutableList()
                 selectedImages.forEach {
                     list.remove(it)
                 }
-                actualImageUris = list
+                actualImageItems = list
                 selectedImages.clear()
                 selectAll = false
                 imageSelectionMode = false
-                actualImageUris = getActualImageUris(context, placeholders)
+                actualImageItems = getActualImageUris(context, placeholders)
             }
 
         } else {
@@ -225,43 +227,44 @@ fun MyImagesScreen() {
                         )
                         Spacer(modifier = Modifier.weight(1f))
                         Row(
-                            modifier = Modifier.then(
-                                Modifier
-                                    .then(Modifier.requiredWidthIn(min = 1.dp))
-                                    .width(IntrinsicSize.Max)
-                            )
+                            modifier = Modifier
+                                .then(
+                                    Modifier
+                                        .then(Modifier.requiredWidthIn(min = 1.dp))
+                                        .width(IntrinsicSize.Max)
+                                )
                                 .wrapContentWidth()
                                 .fillMaxHeight()
                                 .padding(end = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.End
 
-                        ){
+                        ) {
                             if (showMenuItems) {
                                 var expanded by remember { mutableStateOf(false) }
                                 ActionButtonWithText(
-                                    enabled = true ,
+                                    enabled = true,
                                     onClick = {
                                         selectAll = !selectAll
                                         imageSelectionMode = true
                                         if (selectAll) {
-                                            selectedImages.addAll(actualImageUris.filterNotNull())
+                                            selectedImages.addAll(actualImageItems.filterNotNull())
                                         } else {
                                             selectedImages.clear()
                                         }
                                     },
                                     iconId = R.drawable.ic_compress_24dp,
-                                    modifier=Modifier.padding(end = 8.dp),
+                                    modifier = Modifier.padding(end = 8.dp),
                                     text = stringResource(R.string.select_all)
                                 )
 
                                 ActionButtonWithText(
-                                    enabled = anyImageSelected ,
+                                    enabled = anyImageSelected,
                                     onClick = {
                                         showShareSheet = true
                                     },
                                     iconId = R.drawable.ic_compress_24dp,
-                                    modifier=Modifier.padding(end = 8.dp),
+                                    modifier = Modifier.padding(end = 8.dp),
                                     text = stringResource(R.string.share)
                                 )
 
@@ -300,8 +303,8 @@ fun MyImagesScreen() {
                             }
                         }
                     }
-
                 },
+
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.primary
@@ -319,7 +322,7 @@ fun MyImagesScreen() {
                 text = { Text(stringResource(R.string.delete_confirmation_message)) },
                 confirmButton = {
                     Button(onClick = {
-                        deleteSelectedImages(context, selectedImages, launcher)
+                        deleteSelectedImages(context, selectedImages.map { it.uri }, launcher)
 
                         showDeleteConfirmationDialog = false
                     }) {
@@ -338,14 +341,14 @@ fun MyImagesScreen() {
                 onDismissRequest = { showShareSheet = false },
                 sheetState = sheetState,
                 content = {
-                    ShareBottomSheet(selectedImages, context) {
+                    ShareBottomSheet(selectedImages.map { it.uri }, context) {
                         showShareSheet = false
                     }
                 }
             )
         }
 
-        if (actualImageUris.isEmpty()) {
+        if (actualImageItems.isEmpty()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -368,32 +371,23 @@ fun MyImagesScreen() {
                 contentPadding = PaddingValues(0.dp)
             ) {
                 itemsIndexed(
-                    items = actualImageUris,
-                    key = { index, uri -> uri?.hashCode() ?: index }
-                ) { index, uri ->
+                    items = actualImageItems,
+                    key = { index, imageItem -> imageItem.uri },
+                ) { index, imageItem ->
                     AnimatedVisibility(
-                        visible = uri != null,
+                        visible = true,
                         exit = fadeOut(animationSpec = tween(500))
                     ) {
-                        if (uri != null) {
-                            val isSelected = selectedImages.contains(uri)
-                            ImageCard(uri, false, isSelected, imageSelectionMode) {
-                                imageSelectionMode = true
-                                if (isSelected) {
-                                    selectedImages.remove(uri)
-                                } else {
-                                    selectedImages.add(uri)
-                                }
-                                selectAll =
-                                    selectedImages.size == actualImageUris.filterNotNull().size
+                        val isSelected = selectedImages.contains(imageItem)
+                        ImageCard(imageItem, false, isSelected) {
+                            imageSelectionMode = true
+                            if (isSelected) {
+                                selectedImages.remove(imageItem)
+                            } else {
+                                selectedImages.add(imageItem)
                             }
-                        } else {
-                            ImageCard(
-                                uri,
-                                loadingImages.contains(index),
-                                false,
-                                imageSelectionMode
-                            ) {}
+                            selectAll =
+                                selectedImages.size == actualImageItems.filterNotNull().size
                         }
                     }
 
@@ -405,10 +399,9 @@ fun MyImagesScreen() {
 
 @Composable
 fun ImageCard(
-    uri: Uri?,
+    imageItem: ImageItem,
     isLoading: Boolean,
     isSelected: Boolean,
-    imageSelectionMode: Boolean,
     onClick: () -> Unit
 ) {
     Card(
@@ -418,9 +411,26 @@ fun ImageCard(
             .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
             .clickable { onClick() }
     ) {
-        Box {
+
+        Column(
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            imageItem.fileSize?.let {
+                val fileSizeInKb = it / 1024
+                val fileSizeText = if (fileSizeInKb > 1000) {
+                    "${fileSizeInKb / 1024} mb"
+                } else "$fileSizeInKb kb"
+                Text(fileSizeText, maxLines = 1)
+            }
+            Checkbox(
+                checked = isSelected,
+                onCheckedChange = { onClick() },
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+            )
             SubcomposeAsyncImage(
-                model = uri,
+                model = imageItem.uri,
                 contentDescription = "Compressed Image",
                 modifier = Modifier
                     .fillMaxWidth()
@@ -435,13 +445,8 @@ fun ImageCard(
                     SubcomposeAsyncImageContent()
                 }
             }
-            Checkbox(
-                checked = isSelected,
-                onCheckedChange = { onClick() },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-            )
         }
+
     }
 }
 
@@ -473,15 +478,16 @@ fun ShareBottomSheet(selectedImages: List<Uri>, context: Context, onDismiss: () 
     }
 }
 
-fun getActualImageUris(context: Context, placeholders: List<Nothing?>): List<Uri?> {
-    val totalImagesCount = getTotalTransformedImagesCount(context)
-    val imageUris = mutableListOf<Uri?>()
+fun getActualImageUris(context: Context, placeholders: List<Nothing?>): List<ImageItem> {
+    val imageItems = mutableListOf<ImageItem>()
 
     val projection = arrayOf(
         MediaStore.Images.Media._ID,
+        MediaStore.Images.Media.DISPLAY_NAME,
+        MediaStore.Images.Media.SIZE
     )
     val selection = "${MediaStore.Images.Media.DISPLAY_NAME} LIKE ?"
-    val selectionArgs = arrayOf("compressed_image_%")
+    val selectionArgs = arrayOf("imageResizer_%")
     val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
     val queryUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
     val contentResolver = context.contentResolver
@@ -495,25 +501,49 @@ fun getActualImageUris(context: Context, placeholders: List<Nothing?>): List<Uri
 
     cursor?.use {
         val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+        val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME)
+        val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.SIZE)
         val totalCount = cursor.count
         if (totalCount == 0) {
             return emptyList()
         }
+
         for (i in 0 until min(placeholders.size, totalCount)) {
             if (cursor.moveToPosition(i)) {
                 val id = cursor.getLong(idColumn)
+                val imageName = cursor.getString(nameColumn)
+                val fileSize = cursor.getLong(sizeColumn)
                 val contentUri = ContentUris.withAppendedId(queryUri, id)
-                imageUris.add(contentUri)
+                val imageDimensions = imageDimensionsFromUri(context, contentUri)
+                imageItems.add(
+                    ImageItem(
+                        uri = contentUri,
+                        imageName = imageName,
+                        fileSize = fileSize,
+                        originalBitmap = null,
+                        scaledBitmap = null,
+                        imageDimension = imageDimensions
+                    )
+                )
             }
         }
 
+        // Add null items for the remaining placeholders
         val remaining = placeholders.size - totalCount
         for (i in 0 until remaining) {
-            imageUris.add(null)
+            imageItems.add(
+                ImageItem(
+                    uri = Uri.EMPTY,
+                    imageName = null,
+                    fileSize = null,
+                    originalBitmap = null,
+                    scaledBitmap = null
+                )
+            )
         }
     }
 
-    return imageUris
+    return imageItems
 }
 
 fun deleteSelectedImages(
@@ -576,7 +606,7 @@ fun getTotalTransformedImagesCount(context: Context): Int {
         MediaStore.Images.Media.DISPLAY_NAME,
         MediaStore.Images.Media.SIZE
     )
-    val  customDirectoryName: String="ImageResizer"
+    val customDirectoryName: String = "ImageResizer"
     val selection = "${MediaStore.Images.Media.DISPLAY_NAME} LIKE ?"
 //    val selectionArgs = arrayOf("%$customDirectoryName/%")
     val selectionArgs = arrayOf("imageResizer_%")

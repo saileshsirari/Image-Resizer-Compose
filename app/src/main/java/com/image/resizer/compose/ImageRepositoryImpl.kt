@@ -8,15 +8,15 @@ class ImageRepositoryImpl(private val context: Context,val imageHelper: ImageHel
         return getTotalTransformedImagesCount(context)
     }
 
-    override suspend fun getRealCompressedImageUris(imageIndexes: List<Int>): List<Uri?> {
+    override suspend fun getRealCompressedImageUris(imageIndexes: List<Int>): List<ImageItem?> {
         return imageHelper.getRealCompressedImageUris(context, imageIndexes)
     }
 
-    override fun deleteImages(images: List<Uri>) {
+    override fun deleteImages(images: List<ImageItem>) {
 
     }
 
-    override fun getImages(): List<Uri?> {
+    override fun getImages(): List<ImageItem?> {
         TODO("Not yet implemented")
     }
 
