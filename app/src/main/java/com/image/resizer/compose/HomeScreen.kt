@@ -387,6 +387,7 @@ private fun HandleCompressState(
 //                        deleteImages =true
                         saveImagesToGallery(context, it)
                         homeScreenViewModel.showToast()
+                        homeScreenViewModel.showSelectedImages()
                     },
                     onSReplaceClicked = {
                         var replaced = true
@@ -520,13 +521,6 @@ fun CompressToKbImageScreen(
                     Text(text = "Save Images")
                 }
 
-                Button(
-                    onClick = {
-                        onSReplaceClicked(scaledImages)
-                    },
-                ) {
-                    Text(text = "Replace Images")
-                }
             }
         }
     }
