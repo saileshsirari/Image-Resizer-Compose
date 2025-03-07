@@ -9,4 +9,58 @@
     <string name="delete_confirmation_title">Confirm Delete?</string>
     <string name="delete_confirmation_message">Please confirm images deletion</string>
     <string name="cancel">Cancel</string>
+    <string name="open_with">Open with</string>
+    <string name="set_as">"Set as: "</string>
+    <string name="images_videos"><![CDATA[%1$s Images & Videos]]></string>
+    <string name="error_toast">An error occurred!</string>
+    <string name="label">Label</string>
+    <string name="path">Path</string>
+    <string name="location">Location</string>
+    <string name="iso">ISO</string>
+    <string name="kb">KB</string>
+    <string name="mb">MB</string>
+    <string name="gb">GB</string>
+    <string name="no_media_title">Seems empty here</string>
+    <string name="unselect_all">Unselect all</string>
+    <string name="drop_down_cd">Drop down</string>
+    <string name="back_cd">Back</string>
+    <string name="move_album_to_trash">Move album to trash</string>
+    <string name="favorites">Favorites</string>
+    <string name="settings_title">Settings</string>
+    <string name="image_add_description">Add a description</string>
+    <string name="location_chip">Location: %s</string>
+    <string name="location_map_cd">Location Map</string>
+    <string name="no_media_cd">No media found</string>
+    <string name="empty_trash_title">Squeaky Clean</string>
+    <string name="empty_trash_cd">Trash is empty</string>
+    <string name="error_title">Something went wrong :(</string>
+    <string name="error_cd">An error occurred</string>
+    <string name="copy_error">Copy error</string>
+    <string name="trash_restore">Restore</string>
+    <string name="trash_empty">Empty</string>
+    <string name="trash_delete">Delete</string>
+    <string name="hide">Hide</string>
+    <string name="restore">Restore</string>
+    <string name="copy">Copy</string>
+    <string name="favorite">Favourite</string>
+    <string name="edit">Edit</string>
+    <string name="use_as">Use as</string>
+    <string name="trash">Trash</string>
+    <string name="move">Move</string>
+    <string name="metadata">Metadata</string>
+    <string name="encrypted">Encrypted</string>
+    <string name="s_items">%1$s items</string>
+    <string name="delete_location">Delete Location</string>
+    <string name="delete_metadata">Delete Metadata</string>
+    <string name="location_cd">Media Location</string>
+    <string name="media_location" translatable="false">@string/location_cd</string>
+    <string name="header_today">Today</string>
+    <string name="header_yesterday">Yesterday</string>
+    <string name="request_permissions">Request permissions</string>
+
+    <plurals name="item_count">
+        <item quantity="one">%s item</item>
+        <item quantity="other">%s items</item>
+    </plurals>
+
 </resources>

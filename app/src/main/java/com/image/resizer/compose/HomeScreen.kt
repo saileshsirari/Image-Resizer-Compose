@@ -11,13 +11,15 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -69,26 +71,44 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.image.resizer.compose.ImageHelper.getFileNameAndSize
 import com.image.resizer.compose.ImageReplacer.deleteImage
-import com.image.resizer.compose.ImageReplacer.deleteSelectedImages
+import com.image.resizer.compose.mediaApi.AlbumsScreen
+import com.image.resizer.compose.mediaApi.AlbumsViewModel
+import com.image.resizer.compose.mediaApi.MediaViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 
 @Composable
 fun HomeScreenPreview1() {
-    HomeScreen()
+//    HomeScreen()
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class,
+    ExperimentalSharedTransitionApi::class
+)
 @Composable
-fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
+fun HomeScreen(
+    homeScreenViewModel: HomeScreenViewModel = viewModel(),
+    albumsViewModel: AlbumsViewModel,
+    timelineViewModel: MediaViewModel,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedContentScope: AnimatedContentScope,
+    navController: NavHostController
+) {
+// Preloaded viewModels
+    val albumsState =
+        albumsViewModel.albumsFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+    val timelineState =
+        timelineViewModel.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
 
     val context = LocalContext.current
     var scaledParams by remember { mutableStateOf(listOf<ScaleParams>()) }
@@ -207,7 +227,12 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-                HandleGalleryState(galleryState, showImages)
+//                HandleGalleryState(galleryState, showImages)
+                if(galleryState is GalleryState.Idle){
+                    albumsState.value
+                    Log.d(TAG, "here ${albumsState.value}}")
+
+                }
 
                 val currentCropState = cropState
                 when (currentCropState) {
@@ -317,6 +342,25 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                 HandleCompressState(
                     currentCompressState,
                     homeScreenViewModel,
+                )
+                AlbumsScreen(
+                    mediaState = timelineState,
+                    albumsState = albumsState,
+                    paddingValues = innerPadding,
+                    onAlbumClick =
+                        albumsViewModel.onAlbumClick {
+                            navController.navigate(it){
+                            launchSingleTop = true
+                            restoreState = true
+                        } }
+
+                    ,
+                    onAlbumLongClick ={
+
+                    },
+
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedContentScope = animatedContentScope
                 )
             }
         }

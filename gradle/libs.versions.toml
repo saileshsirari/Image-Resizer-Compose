@@ -18,6 +18,17 @@ coilCompose = "2.6.0"
 accompanistPermissions = "0.37.0"
 lifecycleViewmodelCompose = "2.8.7"
 navigationCompose = "2.8.6"
+kotlinxSerializationJson = "1.7.3"
+sketch = "4.0.2"
+zoomimageViewSketch = "1.1.1"
+pinchzoomgrid = "0.0.5"
+room = "2.6.1"
+ksp = "2.1.10-1.0.29"
+securityCrypto = "1.1.0-alpha06"
+core = "1.11.1"
+lazycolumnscrollbar = "2.2.0"
+
+
 uiTestJunit4 = "1.7.8"
 uiTooling = "1.7.8"
 
@@ -46,9 +57,26 @@ activity-compose = { group = "androidx.activity", name = "activity-compose", ver
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coilCompose" }
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanistPermissions" }
 vanniktech-android-image-cropper = { module = "com.vanniktech:android-image-cropper", version.ref = "androidImageCropperVersion" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+sketch-http-ktor = { module = "io.github.panpf.sketch4:sketch-http-ktor3", version.ref = "sketch" }
+zoomimage-sketch = { module = "io.github.panpf.zoomimage:zoomimage-compose-sketch4", version.ref = "zoomimageViewSketch" }
+pinchzoomgrid = { module = "io.github.dokar3:pinchzoomgrid", version.ref = "pinchzoomgrid" }
+core = { module = "com.composables:core", version.ref = "core" }
+androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
+lazycolumnscrollbar = { module = "com.github.nanihadesuka:LazyColumnScrollbar", version.ref = "lazycolumnscrollbar" }
+
+# Room
+room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+roomPlugin = { id = "androidx.room", version.ref = "room" }
+kspAndroid = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+
+
+kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 
