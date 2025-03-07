@@ -55,4 +55,5 @@ class AlbumsViewModel(
     fun onAlbumClick(navigate: (String) -> Unit): (Album) -> Unit = { album ->
         navigate(Screen.AlbumViewScreen.route + "?albumId=${album.id}&albumName=${album.label}")
     }
+
 }

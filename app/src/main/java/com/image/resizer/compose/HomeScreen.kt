@@ -3,6 +3,7 @@
 package com.image.resizer.compose
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -47,6 +48,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -54,19 +56,24 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisallowComposableCalls
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -83,6 +90,11 @@ import com.image.resizer.compose.ImageReplacer.deleteImage
 import com.image.resizer.compose.mediaApi.AlbumsScreen
 import com.image.resizer.compose.mediaApi.AlbumsViewModel
 import com.image.resizer.compose.mediaApi.MediaViewModel
+import com.image.resizer.compose.mediaApi.NavigationButton
+import com.image.resizer.compose.mediaApi.TwoLinedDateToolbarTitle
+import com.image.resizer.compose.mediaApi.model.AlbumState
+import com.image.resizer.compose.mediaApi.model.Media
+import com.image.resizer.compose.mediaApi.model.MediaState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -96,13 +108,20 @@ fun HomeScreenPreview1() {
     ExperimentalSharedTransitionApi::class
 )
 @Composable
-fun HomeScreen(
+ fun <T: Media> HomeScreen(
     homeScreenViewModel: HomeScreenViewModel = viewModel(),
     albumsViewModel: AlbumsViewModel,
     timelineViewModel: MediaViewModel,
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedContentScope,
-    navController: NavHostController
+    navController: NavHostController,
+    mediaState: State<MediaState<T>>,
+    selectionState: MutableState<Boolean>,
+    albumsState: State<AlbumState> = remember { mutableStateOf(AlbumState()) },
+    selectedMedia: SnapshotStateList<T>,
+    albumName: String = stringResource(R.string.app_name),
+     navigate: @DisallowComposableCalls (route: String) -> Unit,
+     navigateUp: @DisallowComposableCalls () -> Unit,
 ) {
 // Preloaded viewModels
     val albumsState =
@@ -155,19 +174,7 @@ fun HomeScreen(
     val multiplePhotoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(),
         onResult = { uris ->
-            if (uris.isNotEmpty()) {
-                val selectedImageItems = uris.map { uri ->
-                    val (imageName, fileSize) = getFileNameAndSize(context, uri)
-                    val imagesDimensions = imageDimensionsFromUri(context, uri)
-                    ImageItem(
-                        uri,
-                        imageName = imageName,
-                        fileSize = fileSize,
-                        imageDimension = imagesDimensions
-                    )
-                }
-                homeScreenViewModel.onGalleryImagesSelected(selectedImageItems)
-            }
+            handlePickedImages(uris, context, homeScreenViewModel)
         }
     )
 
@@ -186,7 +193,12 @@ fun HomeScreen(
                     homeScreenViewModel.onUndo()
                 }, onShowCompress = {
                     homeScreenViewModel.onShowCompressPopup()
-                }
+                },
+                navigateUp = navigateUp,
+                albumName = albumName,
+                selectedMedia = selectedMedia,
+                selectionState = selectionState,
+                mediaState = mediaState
             )
         },
         floatingActionButton = {
@@ -343,25 +355,6 @@ fun HomeScreen(
                     currentCompressState,
                     homeScreenViewModel,
                 )
-                AlbumsScreen(
-                    mediaState = timelineState,
-                    albumsState = albumsState,
-                    paddingValues = innerPadding,
-                    onAlbumClick =
-                        albumsViewModel.onAlbumClick {
-                            navController.navigate(it){
-                            launchSingleTop = true
-                            restoreState = true
-                        } }
-
-                    ,
-                    onAlbumLongClick ={
-
-                    },
-
-                    sharedTransitionScope = sharedTransitionScope,
-                    animatedContentScope = animatedContentScope
-                )
             }
         }
     }
@@ -373,6 +366,7 @@ fun HomeScreen(
             homeScreenViewModel.showToast("") // Reset the state after showing the toast
         }
     }
+
     if (showRationale) {
         AlertDialog(
             onDismissRequest = {
@@ -402,6 +396,27 @@ fun HomeScreen(
         )
     }
 
+}
+
+private  fun handlePickedImages(
+    uris: List<@JvmSuppressWildcards Uri>,
+    context: Context,
+    homeScreenViewModel: HomeScreenViewModel
+) {
+    if (uris.isNotEmpty()) {
+        val selectedImageItems = uris.map { uri ->
+            val (imageName, fileSize) = getFileNameAndSize(context, uri)
+            val imagesDimensions = imageDimensionsFromUri(context, uri)
+            ImageItem(
+                uri,
+                imageName = imageName,
+                fileSize = fileSize,
+                imageDimension = imagesDimensions
+            )
+        }
+        homeScreenViewModel.selectedImageItems = selectedImageItems
+
+    }
 }
 
 @Composable
@@ -666,28 +681,35 @@ fun HomeScreenTopAppBarPreview() {
     val onShowCompress: () -> Unit = {
 
     }
-    HomeScreenTopAppBar(
+/*    HomeScreenTopAppBar(
         imagesTransformed = imagesTransformed,
         galleryState = galleryState,
         onUndo = onUndo,
         onShowScalePopup = onShowScalePopup,
         onCrop = onCrop,
         onShowCompress = onShowCompress
-    )
+    )*/
 }
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreenTopAppBar(
+fun <T: Media> HomeScreenTopAppBar(
     imagesTransformed: Boolean = false,
     galleryState: GalleryState,
     onUndo: () -> Unit,
     onShowScalePopup: () -> Unit,
     onCrop: (Boolean, Uri?) -> Unit,
     onShowCompress: () -> Unit,
+    albumId: Long = -1L,
+    target: String? = remember { null },
+    albumName: String = stringResource(R.string.app_name),
+    navigateUp: () -> Unit,
+    selectionState: MutableState<Boolean>,
+    selectedMedia: SnapshotStateList<T>,
+    mediaState: State<MediaState<T>>,
 ) {
-    TopAppBar(
+    LargeTopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             titleContentColor = MaterialTheme.colorScheme.primary
@@ -700,6 +722,10 @@ fun HomeScreenTopAppBar(
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+               /* TwoLinedDateToolbarTitle(
+                    albumName = albumName,
+                    dateHeader =  mediaState.value.dateHeader
+                )*/
                 Text(
                     text = "Image Resizer",
                     modifier = Modifier
@@ -782,6 +808,19 @@ fun HomeScreenTopAppBar(
                 }
             }
         },
+        navigationIcon = {
+            NavigationButton(
+                albumId = albumId,
+                target = target,
+                navigateUp = navigateUp,
+                clearSelection = {
+                    selectionState.value = false
+                    selectedMedia.clear()
+                },
+                selectionState = selectionState,
+                alwaysGoBack = true,
+            )
+        }
     )
 }
 

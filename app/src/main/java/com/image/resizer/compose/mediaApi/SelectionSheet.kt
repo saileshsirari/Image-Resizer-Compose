@@ -174,7 +174,7 @@ fun <T: Media> SelectionSheet(
                 SelectionBarColumn(
                     imageVector = Icons.Outlined.FavoriteBorder,
                     tabletMode = tabletMode,
-                    title = stringResource(R.string.favorite)
+                    title = stringResource(R.string.compress)
                 ) {
                     scope.launch {
                      //   handler.toggleFavorite(result = result, selectedMedia)

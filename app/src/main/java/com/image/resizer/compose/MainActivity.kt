@@ -172,20 +172,41 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
                     onAlbumLongClick = {
 
                     },
-
                     sharedTransitionScope = this@SharedTransitionLayout,
                     animatedContentScope = this
                 )
             }
-            /* composable(Screen.Home.route) {
-                 HomeScreen(
-                     albumsViewModel = albumsViewModel,
-                     timelineViewModel = timelineViewModel,
-                     sharedTransitionScope =  this@SharedTransitionLayout,
-                     animatedContentScope = this,
-                     navController = navController
-                 )
-             }*/
+
+             composable(Screen.Home.route) {
+                 val appName = stringResource(id = R.string.app_name)
+
+                 val vm = AlbumsViewModel(mediaRepository, mediaHandleUseCase).apply {
+                     albumId = -1
+                 }
+
+                 val hideTimeline by remember { mutableStateOf(true) }
+                 val mediaState = vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+                   HomeScreen(
+                       albumsViewModel = albumsViewModel,
+                       timelineViewModel = timelineViewModel,
+                       sharedTransitionScope =  this@SharedTransitionLayout,
+                       animatedContentScope = this,
+                       navController = navController,
+                       mediaState = mediaState,
+                       albumsState = albumsState,
+                       selectionState = vm.multiSelectState,
+                       selectedMedia = vm.selectedPhotoState,
+                       navigate = {
+                           navController.navigate(it) {
+                               launchSingleTop = true
+                               restoreState = true
+                           }
+                       },
+                       navigateUp = {
+                           navController.navigateUp()
+                       },
+                   )
+             }
             composable(Screen.MyImages.route) {
                 MyImagesScreen()
             }
@@ -216,6 +237,26 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
 
                 val hideTimeline by remember { mutableStateOf(true) }
                 val mediaState = vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+              /*  HomeScreen(
+                    albumsViewModel = albumsViewModel,
+                    timelineViewModel = timelineViewModel,
+                    sharedTransitionScope =  this@SharedTransitionLayout,
+                    animatedContentScope = this,
+                    navController = navController,
+                    mediaState = mediaState,
+                    albumsState = albumsState,
+                    selectionState = vm.multiSelectState,
+                    selectedMedia = vm.selectedPhotoState,
+                    navigate = {
+                        navController.navigate(it) {
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    navigateUp = {
+                        navController.navigateUp()
+                    },
+                )*/
                 TimelineScreen(
                     paddingValues = innerPadding,
                     albumId = argumentAlbumId,
@@ -280,11 +321,11 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
                 val vm = AlbumsViewModel(mediaRepository, mediaHandleUseCase).apply {
                     this.albumId = albumId
                 }
-               /* val mediaState = vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)*/
+                /* val mediaState = vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)*/
                 /* val mediaState = if (entryName == Screen.AlbumsScreen()) {
                      vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
                  } else timelineState*/
-                val mediaState = if (albumId != -1L)  {
+                val mediaState = if (albumId != -1L) {
                     vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
                 } else timelineState
 

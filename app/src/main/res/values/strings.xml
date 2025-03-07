@@ -59,6 +59,7 @@
     <string name="selected_s">Selected %s</string>
     <string name="trash">Trash</string>
     <string name="selection_dialog_close_cd">Close selection dialog</string>
+    <string name="compress">Compress</string>
 
     <plurals name="item_count">
         <item quantity="one">%s item</item>
