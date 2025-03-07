@@ -45,7 +45,6 @@
     <string name="favorite">Favourite</string>
     <string name="edit">Edit</string>
     <string name="use_as">Use as</string>
-    <string name="trash">Trash</string>
     <string name="move">Move</string>
     <string name="metadata">Metadata</string>
     <string name="encrypted">Encrypted</string>
@@ -57,6 +56,9 @@
     <string name="header_today">Today</string>
     <string name="header_yesterday">Yesterday</string>
     <string name="request_permissions">Request permissions</string>
+    <string name="selected_s">Selected %s</string>
+    <string name="trash">Trash</string>
+    <string name="selection_dialog_close_cd">Close selection dialog</string>
 
     <plurals name="item_count">
         <item quantity="one">%s item</item>

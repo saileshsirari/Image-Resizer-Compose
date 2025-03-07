@@ -337,10 +337,23 @@ fun rememberIsMediaManager(): Boolean {
 
 @Composable
 fun rememberWindowInsetsController(): WindowInsetsControllerCompat {
-    val window = with(LocalActivity as Activity) { return@with window }
+    val window = with(LocalContext.current as Activity) { return@with window }
     return remember { WindowCompat.getInsetsController(window, window.decorView) }
 }
 
+fun <T: Media>  Context.launchEditIntent(media: T) {
+    if (media.isImage) {
+       // EditActivity.launchEditor(this@launchEditIntent, media.getUri().authorizedUri(this@launchEditIntent))
+    } else {
+        val intent = Intent(Intent.ACTION_EDIT).apply {
+            addCategory(Intent.CATEGORY_DEFAULT)
+            setDataAndType(media.getUri().authorizedUri(this@launchEditIntent), media.mimeType)
+            putExtra("mimeType", media.mimeType)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        startActivity(Intent.createChooser(intent, getString(R.string.edit)))
+    }
+}
 fun Context.restartApplication() {
     val packageManager: PackageManager = packageManager
     val intent = packageManager.getLaunchIntentForPackage(packageName)

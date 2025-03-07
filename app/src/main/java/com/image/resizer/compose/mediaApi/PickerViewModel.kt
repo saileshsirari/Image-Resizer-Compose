@@ -15,13 +15,10 @@ import com.image.resizer.compose.mediaApi.util.Constants
 import com.image.resizer.compose.mediaApi.util.mapMedia
 import com.image.resizer.compose.mediaApi.util.mediaFlowWithType
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
-open class PickerViewModel constructor(
+open class PickerViewModel (
     private val repository: MediaRepository
 ) : ViewModel() {
 

@@ -521,7 +521,7 @@ fun <T : Media> MediaViewScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceEvenly,
                         ) {
-                           /* MediaViewActions2(
+                           MediaViewActions2(
                                 currentMedia = currentMedia,
                                 handler = handler,
                                 showDeleteButton = !isReadOnly,
@@ -529,11 +529,11 @@ fun <T : Media> MediaViewScreen(
                                 deleteMedia = deleteMedia,
                                 restoreMedia = restoreMedia,
                                 currentVault = currentVault
-                            )*/
+                            )
                         }
                     }
 
-                /*    MediaViewDetails(
+                    MediaViewDetails(
                         albumsState = albumsState,
                         vaultState = vaultState,
                         currentMedia = currentMedia,
@@ -542,7 +542,7 @@ fun <T : Media> MediaViewScreen(
                         restoreMedia = restoreMedia,
                         currentVault = currentVault,
                         navigate = navigate,
-                    )*/
+                    )
                 }
             }
         }

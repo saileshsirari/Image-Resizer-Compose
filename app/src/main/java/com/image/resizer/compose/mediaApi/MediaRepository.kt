@@ -29,6 +29,7 @@ interface MediaRepository {
     fun getAlbumsWithType(allowedMedia: AllowedMedia): Flow<Resource<List<Album>>>
     fun getMediaByAlbumId(albumId: Long): Flow<Resource<List<UriMedia>>>
     suspend fun getCategoryForMediaId(mediaId: Long): String?
+    fun getMediaListByUris(listOfUris: List<Uri>, reviewMode: Boolean): Flow<Resource<List<UriMedia>>>
 
     suspend fun <T: Media> trashMedia(
         result: ActivityResultLauncher<IntentSenderRequest>,

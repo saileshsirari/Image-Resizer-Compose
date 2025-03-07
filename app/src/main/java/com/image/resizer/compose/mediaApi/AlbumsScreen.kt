@@ -61,8 +61,6 @@ fun AlbumsScreen(
     animatedContentScope: AnimatedContentScope,
 ) {
 
-
-
     var finalPaddingValues by remember(paddingValues) { mutableStateOf(paddingValues) }
 
     Scaffold(

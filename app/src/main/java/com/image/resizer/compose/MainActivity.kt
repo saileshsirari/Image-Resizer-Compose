@@ -47,6 +47,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.image.resizer.compose.ImageReplacer.getBitmapFromUri
+import com.image.resizer.compose.mediaApi.AlbumsScreen
 import com.image.resizer.compose.mediaApi.AlbumsViewModel
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.MediaRepositoryImpl
@@ -99,8 +100,13 @@ fun BottomNavigationBar(navController: NavHostController) {
     NavigationBar {
         items.forEach { item ->
             NavigationBarItem(
-                icon = { Icon(item.icon?: Icons.Filled.MoreVert, contentDescription = item.title) },
-                label = { Text(item.title?:"") },
+                icon = {
+                    Icon(
+                        item.icon ?: Icons.Filled.MoreVert,
+                        contentDescription = item.title
+                    )
+                },
+                label = { Text(item.title ?: "") },
                 selected = currentRoute == item.route,
                 onClick = {
                     navController.navigate(item.route) {
@@ -128,14 +134,16 @@ fun BottomNavigationBar(navController: NavHostController) {
 @Composable
 fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
     val mediaRepository = MediaRepositoryImpl(LocalContext.current)
-    val mediaHandleUseCase = MediaHandleUseCase(repository = mediaRepository, context = LocalContext.current)
-    val albumsViewModel = AlbumsViewModel(mediaRepository,mediaHandleUseCase)
-    val timelineViewModel = MediaViewModel(mediaRepository,mediaHandleUseCase)
+    val mediaHandleUseCase =
+        MediaHandleUseCase(repository = mediaRepository, context = LocalContext.current)
+    val albumsViewModel = AlbumsViewModel(mediaRepository, mediaHandleUseCase)
+    val timelineViewModel = MediaViewModel(mediaRepository, mediaHandleUseCase)
     val timelineState =
         timelineViewModel.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
     val albumsState =
         albumsViewModel.albumsFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
-    val vaultState = timelineViewModel.vaultsFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+    val vaultState =
+        timelineViewModel.vaultsFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
 
     SharedTransitionLayout {
         NavHost(
@@ -147,18 +155,41 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
             popExitTransition = { navigateUpAnimation },
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Screen.Home.route) {
-                HomeScreen(
-                    albumsViewModel = albumsViewModel,
-                    timelineViewModel = timelineViewModel,
-                    sharedTransitionScope =  this@SharedTransitionLayout,
-                    animatedContentScope = this,
-                    navController = navController
+            composable(
+                Screen.Home.route
+            ) {
+                AlbumsScreen(
+                    mediaState = timelineState,
+                    albumsState = albumsState,
+                    paddingValues = innerPadding,
+                    onAlbumClick =
+                        albumsViewModel.onAlbumClick {
+                            navController.navigate(it) {
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                    onAlbumLongClick = {
+
+                    },
+
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    animatedContentScope = this
                 )
             }
+            /* composable(Screen.Home.route) {
+                 HomeScreen(
+                     albumsViewModel = albumsViewModel,
+                     timelineViewModel = timelineViewModel,
+                     sharedTransitionScope =  this@SharedTransitionLayout,
+                     animatedContentScope = this,
+                     navController = navController
+                 )
+             }*/
             composable(Screen.MyImages.route) {
                 MyImagesScreen()
             }
+
             composable(
                 route = Screen.AlbumViewScreen.albumAndName(),
                 arguments = listOf(
@@ -179,7 +210,7 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
                 val argumentAlbumId = remember(backStackEntry) {
                     backStackEntry.arguments?.getLong("albumId") ?: -1
                 }
-                val vm  = AlbumsViewModel(mediaRepository,mediaHandleUseCase).apply {
+                val vm = AlbumsViewModel(mediaRepository, mediaHandleUseCase).apply {
                     albumId = argumentAlbumId
                 }
 
@@ -198,7 +229,7 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
                     allowHeaders = !hideTimeline,
                     enableStickyHeaders = !hideTimeline,
                     toggleSelection = vm::toggleSelection,
-                    navigate  = {
+                    navigate = {
                         navController.navigate(it) {
                             launchSingleTop = true
                             restoreState = true
@@ -207,7 +238,7 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
                     navigateUp = {
                         navController.navigateUp()
                     },
-                    toggleNavbar ={
+                    toggleNavbar = {
 
                     },
                     isScrolling = mutableStateOf(false),
@@ -246,17 +277,20 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
                     navController.getBackStackEntry(entryName)
                 }
 
-                val vm  = AlbumsViewModel(mediaRepository,mediaHandleUseCase).apply {
+                val vm = AlbumsViewModel(mediaRepository, mediaHandleUseCase).apply {
                     this.albumId = albumId
                 }
-                val mediaState =  vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
-               /* val mediaState = if (entryName == Screen.AlbumsScreen()) {
+               /* val mediaState = vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)*/
+                /* val mediaState = if (entryName == Screen.AlbumsScreen()) {
+                     vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+                 } else timelineState*/
+                val mediaState = if (albumId != -1L)  {
                     vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
-                } else timelineState*/
+                } else timelineState
 
                 MediaViewScreen(
                     navigateUp = {
-
+                        navController.navigateUp()
                     },
                     toggleRotate = {
 
@@ -355,7 +389,6 @@ fun getStoragePermission(): String {
 }
 
 // Placeholder functions (replace with your actual image processing logic)
-
 
 
 fun compressAndSaveImages(imageUris: List<Uri>, context: Context): List<Uri> {

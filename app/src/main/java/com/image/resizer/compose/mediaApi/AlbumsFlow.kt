@@ -87,8 +87,10 @@ class AlbumsFlow(
                 val thumbnailPathIndex = it.getColumnIndex(MediaStore.Files.FileColumns.DATA)
                 val thumbnailRelativePathIndex =
                     it.getColumnIndex(MediaStore.Files.FileColumns.RELATIVE_PATH)
-                val thumbnailDateTakenIndex = it.getColumnIndex(MediaStore.Files.FileColumns.DATE_TAKEN)
-                val thumbnailDateIndex = it.getColumnIndex(MediaStore.Files.FileColumns.DATE_MODIFIED)
+                val thumbnailDateTakenIndex =
+                    it.getColumnIndex(MediaStore.Files.FileColumns.DATE_TAKEN)
+                val thumbnailDateIndex =
+                    it.getColumnIndex(MediaStore.Files.FileColumns.DATE_MODIFIED)
                 val sizeIndex = it.getColumnIndex(MediaStore.Files.FileColumns.SIZE)
                 val mimeTypeIndex = it.getColumnIndex(MediaStore.Files.FileColumns.MIME_TYPE)
 

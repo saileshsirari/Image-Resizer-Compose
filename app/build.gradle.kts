@@ -41,7 +41,7 @@ android {
 
     defaultConfig {
         applicationId = "com.image.resizer.compose"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -132,6 +132,8 @@ dependencies {
     implementation(libs.lazycolumnscrollbar)
     // Jetpack Security
         implementation(libs.androidx.security.crypto)
+    implementation(libs.compose.material3)
+    implementation(libs.compose.material3.window.size)
 //    implementation(libs.androidx.biometric)
     // Room
 //    implementation(libs.room.runtime)

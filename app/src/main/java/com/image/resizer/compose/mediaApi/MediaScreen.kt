@@ -184,14 +184,14 @@ fun <T: Media> MediaScreen(
             }
         }
         if (target != TARGET_TRASH) {
-         /*   SelectionSheet(
+            SelectionSheet(
                 modifier = Modifier
                     .align(Alignment.BottomEnd),
                 selectedMedia = selectedMedia,
                 selectionState = selectionState,
                 albumsState = albumsState,
                 handler = handler
-            )*/
+            )
         }
     }
 }

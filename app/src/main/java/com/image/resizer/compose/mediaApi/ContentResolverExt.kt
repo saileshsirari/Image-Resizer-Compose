@@ -22,6 +22,7 @@ import android.os.Looper
 import android.provider.MediaStore
 import android.util.Log
 import androidx.exifinterface.media.ExifInterface
+import com.image.resizer.compose.ImageReplacer
 import com.image.resizer.compose.mediaApi.model.ExifAttributes
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.util.Constants
@@ -143,6 +144,8 @@ fun ContentResolver.overrideImage(
     bitmap: Bitmap,
     format: Bitmap.CompressFormat = Bitmap.CompressFormat.PNG
 ): Boolean {
+
+
     val values = ContentValues().apply {
         put(MediaStore.MediaColumns.DATE_MODIFIED, System.currentTimeMillis())
     }

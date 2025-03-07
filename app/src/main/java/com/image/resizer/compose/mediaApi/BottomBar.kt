@@ -936,7 +936,7 @@ fun <T : Media> EditButton(
         title = stringResource(R.string.edit),
         enabled = enabled
     ) {
-      //  context.launchEditIntent(it)
+        context.launchEditIntent(it)
     }
 }
 

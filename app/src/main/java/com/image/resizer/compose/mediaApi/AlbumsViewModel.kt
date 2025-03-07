@@ -2,7 +2,6 @@ package com.image.resizer.compose.mediaApi
 
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.image.resizer.compose.Screen
 import com.image.resizer.compose.mediaApi.model.Album
@@ -16,13 +15,12 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlin.collections.get
 
-class AlbumsViewModel constructor(
-    private val repository: MediaRepository,val handleUseCase: MediaHandleUseCase
+class AlbumsViewModel(
+      repository: MediaRepository, handleUseCase: MediaHandleUseCase
 ) : MediaViewModel(repository,handleUseCase) {
     private val albumOrder: MediaOrder
-        get() = MediaOrder.Date(OrderType.Descending)
+        get() = MediaOrder.Date(OrderType.Ascending)
     val multiSelectState = mutableStateOf(false)
     val selectedPhotoState = mutableStateListOf<UriMedia>()
 
@@ -38,6 +36,7 @@ class AlbumsViewModel constructor(
             multiSelectState.update(selectedPhotoState.isNotEmpty())
         }
     }
+
     val albumsFlow = repository.getAlbums(mediaOrder = albumOrder).map { result ->
         val newOrder = albumOrder
         val data = newOrder.sortAlbums(result.data ?: emptyList())
