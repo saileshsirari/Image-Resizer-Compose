@@ -76,6 +76,7 @@ fun <T: Media> MediaScreen(
     searchBarActive: MutableState<Boolean> = remember { mutableStateOf(false) },
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedContentScope,
+    selectedMediaRepository: SelectedMediaRepository,
     onActivityResult: (result: ActivityResult) -> Unit,
 ) {
     val showSearchBar = remember { albumId == -1L && target == null }
@@ -190,7 +191,8 @@ fun <T: Media> MediaScreen(
                 selectedMedia = selectedMedia,
                 selectionState = selectionState,
                 albumsState = albumsState,
-                handler = handler
+                handler = handler,
+                selectedMediaRepository = selectedMediaRepository
             )
         }
     }

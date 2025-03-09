@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.dp
 import com.image.resizer.compose.R
 import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
+import com.image.resizer.compose.mediaApi.util.getUri
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
@@ -76,7 +77,8 @@ fun <T: Media> SelectionSheet(
     selectedMedia: SnapshotStateList<T>,
     selectionState: MutableState<Boolean>,
     albumsState: State<AlbumState>,
-    handler: MediaHandleUseCase
+    handler: MediaHandleUseCase,
+    selectedMediaRepository: SelectedMediaRepository
 ) {
     fun clearSelection() {
         selectedMedia.clear()
@@ -177,8 +179,11 @@ fun <T: Media> SelectionSheet(
                     title = stringResource(R.string.compress)
                 ) {
                     scope.launch {
-                     //   handler.toggleFavorite(result = result, selectedMedia)
+                        //  handler.toggleFavorite(result = result, selectedMedia)
+                        val uriList = selectedMedia.map{ it }
+                        selectedMediaRepository.addSelectedMedias(uriList.map { it.getUri() })
                     }
+
                 }
                 // Copy Component
                 SelectionBarColumn(

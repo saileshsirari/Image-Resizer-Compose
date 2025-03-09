@@ -162,6 +162,12 @@ fun Uri.writeRequest(
 ) = IntentSenderRequest.Builder(MediaStore.createWriteRequest(contentResolver, arrayListOf(this)))
     .build()
 
+@RequiresApi(Build.VERSION_CODES.R)
+fun List<Uri>.writeRequests(
+    contentResolver: ContentResolver,
+) = IntentSenderRequest.Builder(MediaStore.createWriteRequest(contentResolver, this))
+    .build()
+
 
 @Composable
 fun <T: Media> rememberExifMetadata(media: T, exifInterface: ExifInterface?): ExifMetadata? {

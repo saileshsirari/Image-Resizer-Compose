@@ -65,6 +65,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
@@ -91,11 +92,19 @@ import com.image.resizer.compose.mediaApi.AlbumsScreen
 import com.image.resizer.compose.mediaApi.AlbumsViewModel
 import com.image.resizer.compose.mediaApi.MediaViewModel
 import com.image.resizer.compose.mediaApi.NavigationButton
+import com.image.resizer.compose.mediaApi.SaveFormat
 import com.image.resizer.compose.mediaApi.TwoLinedDateToolbarTitle
+import com.image.resizer.compose.mediaApi.model.Album
 import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.model.MediaState
+import com.image.resizer.compose.mediaApi.util.printError
+import com.image.resizer.compose.mediaApi.util.rememberActivityResult
+import com.image.resizer.compose.mediaApi.util.writeRequest
+import com.image.resizer.compose.mediaApi.util.writeRequests
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 
@@ -109,7 +118,7 @@ fun HomeScreenPreview1() {
 )
 @Composable
  fun <T: Media> HomeScreen(
-    homeScreenViewModel: HomeScreenViewModel = viewModel(),
+    homeScreenViewModel: HomeScreenViewModel ,
     albumsViewModel: AlbumsViewModel,
     timelineViewModel: MediaViewModel,
     sharedTransitionScope: SharedTransitionScope,
@@ -120,7 +129,8 @@ fun HomeScreenPreview1() {
     albumsState: State<AlbumState> = remember { mutableStateOf(AlbumState()) },
     selectedMedia: SnapshotStateList<T>,
     albumName: String = stringResource(R.string.app_name),
-     navigate: @DisallowComposableCalls (route: String) -> Unit,
+     navigate: (route: String) -> Unit,
+    onItemClick: () -> Unit,
      navigateUp: @DisallowComposableCalls () -> Unit,
 ) {
 // Preloaded viewModels
@@ -128,6 +138,7 @@ fun HomeScreenPreview1() {
         albumsViewModel.albumsFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
     val timelineState =
         timelineViewModel.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+    val selectedUris = homeScreenViewModel.selectedUris.collectAsStateWithLifecycle(emptyList())
 
     val context = LocalContext.current
     var scaledParams by remember { mutableStateOf(listOf<ScaleParams>()) }
@@ -174,7 +185,9 @@ fun HomeScreenPreview1() {
     val multiplePhotoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(),
         onResult = { uris ->
-            handlePickedImages(uris, context, homeScreenViewModel)
+            handlePickedImages(uris, context, homeScreenViewModel){
+
+            }
         }
     )
 
@@ -208,11 +221,13 @@ fun HomeScreenPreview1() {
                     onClick = {
                         showDialog = true
                         if (galleryPermissionState.status.isGranted) {
-                            multiplePhotoPickerLauncher.launch(
+
+                            onItemClick()
+                        /*    multiplePhotoPickerLauncher.launch(
                                 PickVisualMediaRequest(
                                     ActivityResultContracts.PickVisualMedia.ImageOnly
                                 )
-                            )
+                            )*/
                         } else {
                             showRationale = true
                         }
@@ -239,11 +254,11 @@ fun HomeScreenPreview1() {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-//                HandleGalleryState(galleryState, showImages)
-                if(galleryState is GalleryState.Idle){
-                    albumsState.value
-                    Log.d(TAG, "here ${albumsState.value}}")
-
+                HandleGalleryState(galleryState, showImages)
+                if(selectedUris.value.isNotEmpty()){
+                    handlePickedImages(selectedUris.value, context, homeScreenViewModel){
+                            homeScreenViewModel.clearSelectedUri()
+                    }
                 }
 
                 val currentCropState = cropState
@@ -303,8 +318,7 @@ fun HomeScreenPreview1() {
 
                     is ScaleState.ShowPopup -> {
                         val originalDimensions =
-                            homeScreenViewModel.selectedImageItems.map { it.imageDimension }
-                                .filterNotNull()
+                            homeScreenViewModel.selectedImageItems.mapNotNull { it.imageDimension }
                         // Implement image scaling logic here
                         AnimatedVisibility(
                             visible = true,
@@ -339,7 +353,13 @@ fun HomeScreenPreview1() {
                                 currentScaleState.data.scaleParamsList,
                                 onSaveClicked = {
                                     homeScreenViewModel.showToast()
-                                    homeScreenViewModel.showSelectedImages()
+
+                                    homeScreenViewModel.saveOverride(onSuccess = {
+                                        homeScreenViewModel.showToast()
+                                        homeScreenViewModel.showSelectedImages()
+                                    }, onFail = {
+                                        homeScreenViewModel.showToast("Failed")
+                                    })
                                 })
                         }
 
@@ -397,11 +417,11 @@ fun HomeScreenPreview1() {
     }
 
 }
-
 private  fun handlePickedImages(
     uris: List<@JvmSuppressWildcards Uri>,
     context: Context,
-    homeScreenViewModel: HomeScreenViewModel
+    homeScreenViewModel: HomeScreenViewModel,
+    callBack:()->Unit
 ) {
     if (uris.isNotEmpty()) {
         val selectedImageItems = uris.map { uri ->
@@ -414,7 +434,8 @@ private  fun handlePickedImages(
                 imageDimension = imagesDimensions
             )
         }
-        homeScreenViewModel.selectedImageItems = selectedImageItems
+        homeScreenViewModel.onGalleryImagesSelected(selectedImageItems)
+        callBack()
 
     }
 }
@@ -425,7 +446,7 @@ private fun HandleCompressState(
     homeScreenViewModel: HomeScreenViewModel,
 ) {
     var deleteImages by remember { mutableStateOf(false) }
-
+    val scope = rememberCoroutineScope { Dispatchers.IO }
     val context = LocalContext.current
     if(deleteImages) {
 
@@ -436,6 +457,36 @@ private fun HandleCompressState(
         deleteImages =false
 
     }
+
+    val overrideRequest = rememberActivityResult(
+        onResultOk = {
+            homeScreenViewModel.saveOverride(
+                saveFormat = SaveFormat.PNG,
+                onSuccess = {
+                    var replaced =false
+                    homeScreenViewModel.selectedImageItems.forEach { imageItem->
+                        imageItem.scaledBitmap?.let {
+                             replaced = ImageReplacer.replaceOriginalImageWithBitmap(
+                                context,
+                                imageItem.uri,
+                                it
+                            )
+
+                        }
+                    }
+                    if(replaced) {
+                        homeScreenViewModel.showToast("Images replaced")
+                    }else{
+                        homeScreenViewModel.showToast("Error in replacing images  ")
+                    }
+
+                },
+                onFail = {
+                    printError("Failed to save override")
+                }
+            )
+        }
+    )
     when (currentCompressState) {
         is CompressState.Success -> {
             if (homeScreenViewModel.selectedImageItems.isNotEmpty()) {
@@ -450,20 +501,21 @@ private fun HandleCompressState(
                     },
                     onSReplaceClicked = {
                         var replaced = true
-                        it.forEach { imageItem ->
+                        scope.launch {
+                            overrideRequest.launch(
+                                it.map { it.uri }.writeRequests((context as Activity).contentResolver))
+                        }
+
+                     /*   it.forEach { imageItem ->
                             imageItem.scaledBitmap?.let {
-                                replaced = ImageReplacer.replaceOriginalImageWithBitmap(
-                                    context,
-                                    imageItem.uri,
-                                    it
-                                )
+                                scope.launch {
+                                    imageItem.uri.let { uri -> overrideRequest.launch(
+                                        uri.writeRequest( (context as Activity).contentResolver)) }
+                                }
+
                             }
-                        }
-                        if(replaced) {
-                            homeScreenViewModel.showToast("Images replaced")
-                        }else{
-                            homeScreenViewModel.showToast("Error in replacing images  ")
-                        }
+                        }*/
+
                     })
             }
         }
@@ -578,6 +630,14 @@ fun CompressToKbImageScreen(
                     },
                 ) {
                     Text(text = "Save Images")
+                }
+
+                Button(
+                    onClick = {
+                        onSReplaceClicked(scaledImages)
+                    },
+                ) {
+                    Text(text = "Replace Images")
                 }
 
             }

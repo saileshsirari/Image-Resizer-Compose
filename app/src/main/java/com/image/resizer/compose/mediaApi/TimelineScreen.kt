@@ -44,6 +44,7 @@ inline fun <reified T: Media> TimelineScreen(
     searchBarActive: MutableState<Boolean> = mutableStateOf(false),
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedContentScope,
+    selectedMediaRepository: SelectedMediaRepository
 ) {
     MediaScreen(
         paddingValues = paddingValues,
@@ -79,6 +80,7 @@ inline fun <reified T: Media> TimelineScreen(
         searchBarActive = searchBarActive,
         sharedTransitionScope = sharedTransitionScope,
         animatedContentScope = animatedContentScope,
+        selectedMediaRepository = selectedMediaRepository
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             selectedMedia.clear()

@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -53,11 +54,14 @@ import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.MediaRepositoryImpl
 import com.image.resizer.compose.mediaApi.MediaViewModel
 import com.image.resizer.compose.mediaApi.MediaViewScreen
+import com.image.resizer.compose.mediaApi.SelectedMediaRepository
 import com.image.resizer.compose.mediaApi.TimelineScreen
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.navigateInAnimation
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.navigateUpAnimation
 import com.image.resizer.compose.theme.AppTheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
@@ -144,6 +148,8 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
         albumsViewModel.albumsFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
     val vaultState =
         timelineViewModel.vaultsFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+    val selectedMediaRepository = SelectedMediaRepository(context = LocalContext.current)
+    val homeScreenViewModel = HomeScreenViewModel(selectedMediaRepository, mediaHandleUseCase)
 
     SharedTransitionLayout {
         NavHost(
@@ -156,7 +162,7 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(
-                Screen.Home.route
+                Screen.AlbumsScreen.route
             ) {
                 AlbumsScreen(
                     mediaState = timelineState,
@@ -187,6 +193,7 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
                  val hideTimeline by remember { mutableStateOf(true) }
                  val mediaState = vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
                    HomeScreen(
+                       homeScreenViewModel =homeScreenViewModel,
                        albumsViewModel = albumsViewModel,
                        timelineViewModel = timelineViewModel,
                        sharedTransitionScope =  this@SharedTransitionLayout,
@@ -196,6 +203,12 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
                        albumsState = albumsState,
                        selectionState = vm.multiSelectState,
                        selectedMedia = vm.selectedPhotoState,
+                       onItemClick = {
+                           navController.navigate(Screen.AlbumsScreen.route) {
+                               launchSingleTop = true
+                               restoreState = true
+                           }
+                       },
                        navigate = {
                            navController.navigate(it) {
                                launchSingleTop = true
@@ -234,6 +247,13 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
                 val vm = AlbumsViewModel(mediaRepository, mediaHandleUseCase).apply {
                     albumId = argumentAlbumId
                 }
+               /* val scope = rememberCoroutineScope()
+                scope.launch {
+                    vm.mediaFlow.map { it }.collect {
+                        Log.d("AlbumViewScreen", "albums: $it")
+                    }
+
+                }*/
 
                 val hideTimeline by remember { mutableStateOf(true) }
                 val mediaState = vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
@@ -284,7 +304,8 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
                     },
                     isScrolling = mutableStateOf(false),
                     sharedTransitionScope = this@SharedTransitionLayout,
-                    animatedContentScope = this
+                    animatedContentScope = this,
+                    selectedMediaRepository = selectedMediaRepository
                 )
             }
             composable(
