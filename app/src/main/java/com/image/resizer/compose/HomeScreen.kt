@@ -3,6 +3,7 @@
 package com.image.resizer.compose
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -11,13 +12,15 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,6 +48,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -52,44 +56,94 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisallowComposableCalls
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.image.resizer.compose.ImageHelper.getFileNameAndSize
 import com.image.resizer.compose.ImageReplacer.deleteImage
-import com.image.resizer.compose.ImageReplacer.deleteSelectedImages
+import com.image.resizer.compose.mediaApi.AlbumsScreen
+import com.image.resizer.compose.mediaApi.AlbumsViewModel
+import com.image.resizer.compose.mediaApi.CopyMediaSheet
+import com.image.resizer.compose.mediaApi.MediaHandleUseCase
+import com.image.resizer.compose.mediaApi.MediaViewModel
+import com.image.resizer.compose.mediaApi.NavigationButton
+import com.image.resizer.compose.mediaApi.SaveFormat
+import com.image.resizer.compose.mediaApi.TwoLinedDateToolbarTitle
+import com.image.resizer.compose.mediaApi.model.Album
+import com.image.resizer.compose.mediaApi.model.AlbumState
+import com.image.resizer.compose.mediaApi.model.Media
+import com.image.resizer.compose.mediaApi.model.MediaState
+import com.image.resizer.compose.mediaApi.rememberAppBottomSheetState
+import com.image.resizer.compose.mediaApi.util.printError
+import com.image.resizer.compose.mediaApi.util.rememberActivityResult
+import com.image.resizer.compose.mediaApi.util.writeRequest
+import com.image.resizer.compose.mediaApi.util.writeRequests
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 
 @Composable
 fun HomeScreenPreview1() {
-    HomeScreen()
+//    HomeScreen()
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class,
+    ExperimentalSharedTransitionApi::class
+)
 @Composable
-fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
-
+ fun <T: Media> HomeScreen(
+    homeScreenViewModel: HomeScreenViewModel ,
+    albumsViewModel: AlbumsViewModel,
+    timelineViewModel: MediaViewModel,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedContentScope: AnimatedContentScope,
+    navController: NavHostController,
+    mediaState: State<MediaState<T>>,
+    selectionState: MutableState<Boolean>,
+    albumsState: State<AlbumState> = remember { mutableStateOf(AlbumState()) },
+    selectedMedia: SnapshotStateList<T>,
+    albumName: String = stringResource(R.string.app_name),
+     navigate: (route: String) -> Unit,
+    onItemClick: () -> Unit,
+    handler:MediaHandleUseCase,
+     navigateUp: @DisallowComposableCalls () -> Unit,
+) {
+// Preloaded viewModels
+    val albumsState =
+        albumsViewModel.albumsFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+    val timelineState =
+        timelineViewModel.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+   // val selectedUris = homeScreenViewModel.selectedUris.collectAsStateWithLifecycle(emptyList())
+    val copySheetState = rememberAppBottomSheetState()
     val context = LocalContext.current
     var scaledParams by remember { mutableStateOf(listOf<ScaleParams>()) }
     val viewModel = ScaleImageViewModel()
@@ -106,6 +160,8 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
     val scaleState by homeScreenViewModel.scaleState.collectAsState()
     val galleryState by homeScreenViewModel.galleryState.collectAsState()
     val showToast by homeScreenViewModel.showToast.collectAsState()
+    val scope = rememberCoroutineScope()
+
 
     val showImages by remember {
         derivedStateOf { galleryState is GalleryState.Success }
@@ -132,24 +188,7 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
 
     }
 
-    val multiplePhotoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(),
-        onResult = { uris ->
-            if (uris.isNotEmpty()) {
-                val selectedImageItems = uris.map { uri ->
-                    val (imageName, fileSize) = getFileNameAndSize(context, uri)
-                    val imagesDimensions = imageDimensionsFromUri(context, uri)
-                    ImageItem(
-                        uri,
-                        imageName = imageName,
-                        fileSize = fileSize,
-                        imageDimension = imagesDimensions
-                    )
-                }
-                homeScreenViewModel.onGalleryImagesSelected(selectedImageItems)
-            }
-        }
-    )
+
 
     Scaffold(
         topBar = {
@@ -166,21 +205,45 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                     homeScreenViewModel.onUndo()
                 }, onShowCompress = {
                     homeScreenViewModel.onShowCompressPopup()
-                }
+                },
+                navigateUp = navigateUp,
+                albumName = albumName,
+                selectedMedia = selectedMedia,
+                selectionState = selectionState,
+                mediaState = mediaState
             )
         },
         floatingActionButton = {
             // Custom position for the FloatingActionButton
             Box(modifier = Modifier.fillMaxSize()) {
+                CopyMediaSheet(
+                    sheetState = copySheetState,
+                    mediaList = selectedMedia,
+                    albumsState = albumsState,
+                    handler = handler,
+                    onFinish = {
+
+                    }
+                )
                 FloatingActionButton(
                     onClick = {
                         showDialog = true
                         if (galleryPermissionState.status.isGranted) {
-                            multiplePhotoPickerLauncher.launch(
+                            if (albumsState.value.albums.isNotEmpty()) {
+                                scope.launch {
+                                    copySheetState.show()
+                                }
+
+                            }else{
+                               homeScreenViewModel.showToast("No Pictures found")
+                            }
+
+                          //  onItemClick()
+                        /*    multiplePhotoPickerLauncher.launch(
                                 PickVisualMediaRequest(
                                     ActivityResultContracts.PickVisualMedia.ImageOnly
                                 )
-                            )
+                            )*/
                         } else {
                             showRationale = true
                         }
@@ -208,6 +271,7 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
             ) {
 
                 HandleGalleryState(galleryState, showImages)
+
 
                 val currentCropState = cropState
                 when (currentCropState) {
@@ -266,8 +330,7 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
 
                     is ScaleState.ShowPopup -> {
                         val originalDimensions =
-                            homeScreenViewModel.selectedImageItems.map { it.imageDimension }
-                                .filterNotNull()
+                            homeScreenViewModel.selectedImageItems.mapNotNull { it.imageDimension }
                         // Implement image scaling logic here
                         AnimatedVisibility(
                             visible = true,
@@ -302,7 +365,13 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                                 currentScaleState.data.scaleParamsList,
                                 onSaveClicked = {
                                     homeScreenViewModel.showToast()
-                                    homeScreenViewModel.showSelectedImages()
+
+                                    homeScreenViewModel.saveOverride(onSuccess = {
+                                        homeScreenViewModel.showToast()
+                                        homeScreenViewModel.showSelectedImages()
+                                    }, onFail = {
+                                        homeScreenViewModel.showToast("Failed")
+                                    })
                                 })
                         }
 
@@ -329,6 +398,11 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
             homeScreenViewModel.showToast("") // Reset the state after showing the toast
         }
     }
+    if(showDialog){
+
+
+    }
+
     if (showRationale) {
         AlertDialog(
             onDismissRequest = {
@@ -360,13 +434,14 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
 
 }
 
+
 @Composable
 private fun HandleCompressState(
     currentCompressState: CompressState,
     homeScreenViewModel: HomeScreenViewModel,
 ) {
     var deleteImages by remember { mutableStateOf(false) }
-
+    val scope = rememberCoroutineScope { Dispatchers.IO }
     val context = LocalContext.current
     if(deleteImages) {
 
@@ -377,6 +452,36 @@ private fun HandleCompressState(
         deleteImages =false
 
     }
+
+    val overrideRequest = rememberActivityResult(
+        onResultOk = {
+            homeScreenViewModel.saveOverride(
+                saveFormat = SaveFormat.PNG,
+                onSuccess = {
+                    var replaced =false
+                    homeScreenViewModel.selectedImageItems.forEach { imageItem->
+                        imageItem.scaledBitmap?.let {
+                             replaced = ImageReplacer.replaceOriginalImageWithBitmap(
+                                context,
+                                imageItem.uri,
+                                it
+                            )
+
+                        }
+                    }
+                    if(replaced) {
+                        homeScreenViewModel.showToast("Images replaced")
+                    }else{
+                        homeScreenViewModel.showToast("Error in replacing images  ")
+                    }
+
+                },
+                onFail = {
+                    printError("Failed to save override")
+                }
+            )
+        }
+    )
     when (currentCompressState) {
         is CompressState.Success -> {
             if (homeScreenViewModel.selectedImageItems.isNotEmpty()) {
@@ -391,20 +496,21 @@ private fun HandleCompressState(
                     },
                     onSReplaceClicked = {
                         var replaced = true
-                        it.forEach { imageItem ->
+                        scope.launch {
+                            overrideRequest.launch(
+                                it.map { it.uri }.writeRequests((context as Activity).contentResolver))
+                        }
+
+                     /*   it.forEach { imageItem ->
                             imageItem.scaledBitmap?.let {
-                                replaced = ImageReplacer.replaceOriginalImageWithBitmap(
-                                    context,
-                                    imageItem.uri,
-                                    it
-                                )
+                                scope.launch {
+                                    imageItem.uri.let { uri -> overrideRequest.launch(
+                                        uri.writeRequest( (context as Activity).contentResolver)) }
+                                }
+
                             }
-                        }
-                        if(replaced) {
-                            homeScreenViewModel.showToast("Images replaced")
-                        }else{
-                            homeScreenViewModel.showToast("Error in replacing images  ")
-                        }
+                        }*/
+
                     })
             }
         }
@@ -521,6 +627,14 @@ fun CompressToKbImageScreen(
                     Text(text = "Save Images")
                 }
 
+                Button(
+                    onClick = {
+                        onSReplaceClicked(scaledImages)
+                    },
+                ) {
+                    Text(text = "Replace Images")
+                }
+
             }
         }
     }
@@ -622,28 +736,35 @@ fun HomeScreenTopAppBarPreview() {
     val onShowCompress: () -> Unit = {
 
     }
-    HomeScreenTopAppBar(
+/*    HomeScreenTopAppBar(
         imagesTransformed = imagesTransformed,
         galleryState = galleryState,
         onUndo = onUndo,
         onShowScalePopup = onShowScalePopup,
         onCrop = onCrop,
         onShowCompress = onShowCompress
-    )
+    )*/
 }
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreenTopAppBar(
+fun <T: Media> HomeScreenTopAppBar(
     imagesTransformed: Boolean = false,
     galleryState: GalleryState,
     onUndo: () -> Unit,
     onShowScalePopup: () -> Unit,
     onCrop: (Boolean, Uri?) -> Unit,
     onShowCompress: () -> Unit,
+    albumId: Long = -1L,
+    target: String? = remember { null },
+    albumName: String = stringResource(R.string.app_name),
+    navigateUp: () -> Unit,
+    selectionState: MutableState<Boolean>,
+    selectedMedia: SnapshotStateList<T>,
+    mediaState: State<MediaState<T>>,
 ) {
-    TopAppBar(
+    LargeTopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             titleContentColor = MaterialTheme.colorScheme.primary
@@ -656,6 +777,10 @@ fun HomeScreenTopAppBar(
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+               /* TwoLinedDateToolbarTitle(
+                    albumName = albumName,
+                    dateHeader =  mediaState.value.dateHeader
+                )*/
                 Text(
                     text = "Image Resizer",
                     modifier = Modifier
@@ -738,6 +863,19 @@ fun HomeScreenTopAppBar(
                 }
             }
         },
+        navigationIcon = {
+            NavigationButton(
+                albumId = albumId,
+                target = target,
+                navigateUp = navigateUp,
+                clearSelection = {
+                    selectionState.value = false
+                    selectedMedia.clear()
+                },
+                selectionState = selectionState,
+                alwaysGoBack = true,
+            )
+        }
     )
 }
 
