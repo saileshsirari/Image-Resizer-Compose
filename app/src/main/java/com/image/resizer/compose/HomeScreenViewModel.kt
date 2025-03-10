@@ -1,9 +1,11 @@
 package com.image.resizer.compose
 
+import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.image.resizer.compose.ImageHelper.getFileNameAndSize
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.SaveFormat
 import com.image.resizer.compose.mediaApi.SelectedMediaRepository
@@ -22,7 +24,7 @@ class HomeScreenViewModel(private val selectedMediaRepository: SelectedMediaRepo
     val showToast: StateFlow<String> = _showToast
     private val _cropState = MutableStateFlow<CropState>(CropState.Idle)
     val cropState: StateFlow<CropState> = _cropState
-    val selectedUris: Flow<List<Uri>> = selectedMediaRepository.getSelectedMedia()
+   // val selectedUris: Flow<List<Uri>> = selectedMediaRepository.getSelectedMedia()
     private val _compressState = MutableStateFlow<CompressState>(CompressState.Idle)
     val compressState: StateFlow<CompressState> = _compressState
     private val _isSaving = MutableStateFlow(true)
@@ -59,18 +61,40 @@ class HomeScreenViewModel(private val selectedMediaRepository: SelectedMediaRepo
 
     fun onShowCompressPopup() {
         viewModelScope.launch {
+            onReset()
             _compressState.value = CompressState.PopupShown
         }
     }
 
 
     fun onShowScalePopup() {
+        onReset()
         _scaleState.value = ScaleState.ShowPopup
     }
 
     fun onImagesScaled(scaleParamsList: List<ScaleParams>) {
         onReset()
         _scaleState.value = ScaleState.Success(ScaleStateData(scaleParamsList))
+    }
+      fun handlePickedImages(
+        uris: List<@JvmSuppressWildcards Uri>,
+        context: Context,
+        callBack:()->Unit
+    ) {
+        if (uris.isNotEmpty()) {
+            val selectedImageItems = uris.map { uri ->
+                val (imageName, fileSize) = getFileNameAndSize(context, uri)
+                val imagesDimensions = imageDimensionsFromUri(context, uri)
+                ImageItem(
+                    uri,
+                    imageName = imageName,
+                    fileSize = fileSize,
+                    imageDimension = imagesDimensions
+                )
+            }
+            onGalleryImagesSelected(selectedImageItems)
+            callBack()
+        }
     }
 
     fun onGalleryImagesSelected(imageItems: List<ImageItem>) {

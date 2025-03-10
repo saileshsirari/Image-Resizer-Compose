@@ -5,6 +5,7 @@
 
 package com.image.resizer.compose.mediaApi
 
+import android.net.Uri
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
@@ -72,12 +73,14 @@ fun <T: Media> MediaScreen(
     navigate: (route: String) -> Unit,
     navigateUp: () -> Unit,
     toggleNavbar: (Boolean) -> Unit,
+    onCompressClick:(List<Uri>)-> Unit,
     isScrolling: MutableState<Boolean> = remember { mutableStateOf(false) },
     searchBarActive: MutableState<Boolean> = remember { mutableStateOf(false) },
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedContentScope,
     selectedMediaRepository: SelectedMediaRepository,
     onActivityResult: (result: ActivityResult) -> Unit,
+
 ) {
     val showSearchBar = remember { albumId == -1L && target == null }
     var canScroll by rememberSaveable { mutableStateOf(true) }
@@ -192,7 +195,9 @@ fun <T: Media> MediaScreen(
                 selectionState = selectionState,
                 albumsState = albumsState,
                 handler = handler,
-                selectedMediaRepository = selectedMediaRepository
+                selectedMediaRepository = selectedMediaRepository,
+                onCompressClick  = onCompressClick
+
             )
         }
     }

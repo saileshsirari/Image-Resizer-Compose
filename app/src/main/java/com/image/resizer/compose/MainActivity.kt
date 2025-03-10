@@ -30,6 +30,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -183,43 +184,44 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
                 )
             }
 
-             composable(Screen.Home.route) {
-                 val appName = stringResource(id = R.string.app_name)
+            composable(Screen.Home.route) {
+                val appName = stringResource(id = R.string.app_name)
 
-                 val vm = AlbumsViewModel(mediaRepository, mediaHandleUseCase).apply {
-                     albumId = -1
-                 }
+                val vm = AlbumsViewModel(mediaRepository, mediaHandleUseCase).apply {
+                    albumId = -1
+                }
 
-                 val hideTimeline by remember { mutableStateOf(true) }
-                 val mediaState = vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
-                   HomeScreen(
-                       homeScreenViewModel =homeScreenViewModel,
-                       albumsViewModel = albumsViewModel,
-                       timelineViewModel = timelineViewModel,
-                       sharedTransitionScope =  this@SharedTransitionLayout,
-                       animatedContentScope = this,
-                       navController = navController,
-                       mediaState = mediaState,
-                       albumsState = albumsState,
-                       selectionState = vm.multiSelectState,
-                       selectedMedia = vm.selectedPhotoState,
-                       onItemClick = {
-                           navController.navigate(Screen.AlbumsScreen.route) {
-                               launchSingleTop = true
-                               restoreState = true
-                           }
-                       },
-                       navigate = {
-                           navController.navigate(it) {
-                               launchSingleTop = true
-                               restoreState = true
-                           }
-                       },
-                       navigateUp = {
-                           navController.navigateUp()
-                       },
-                   )
-             }
+                val hideTimeline by remember { mutableStateOf(true) }
+                val mediaState = vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+                HomeScreen(
+                    homeScreenViewModel = homeScreenViewModel,
+                    albumsViewModel = albumsViewModel,
+                    timelineViewModel = timelineViewModel,
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    animatedContentScope = this,
+                    navController = navController,
+                    mediaState = mediaState,
+                    albumsState = albumsState,
+                    selectionState = vm.multiSelectState,
+                    selectedMedia = vm.selectedPhotoState,
+                    onItemClick = {
+                        navController.navigate(Screen.AlbumsScreen.route) {
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    navigate = {
+                        navController.navigate(it) {
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    handler = vm.handler,
+                    navigateUp = {
+                        navController.navigateUp()
+                    },
+                )
+            }
             composable(Screen.MyImages.route) {
                 MyImagesScreen()
             }
@@ -247,36 +249,31 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
                 val vm = AlbumsViewModel(mediaRepository, mediaHandleUseCase).apply {
                     albumId = argumentAlbumId
                 }
-               /* val scope = rememberCoroutineScope()
-                scope.launch {
-                    vm.mediaFlow.map { it }.collect {
-                        Log.d("AlbumViewScreen", "albums: $it")
-                    }
 
-                }*/
+                val context = LocalContext.current
 
                 val hideTimeline by remember { mutableStateOf(true) }
                 val mediaState = vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
-              /*  HomeScreen(
-                    albumsViewModel = albumsViewModel,
-                    timelineViewModel = timelineViewModel,
-                    sharedTransitionScope =  this@SharedTransitionLayout,
-                    animatedContentScope = this,
-                    navController = navController,
-                    mediaState = mediaState,
-                    albumsState = albumsState,
-                    selectionState = vm.multiSelectState,
-                    selectedMedia = vm.selectedPhotoState,
-                    navigate = {
-                        navController.navigate(it) {
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    navigateUp = {
-                        navController.navigateUp()
-                    },
-                )*/
+                /*  HomeScreen(
+                      albumsViewModel = albumsViewModel,
+                      timelineViewModel = timelineViewModel,
+                      sharedTransitionScope =  this@SharedTransitionLayout,
+                      animatedContentScope = this,
+                      navController = navController,
+                      mediaState = mediaState,
+                      albumsState = albumsState,
+                      selectionState = vm.multiSelectState,
+                      selectedMedia = vm.selectedPhotoState,
+                      navigate = {
+                          navController.navigate(it) {
+                              launchSingleTop = true
+                              restoreState = true
+                          }
+                      },
+                      navigateUp = {
+                          navController.navigateUp()
+                      },
+                  )*/
                 TimelineScreen(
                     paddingValues = innerPadding,
                     albumId = argumentAlbumId,
@@ -305,7 +302,19 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
                     isScrolling = mutableStateOf(false),
                     sharedTransitionScope = this@SharedTransitionLayout,
                     animatedContentScope = this,
-                    selectedMediaRepository = selectedMediaRepository
+                    selectedMediaRepository = selectedMediaRepository,
+                    onCompressClick = {
+                        homeScreenViewModel.handlePickedImages(it, context) {
+                            navController.popBackStack(
+                                Screen.Home.route,
+                                inclusive = false
+                            )
+                        }
+
+                        //homeScreenViewModel.onGalleryImagesSelected()
+
+
+                    }
                 )
             }
             composable(

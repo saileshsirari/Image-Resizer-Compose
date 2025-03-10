@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyGridState
@@ -329,7 +330,7 @@ private fun <T: Media> PinchZoomGridScope.MediaGridContent(
     LazyVerticalGrid(
         state = gridState,
         modifier = Modifier.fillMaxSize(),
-        columns = gridCells,
+        columns = GridCells.Fixed(3),
         contentPadding = paddingValues,
         userScrollEnabled = canScroll,
         horizontalArrangement = Arrangement.spacedBy(1.dp),

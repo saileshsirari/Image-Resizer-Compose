@@ -6,6 +6,7 @@
 package com.image.resizer.compose.mediaApi
 
 import android.app.Activity
+import android.net.Uri
 import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -44,7 +45,8 @@ inline fun <reified T: Media> TimelineScreen(
     searchBarActive: MutableState<Boolean> = mutableStateOf(false),
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedContentScope,
-    selectedMediaRepository: SelectedMediaRepository
+    selectedMediaRepository: SelectedMediaRepository,
+    noinline onCompressClick:(List<Uri>)-> Unit
 ) {
     MediaScreen(
         paddingValues = paddingValues,
@@ -61,6 +63,7 @@ inline fun <reified T: Media> TimelineScreen(
         showMonthlyHeader = true,
         enableStickyHeaders = enableStickyHeaders,
         allowNavBar = allowNavBar,
+        onCompressClick = onCompressClick,
         navActionsContent = { expandedDropDown: MutableState<Boolean>, _ ->
             TimelineNavActions(
                 albumId = albumId,

@@ -6,6 +6,7 @@
 package com.image.resizer.compose.mediaApi
 
 import android.app.Activity
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -78,7 +79,8 @@ fun <T: Media> SelectionSheet(
     selectionState: MutableState<Boolean>,
     albumsState: State<AlbumState>,
     handler: MediaHandleUseCase,
-    selectedMediaRepository: SelectedMediaRepository
+    selectedMediaRepository: SelectedMediaRepository,
+    onCompressClick:(List<Uri>)-> Unit
 ) {
     fun clearSelection() {
         selectedMedia.clear()
@@ -172,38 +174,17 @@ fun <T: Media> SelectionSheet(
                 ) {
                     context.shareMedia(selectedMedia)
                 }
-                // Favorite Component
                 SelectionBarColumn(
                     imageVector = Icons.Outlined.FavoriteBorder,
                     tabletMode = tabletMode,
                     title = stringResource(R.string.compress)
                 ) {
                     scope.launch {
-                        //  handler.toggleFavorite(result = result, selectedMedia)
                         val uriList = selectedMedia.map{ it }
                         selectedMediaRepository.addSelectedMedias(uriList.map { it.getUri() })
+                        onCompressClick(uriList.map { it.getUri() })
                     }
 
-                }
-                // Copy Component
-                SelectionBarColumn(
-                    imageVector = Icons.Outlined.CopyAll,
-                    tabletMode = tabletMode,
-                    title = stringResource(R.string.copy)
-                ) {
-                    scope.launch {
-                        copySheetState.show()
-                    }
-                }
-                // Move Component
-                SelectionBarColumn(
-                    imageVector = Icons.AutoMirrored.Outlined.DriveFileMove,
-                    tabletMode = tabletMode,
-                    title = stringResource(R.string.move)
-                ) {
-                    scope.launch {
-                        moveSheetState.show()
-                    }
                 }
                 // Trash Component
                 val trashEnabled by remember { mutableStateOf(true) }

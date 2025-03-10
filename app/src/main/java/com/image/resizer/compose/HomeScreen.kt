@@ -90,6 +90,8 @@ import com.image.resizer.compose.ImageHelper.getFileNameAndSize
 import com.image.resizer.compose.ImageReplacer.deleteImage
 import com.image.resizer.compose.mediaApi.AlbumsScreen
 import com.image.resizer.compose.mediaApi.AlbumsViewModel
+import com.image.resizer.compose.mediaApi.CopyMediaSheet
+import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.MediaViewModel
 import com.image.resizer.compose.mediaApi.NavigationButton
 import com.image.resizer.compose.mediaApi.SaveFormat
@@ -98,6 +100,7 @@ import com.image.resizer.compose.mediaApi.model.Album
 import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.model.MediaState
+import com.image.resizer.compose.mediaApi.rememberAppBottomSheetState
 import com.image.resizer.compose.mediaApi.util.printError
 import com.image.resizer.compose.mediaApi.util.rememberActivityResult
 import com.image.resizer.compose.mediaApi.util.writeRequest
@@ -131,6 +134,7 @@ fun HomeScreenPreview1() {
     albumName: String = stringResource(R.string.app_name),
      navigate: (route: String) -> Unit,
     onItemClick: () -> Unit,
+    handler:MediaHandleUseCase,
      navigateUp: @DisallowComposableCalls () -> Unit,
 ) {
 // Preloaded viewModels
@@ -138,8 +142,8 @@ fun HomeScreenPreview1() {
         albumsViewModel.albumsFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
     val timelineState =
         timelineViewModel.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
-    val selectedUris = homeScreenViewModel.selectedUris.collectAsStateWithLifecycle(emptyList())
-
+   // val selectedUris = homeScreenViewModel.selectedUris.collectAsStateWithLifecycle(emptyList())
+    val copySheetState = rememberAppBottomSheetState()
     val context = LocalContext.current
     var scaledParams by remember { mutableStateOf(listOf<ScaleParams>()) }
     val viewModel = ScaleImageViewModel()
@@ -156,6 +160,8 @@ fun HomeScreenPreview1() {
     val scaleState by homeScreenViewModel.scaleState.collectAsState()
     val galleryState by homeScreenViewModel.galleryState.collectAsState()
     val showToast by homeScreenViewModel.showToast.collectAsState()
+    val scope = rememberCoroutineScope()
+
 
     val showImages by remember {
         derivedStateOf { galleryState is GalleryState.Success }
@@ -182,14 +188,7 @@ fun HomeScreenPreview1() {
 
     }
 
-    val multiplePhotoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(),
-        onResult = { uris ->
-            handlePickedImages(uris, context, homeScreenViewModel){
 
-            }
-        }
-    )
 
     Scaffold(
         topBar = {
@@ -217,12 +216,29 @@ fun HomeScreenPreview1() {
         floatingActionButton = {
             // Custom position for the FloatingActionButton
             Box(modifier = Modifier.fillMaxSize()) {
+                CopyMediaSheet(
+                    sheetState = copySheetState,
+                    mediaList = selectedMedia,
+                    albumsState = albumsState,
+                    handler = handler,
+                    onFinish = {
+
+                    }
+                )
                 FloatingActionButton(
                     onClick = {
                         showDialog = true
                         if (galleryPermissionState.status.isGranted) {
+                            if (albumsState.value.albums.isNotEmpty()) {
+                                scope.launch {
+                                    copySheetState.show()
+                                }
 
-                            onItemClick()
+                            }else{
+                               homeScreenViewModel.showToast("No Pictures found")
+                            }
+
+                          //  onItemClick()
                         /*    multiplePhotoPickerLauncher.launch(
                                 PickVisualMediaRequest(
                                     ActivityResultContracts.PickVisualMedia.ImageOnly
@@ -255,11 +271,7 @@ fun HomeScreenPreview1() {
             ) {
 
                 HandleGalleryState(galleryState, showImages)
-                if(selectedUris.value.isNotEmpty()){
-                    handlePickedImages(selectedUris.value, context, homeScreenViewModel){
-                            homeScreenViewModel.clearSelectedUri()
-                    }
-                }
+
 
                 val currentCropState = cropState
                 when (currentCropState) {
@@ -386,6 +398,10 @@ fun HomeScreenPreview1() {
             homeScreenViewModel.showToast("") // Reset the state after showing the toast
         }
     }
+    if(showDialog){
+
+
+    }
 
     if (showRationale) {
         AlertDialog(
@@ -417,28 +433,7 @@ fun HomeScreenPreview1() {
     }
 
 }
-private  fun handlePickedImages(
-    uris: List<@JvmSuppressWildcards Uri>,
-    context: Context,
-    homeScreenViewModel: HomeScreenViewModel,
-    callBack:()->Unit
-) {
-    if (uris.isNotEmpty()) {
-        val selectedImageItems = uris.map { uri ->
-            val (imageName, fileSize) = getFileNameAndSize(context, uri)
-            val imagesDimensions = imageDimensionsFromUri(context, uri)
-            ImageItem(
-                uri,
-                imageName = imageName,
-                fileSize = fileSize,
-                imageDimension = imagesDimensions
-            )
-        }
-        homeScreenViewModel.onGalleryImagesSelected(selectedImageItems)
-        callBack()
 
-    }
-}
 
 @Composable
 private fun HandleCompressState(
