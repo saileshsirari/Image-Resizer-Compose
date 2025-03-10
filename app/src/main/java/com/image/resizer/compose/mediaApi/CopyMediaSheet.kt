@@ -1,7 +1,14 @@
 package com.image.resizer.compose.mediaApi
 
+import android.R.attr.type
+import android.app.Activity
+import android.net.http.SslCertificate.restoreState
 import android.os.Environment
+import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +30,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -33,15 +41,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.SecureFlagPolicy
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.image.resizer.compose.HomeScreenViewModel
 import com.image.resizer.compose.R
+import com.image.resizer.compose.Screen
 import com.image.resizer.compose.mediaApi.model.Album
 import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
+import com.image.resizer.compose.mediaApi.model.MediaState
 import com.image.resizer.compose.mediaApi.util.Constants
 import com.image.resizer.compose.mediaApi.util.Constants.albumCellsList
 import com.image.resizer.compose.mediaApi.util.toastError
@@ -54,32 +72,47 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
-fun <T: Media> CopyMediaSheet(
+fun <T : Media> CopyMediaSheet(
     sheetState: AppBottomSheetState,
     albumsState: State<AlbumState>,
     handler: MediaHandleUseCase,
+    paddingValues: PaddingValues,
+    mediaState: State<MediaState<Media.UriMedia>>,
     mediaList: List<T>,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedContentScope: AnimatedContentScope,
+    homeScreenViewModel: HomeScreenViewModel,
+    activity: Activity,
     onFinish: () -> Unit,
 ) {
     val toastError = toastError()
-    val scope = rememberCoroutineScope()
     var progress by remember(mediaList) { mutableFloatStateOf(0f) }
     var newPath by remember(mediaList) { mutableStateOf("") }
-
+    val navController = rememberNavController()
     val newAlbumSheetState = rememberAppBottomSheetState()
     val mutex = Mutex()
+    var hideSheet by remember { mutableStateOf(false) }
+    val selectedMediaRepository = SelectedMediaRepository(context = LocalContext.current)
+    val scope = rememberCoroutineScope()
 
+    var albumId by remember { mutableStateOf(-1L) }
+    var albumName by remember { mutableStateOf("") }
+    val mediaRepository = MediaRepositoryImpl(LocalContext.current)
+    val mediaHandleUseCase =
+        MediaHandleUseCase(repository = mediaRepository, context = LocalContext.current)
+    val albumsViewModel = AlbumsViewModel(mediaRepository, mediaHandleUseCase)
+    val timelineViewModel = MediaViewModel(mediaRepository, mediaHandleUseCase)
     fun copyMedia(path: String) {
         scope.launch(Dispatchers.IO) {
             mutex.withLock {
                 newPath = path
                 async {
                     mediaList.forEachIndexed { i, media ->
-                       /* if (handler.copyMedia(media, newPath)) {
-                            progress = (i + 1f) / mediaList.size
-                        }*/
+                        /* if (handler.copyMedia(media, newPath)) {
+                             progress = (i + 1f) / mediaList.size
+                         }*/
                     }
                 }.await()
                 newPath = ""
@@ -98,6 +131,11 @@ fun <T: Media> CopyMediaSheet(
     }
 
     if (sheetState.isVisible) {
+        if(hideSheet){
+            scope.launch {
+                sheetState.hide()
+            }
+        }
         val prop = remember(progress) {
             val shouldDismiss = progress == 0f
             ModalBottomSheetProperties(
@@ -121,105 +159,107 @@ fun <T: Media> CopyMediaSheet(
             contentWindowInsets = { WindowInsets(0, 0, 0, 0) }
         ) {
 
-            Column(
-                modifier = Modifier
-                    .wrapContentHeight()
-                    .navigationBarsPadding()
-                    .fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    text = stringResource(R.string.copy),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier
-                        .padding(24.dp)
-                        .fillMaxWidth()
-                )
+            SharedTransitionLayout {
 
-                AnimatedVisibility(
-                    visible = progress > 0f,
-                    modifier = Modifier
-                        .padding(32.dp)
-                        .align(Alignment.CenterHorizontally),
-                    enter = Constants.Animation.enterAnimation,
-                    exit = Constants.Animation.exitAnimation
+                NavHost(
+                    navController = navController,
+                    startDestination = Screen.AlbumsScreen.route
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .padding(bottom = 48.dp),
-                        contentAlignment = Alignment.Center
+                    composable(
+                        Screen.AlbumsScreen.route
                     ) {
-                        CircularProgressIndicator(
-                            progress = {
-                                progress
-                            },
-                            strokeWidth = 4.dp,
-                            strokeCap = StrokeCap.Round,
-                            modifier = Modifier.size(128.dp),
-                        )
-                        Text(text = "${(progress * 100).roundToInt()}%")
-                    }
-                }
-
-                val albumSize by remember { mutableStateOf(5) }
-                AnimatedVisibility(
-                    visible = progress == 0f,
-                    enter = Constants.Animation.enterAnimation,
-                    exit = Constants.Animation.exitAnimation
-                ) {
-                    LazyVerticalGrid(
-                        state = rememberLazyGridState(),
-                        modifier = Modifier.padding(horizontal = 8.dp),
-                        columns = albumCellsList[albumSize],
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(
-                            bottom = WindowInsets.navigationBars.getBottom(
-                                LocalDensity.current
-                            ).dp
-                        )
-                    ) {
-                        item {
-                            AlbumComponent(
-                                album = Album.NewAlbum,
-                                isEnabled = true,
-                                onItemClick = {
-                                    scope.launch(Dispatchers.Main) {
-                                        newAlbumSheetState.show()
+                        AlbumsScreen(
+                            mediaState = mediaState,
+                            albumsState = albumsState,
+                            paddingValues = paddingValues,
+                            onAlbumClick =
+                                albumsViewModel.onAlbumClick {
+                                    navController.navigate(it) {
+                                        launchSingleTop = true
+                                        restoreState = true
                                     }
-                                }
-                            )
+                                },
+                            onAlbumLongClick = {
+
+                            },
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            animatedContentScope = this
+                        )
+                    }
+                    composable(
+                        route = Screen.AlbumViewScreen.albumAndName(),
+                        arguments = listOf(
+                            navArgument(name = "albumId") {
+                                type = NavType.LongType
+                                defaultValue = -1
+                            },
+                            navArgument(name = "albumName") {
+                                type = NavType.StringType
+                                defaultValue = ""
+                            }
+                        )
+                    ) { backStackEntry ->
+                        val appName = stringResource(id = R.string.app_name)
+                        val argumentAlbumName = remember(backStackEntry) {
+                            backStackEntry.arguments?.getString("albumName") ?: appName
                         }
-                        items(
-                            items = albumsState.value.albums,
-                            key = { item -> item.toString() }
-                        ) { item ->
-                            val mediaVolume = (mediaList.firstOrNull()?.volume ?: item.volume)
-                            val albumOwnership =
-                                item.relativePath.substringBeforeLast("Android/media/", "allow")
-                            val mediaOwnership =
-                                mediaList.firstOrNull()?.relativePath?.substringBeforeLast(
-                                    "Android/media/",
-                                    "allow"
-                                ) ?: albumOwnership
-                            val isStorageManager = Environment.isExternalStorageManager()
-                            AlbumComponent(
-                                album = item,
-                                isEnabled = isStorageManager || (item.volume == mediaVolume
-                                        && albumOwnership == "allow"
-                                        && mediaOwnership == "allow"
-                                        && (item.relativePath.contains("Pictures")
-                                        || item.relativePath.contains("DCIM"))),
-                                onItemClick = { album ->
-                                    copyMedia(album.relativePath)
-                                }
-                            )
+                        val argumentAlbumId = remember(backStackEntry) {
+                            backStackEntry.arguments?.getLong("albumId") ?: -1
                         }
+                        val vm = AlbumsViewModel(
+                            repository = mediaRepository,
+                            mediaHandleUseCase
+                        ).apply {
+                            albumId = argumentAlbumId
+                        }
+
+                        val context = LocalContext.current
+
+                        val hideTimeline by remember { mutableStateOf(true) }
+                        val mediaState =
+                            vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+
+                        TimelineScreen(
+                            paddingValues = paddingValues,
+                            albumId = argumentAlbumId,
+                            albumName = argumentAlbumName,
+                            handler = vm.handler,
+                            mediaState = mediaState,
+                            albumsState = albumsState,
+                            selectionState = vm.multiSelectState,
+                            selectedMedia = vm.selectedPhotoState,
+                            allowNavBar = false,
+                            allowHeaders = !hideTimeline,
+                            enableStickyHeaders = !hideTimeline,
+                            toggleSelection = vm::toggleSelection,
+                            activity = activity,
+                            navigate = {
+                                navController.navigate(it) {
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            },
+                            navigateUp = {
+                                navController.navigateUp()
+                            },
+                            toggleNavbar = {
+
+                            },
+                            isScrolling = mutableStateOf(false),
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            animatedContentScope = this,
+                            selectedMediaRepository = selectedMediaRepository,
+                            onCompressClick = {
+
+                                homeScreenViewModel.handlePickedImages(it, context) {
+                                   hideSheet =true
+                                }
+
+                            }
+                        )
                     }
                 }
+
             }
         }
     }

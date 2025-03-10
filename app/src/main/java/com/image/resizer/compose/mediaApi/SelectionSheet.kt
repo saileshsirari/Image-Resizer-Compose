@@ -80,7 +80,9 @@ fun <T: Media> SelectionSheet(
     albumsState: State<AlbumState>,
     handler: MediaHandleUseCase,
     selectedMediaRepository: SelectedMediaRepository,
+    activity: Activity,
     onCompressClick:(List<Uri>)-> Unit
+
 ) {
     fun clearSelection() {
         selectedMedia.clear()
@@ -104,7 +106,7 @@ fun <T: Media> SelectionSheet(
             }
         }
     )
-    val windowSizeClass = calculateWindowSizeClass(LocalContext.current as Activity)
+    val windowSizeClass = calculateWindowSizeClass(activity)
     val tabletMode = remember(windowSizeClass) {
         windowSizeClass.widthSizeClass > WindowWidthSizeClass.Compact
     }

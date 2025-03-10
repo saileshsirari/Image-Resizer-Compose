@@ -121,21 +121,22 @@ fun HomeScreenPreview1() {
 )
 @Composable
  fun <T: Media> HomeScreen(
-    homeScreenViewModel: HomeScreenViewModel ,
+    homeScreenViewModel: HomeScreenViewModel,
     albumsViewModel: AlbumsViewModel,
     timelineViewModel: MediaViewModel,
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedContentScope,
     navController: NavHostController,
-    mediaState: State<MediaState<T>>,
+    paddingValues: PaddingValues,
+    mediaState: State<MediaState<Media.UriMedia>>,
     selectionState: MutableState<Boolean>,
     albumsState: State<AlbumState> = remember { mutableStateOf(AlbumState()) },
     selectedMedia: SnapshotStateList<T>,
     albumName: String = stringResource(R.string.app_name),
-     navigate: (route: String) -> Unit,
+    navigate: (route: String) -> Unit,
     onItemClick: () -> Unit,
     handler:MediaHandleUseCase,
-     navigateUp: @DisallowComposableCalls () -> Unit,
+    navigateUp: @DisallowComposableCalls () -> Unit,
 ) {
 // Preloaded viewModels
     val albumsState =
@@ -209,8 +210,7 @@ fun HomeScreenPreview1() {
                 navigateUp = navigateUp,
                 albumName = albumName,
                 selectedMedia = selectedMedia,
-                selectionState = selectionState,
-                mediaState = mediaState
+                selectionState = selectionState
             )
         },
         floatingActionButton = {
@@ -221,6 +221,12 @@ fun HomeScreenPreview1() {
                     mediaList = selectedMedia,
                     albumsState = albumsState,
                     handler = handler,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedContentScope = animatedContentScope,
+                    paddingValues =paddingValues ,
+                    mediaState = mediaState,
+                    homeScreenViewModel = homeScreenViewModel,
+                    activity = context as Activity,
                     onFinish = {
 
                     }
@@ -762,7 +768,6 @@ fun <T: Media> HomeScreenTopAppBar(
     navigateUp: () -> Unit,
     selectionState: MutableState<Boolean>,
     selectedMedia: SnapshotStateList<T>,
-    mediaState: State<MediaState<T>>,
 ) {
     LargeTopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(

@@ -49,20 +49,16 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.image.resizer.compose.ImageReplacer.getBitmapFromUri
-import com.image.resizer.compose.mediaApi.AlbumsScreen
 import com.image.resizer.compose.mediaApi.AlbumsViewModel
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.MediaRepositoryImpl
 import com.image.resizer.compose.mediaApi.MediaViewModel
 import com.image.resizer.compose.mediaApi.MediaViewScreen
 import com.image.resizer.compose.mediaApi.SelectedMediaRepository
-import com.image.resizer.compose.mediaApi.TimelineScreen
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.navigateInAnimation
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.navigateUpAnimation
 import com.image.resizer.compose.theme.AppTheme
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
@@ -162,7 +158,7 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
             popExitTransition = { navigateUpAnimation },
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(
+          /*  composable(
                 Screen.AlbumsScreen.route
             ) {
                 AlbumsScreen(
@@ -183,7 +179,7 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
                     animatedContentScope = this
                 )
             }
-
+*/
             composable(Screen.Home.route) {
                 val appName = stringResource(id = R.string.app_name)
 
@@ -204,6 +200,7 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
                     albumsState = albumsState,
                     selectionState = vm.multiSelectState,
                     selectedMedia = vm.selectedPhotoState,
+                    paddingValues = innerPadding,
                     onItemClick = {
                         navController.navigate(Screen.AlbumsScreen.route) {
                             launchSingleTop = true
@@ -226,7 +223,7 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
                 MyImagesScreen()
             }
 
-            composable(
+         /*   composable(
                 route = Screen.AlbumViewScreen.albumAndName(),
                 arguments = listOf(
                     navArgument(name = "albumId") {
@@ -254,7 +251,7 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
 
                 val hideTimeline by remember { mutableStateOf(true) }
                 val mediaState = vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
-                /*  HomeScreen(
+                *//*  HomeScreen(
                       albumsViewModel = albumsViewModel,
                       timelineViewModel = timelineViewModel,
                       sharedTransitionScope =  this@SharedTransitionLayout,
@@ -273,7 +270,7 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
                       navigateUp = {
                           navController.navigateUp()
                       },
-                  )*/
+                  )*//*
                 TimelineScreen(
                     paddingValues = innerPadding,
                     albumId = argumentAlbumId,
@@ -316,7 +313,7 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
 
                     }
                 )
-            }
+            }*/
             composable(
                 route = Screen.MediaViewScreen.idAndAlbum(),
                 arguments = listOf(

@@ -5,6 +5,7 @@
 
 package com.image.resizer.compose.mediaApi
 
+import android.app.Activity
 import android.net.Uri
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
@@ -41,6 +42,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
 import com.dokar.pinchzoomgrid.PinchZoomGridLayout
 import com.dokar.pinchzoomgrid.rememberPinchZoomGridState
+import com.image.resizer.compose.MainActivity
 import com.image.resizer.compose.Screen
 import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
@@ -73,12 +75,13 @@ fun <T: Media> MediaScreen(
     navigate: (route: String) -> Unit,
     navigateUp: () -> Unit,
     toggleNavbar: (Boolean) -> Unit,
-    onCompressClick:(List<Uri>)-> Unit,
     isScrolling: MutableState<Boolean> = remember { mutableStateOf(false) },
     searchBarActive: MutableState<Boolean> = remember { mutableStateOf(false) },
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedContentScope,
+    onCompressClick:(List<Uri>)-> Unit,
     selectedMediaRepository: SelectedMediaRepository,
+    activity: Activity,
     onActivityResult: (result: ActivityResult) -> Unit,
 
 ) {
@@ -195,6 +198,7 @@ fun <T: Media> MediaScreen(
                 selectionState = selectionState,
                 albumsState = albumsState,
                 handler = handler,
+                activity = activity,
                 selectedMediaRepository = selectedMediaRepository,
                 onCompressClick  = onCompressClick
 

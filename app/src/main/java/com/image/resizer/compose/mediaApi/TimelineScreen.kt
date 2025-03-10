@@ -46,6 +46,7 @@ inline fun <reified T: Media> TimelineScreen(
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedContentScope,
     selectedMediaRepository: SelectedMediaRepository,
+    activity: Activity,
     noinline onCompressClick:(List<Uri>)-> Unit
 ) {
     MediaScreen(
@@ -64,6 +65,7 @@ inline fun <reified T: Media> TimelineScreen(
         enableStickyHeaders = enableStickyHeaders,
         allowNavBar = allowNavBar,
         onCompressClick = onCompressClick,
+        activity = activity,
         navActionsContent = { expandedDropDown: MutableState<Boolean>, _ ->
             TimelineNavActions(
                 albumId = albumId,
@@ -83,7 +85,8 @@ inline fun <reified T: Media> TimelineScreen(
         searchBarActive = searchBarActive,
         sharedTransitionScope = sharedTransitionScope,
         animatedContentScope = animatedContentScope,
-        selectedMediaRepository = selectedMediaRepository
+        selectedMediaRepository = selectedMediaRepository,
+
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             selectedMedia.clear()
