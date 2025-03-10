@@ -189,7 +189,7 @@ fun ScaledImageScreen(
             ) {
                 Button(
                     onClick = {
-                        saveImagesToGallery(context, imageItems)
+                       // saveImagesToGallery(context, imageItems)
                         onSaveClicked()
                     },
                     modifier = Modifier.fillMaxWidth()

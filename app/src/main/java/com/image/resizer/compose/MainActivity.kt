@@ -158,28 +158,28 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
             popExitTransition = { navigateUpAnimation },
             modifier = Modifier.padding(innerPadding)
         ) {
-          /*  composable(
-                Screen.AlbumsScreen.route
-            ) {
-                AlbumsScreen(
-                    mediaState = timelineState,
-                    albumsState = albumsState,
-                    paddingValues = innerPadding,
-                    onAlbumClick =
-                        albumsViewModel.onAlbumClick {
-                            navController.navigate(it) {
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                    onAlbumLongClick = {
+            /*  composable(
+                  Screen.AlbumsScreen.route
+              ) {
+                  AlbumsScreen(
+                      mediaState = timelineState,
+                      albumsState = albumsState,
+                      paddingValues = innerPadding,
+                      onAlbumClick =
+                          albumsViewModel.onAlbumClick {
+                              navController.navigate(it) {
+                                  launchSingleTop = true
+                                  restoreState = true
+                              }
+                          },
+                      onAlbumLongClick = {
 
-                    },
-                    sharedTransitionScope = this@SharedTransitionLayout,
-                    animatedContentScope = this
-                )
-            }
-*/
+                      },
+                      sharedTransitionScope = this@SharedTransitionLayout,
+                      animatedContentScope = this
+                  )
+              }
+  */
             composable(Screen.Home.route) {
                 val appName = stringResource(id = R.string.app_name)
 
@@ -223,35 +223,35 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
                 MyImagesScreen()
             }
 
-         /*   composable(
-                route = Screen.AlbumViewScreen.albumAndName(),
-                arguments = listOf(
-                    navArgument(name = "albumId") {
-                        type = NavType.LongType
-                        defaultValue = -1
-                    },
-                    navArgument(name = "albumName") {
-                        type = NavType.StringType
-                        defaultValue = ""
-                    }
-                )
-            ) { backStackEntry ->
-                val appName = stringResource(id = R.string.app_name)
-                val argumentAlbumName = remember(backStackEntry) {
-                    backStackEntry.arguments?.getString("albumName") ?: appName
-                }
-                val argumentAlbumId = remember(backStackEntry) {
-                    backStackEntry.arguments?.getLong("albumId") ?: -1
-                }
-                val vm = AlbumsViewModel(mediaRepository, mediaHandleUseCase).apply {
-                    albumId = argumentAlbumId
-                }
+            /*   composable(
+                   route = Screen.AlbumViewScreen.albumAndName(),
+                   arguments = listOf(
+                       navArgument(name = "albumId") {
+                           type = NavType.LongType
+                           defaultValue = -1
+                       },
+                       navArgument(name = "albumName") {
+                           type = NavType.StringType
+                           defaultValue = ""
+                       }
+                   )
+               ) { backStackEntry ->
+                   val appName = stringResource(id = R.string.app_name)
+                   val argumentAlbumName = remember(backStackEntry) {
+                       backStackEntry.arguments?.getString("albumName") ?: appName
+                   }
+                   val argumentAlbumId = remember(backStackEntry) {
+                       backStackEntry.arguments?.getLong("albumId") ?: -1
+                   }
+                   val vm = AlbumsViewModel(mediaRepository, mediaHandleUseCase).apply {
+                       albumId = argumentAlbumId
+                   }
 
-                val context = LocalContext.current
+                   val context = LocalContext.current
 
-                val hideTimeline by remember { mutableStateOf(true) }
-                val mediaState = vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
-                *//*  HomeScreen(
+                   val hideTimeline by remember { mutableStateOf(true) }
+                   val mediaState = vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+                   *//*  HomeScreen(
                       albumsViewModel = albumsViewModel,
                       timelineViewModel = timelineViewModel,
                       sharedTransitionScope =  this@SharedTransitionLayout,
