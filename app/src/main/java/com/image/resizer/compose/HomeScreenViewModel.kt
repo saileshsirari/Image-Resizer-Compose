@@ -174,27 +174,29 @@ class HomeScreenViewModel(private val selectedMediaRepository: SelectedMediaRepo
         viewModelScope.launch(Dispatchers.IO) {
             _isSaving.value = true
             delay(500)
-            val media = selectedImageItems.first()
-            val currentBitmap = selectedImageItems.first().scaledBitmap
-            currentBitmap?.let { bitmap ->
-                try {
-                    if (mediaHandler.overrideImage(
-                            uri = media.uri,
-                            bitmap = bitmap,
-                            format = saveFormat.format,
-                            relativePath = Environment.DIRECTORY_PICTURES + "/Edited",
-                            displayName = media.imageName?:"test",
-                            mimeType = saveFormat.mimeType
-                        )
-                    ) {
-                        onSuccess().also { _isSaving.value = false }
-                    } else {
+            selectedImageItems.forEach {
+                val media = it
+                val currentBitmap =it.scaledBitmap
+                currentBitmap?.let { bitmap ->
+                    try {
+                        if (mediaHandler.overrideImage(
+                                uri = media.uri,
+                                bitmap = bitmap,
+                                format = saveFormat.format,
+                                relativePath = Environment.DIRECTORY_PICTURES + "/Edited",
+                                displayName = media.imageName ?: "test",
+                                mimeType = saveFormat.mimeType
+                            )
+                        ) {
+                            onSuccess().also { _isSaving.value = false }
+                        } else {
+                            onFail().also { _isSaving.value = false }
+                        }
+                    } catch (e: Exception) {
                         onFail().also { _isSaving.value = false }
                     }
-                } catch (e: Exception) {
-                    onFail().also { _isSaving.value = false }
-                }
-            } ?: onFail().also { _isSaving.value = false }
+                } ?: onFail().also { _isSaving.value = false }
+            }
         }
     }
 

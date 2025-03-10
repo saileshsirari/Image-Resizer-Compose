@@ -67,6 +67,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -105,7 +106,9 @@ const val IMAGES_PER_PAGE = 6
 fun MyImagesScreen() {
     val context = LocalContext.current
 
-    val totalImagesCount = getTotalTransformedImagesCount(context)
+    val totalImagesCount by remember {
+        mutableIntStateOf(getTotalTransformedImagesCount(context))
+    }
 
     var loadingImages by remember {
         mutableStateOf(mutableSetOf<Int>())

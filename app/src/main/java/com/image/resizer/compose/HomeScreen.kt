@@ -14,10 +14,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -81,7 +79,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -90,14 +87,11 @@ import com.image.resizer.compose.ImageReplacer.deleteImage
 import com.image.resizer.compose.mediaApi.AlbumsViewModel
 import com.image.resizer.compose.mediaApi.PickerMediaSheet
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
-import com.image.resizer.compose.mediaApi.MediaViewModel
 import com.image.resizer.compose.mediaApi.NavigationButton
-import com.image.resizer.compose.mediaApi.SaveFormat
 import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.model.MediaState
 import com.image.resizer.compose.mediaApi.rememberAppBottomSheetState
-import com.image.resizer.compose.mediaApi.util.printError
 import com.image.resizer.compose.mediaApi.util.rememberActivityResult
 import com.image.resizer.compose.mediaApi.util.writeRequests
 import kotlinx.coroutines.Dispatchers
@@ -118,10 +112,6 @@ fun HomeScreenPreview1() {
 fun <T : Media> HomeScreen(
     homeScreenViewModel: HomeScreenViewModel,
     albumsViewModel: AlbumsViewModel,
-    timelineViewModel: MediaViewModel,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedContentScope: AnimatedContentScope,
-    navController: NavHostController,
     paddingValues: PaddingValues,
     mediaState: State<MediaState<Media.UriMedia>>,
     selectionState: MutableState<Boolean>,
@@ -134,11 +124,6 @@ fun <T : Media> HomeScreen(
     navigateUp: @DisallowComposableCalls () -> Unit,
 ) {
 // Preloaded viewModels
-    val albumsState =
-        albumsViewModel.albumsFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
-    val timelineState =
-        timelineViewModel.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
-    // val selectedUris = homeScreenViewModel.selectedUris.collectAsStateWithLifecycle(emptyList())
     val copySheetState = rememberAppBottomSheetState()
     val context = LocalContext.current
     var scaledParams by remember { mutableStateOf(listOf<ScaleParams>()) }
@@ -184,7 +169,7 @@ fun <T : Media> HomeScreen(
         }
 
     }
-
+    Log.d(TAG, " entering composition ")
 
 
     Scaffold(
@@ -234,12 +219,6 @@ fun <T : Media> HomeScreen(
                                 homeScreenViewModel.showToast("No Pictures found")
                             }
 
-                            //  onItemClick()
-                            /*    multiplePhotoPickerLauncher.launch(
-                                    PickVisualMediaRequest(
-                                        ActivityResultContracts.PickVisualMedia.ImageOnly
-                                    )
-                                )*/
                         } else {
                             showRationale = true
                         }
@@ -531,11 +510,16 @@ private fun overrideImagesRequest(
             var replaced = false
             homeScreenViewModel.selectedImageItems.forEach { imageItem ->
                 imageItem.scaledBitmap?.let {
-                    replaced = ImageReplacer.replaceOriginalImageWithBitmap(
-                        context,
-                        imageItem.uri,
-                        it
-                    )
+                    homeScreenViewModel.saveOverride(onSuccess = {
+                        replaced = true
+                    }, onFail = {
+                        replaced = false
+                    })
+                    /*  replaced = ImageReplacer.replaceOriginalImageWithBitmap(
+                          context,
+                          imageItem.uri,
+                          it
+                      )*/
 
                 }
             }
