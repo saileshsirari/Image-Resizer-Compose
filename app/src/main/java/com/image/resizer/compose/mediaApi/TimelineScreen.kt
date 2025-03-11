@@ -45,7 +45,6 @@ inline fun <reified T: Media> TimelineScreen(
     searchBarActive: MutableState<Boolean> = mutableStateOf(false),
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedContentScope,
-    selectedMediaRepository: SelectedMediaRepository,
     activity: Activity,
     noinline onMediaClick: @DisallowComposableCalls (media: T) -> Unit = {},
     noinline onCompressClick:(List<Uri>)-> Unit
@@ -86,7 +85,6 @@ inline fun <reified T: Media> TimelineScreen(
         searchBarActive = searchBarActive,
         sharedTransitionScope = sharedTransitionScope,
         animatedContentScope = animatedContentScope,
-        selectedMediaRepository = selectedMediaRepository,
         onMediaClick = onMediaClick
 
     ) { result ->

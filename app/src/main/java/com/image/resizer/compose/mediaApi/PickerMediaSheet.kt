@@ -49,7 +49,6 @@ fun <T : Media> PickerMediaSheet(
     var progress by remember(mediaList) { mutableFloatStateOf(0f) }
     val navController = rememberNavController()
     var hideSheet by remember { mutableStateOf(false) }
-    val selectedMediaRepository = SelectedMediaRepository(context = LocalContext.current)
     val scope = rememberCoroutineScope()
     val mediaRepository = MediaRepositoryImpl(LocalContext.current)
     val mediaHandleUseCase =
@@ -169,7 +168,6 @@ fun <T : Media> PickerMediaSheet(
                             isScrolling = mutableStateOf(false),
                             sharedTransitionScope = this@SharedTransitionLayout,
                             animatedContentScope = this,
-                            selectedMediaRepository = selectedMediaRepository,
                             onCompressClick = {
                                 homeScreenViewModel.handlePickedImages(it, context) {
                                     hideSheet = true

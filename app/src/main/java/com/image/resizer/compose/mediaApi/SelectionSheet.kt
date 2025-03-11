@@ -79,7 +79,6 @@ fun <T: Media> SelectionSheet(
     selectionState: MutableState<Boolean>,
     albumsState: State<AlbumState>,
     handler: MediaHandleUseCase,
-    selectedMediaRepository: SelectedMediaRepository,
     activity: Activity,
     onCompressClick:(List<Uri>)-> Unit
 

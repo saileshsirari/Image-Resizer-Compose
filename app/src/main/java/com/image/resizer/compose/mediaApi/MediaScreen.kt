@@ -81,7 +81,6 @@ fun <T: Media> MediaScreen(
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedContentScope,
     onCompressClick:(List<Uri>)-> Unit,
-    selectedMediaRepository: SelectedMediaRepository,
     activity: Activity,
     onMediaClick: @DisallowComposableCalls (media: T) -> Unit = {},
     onActivityResult: (result: ActivityResult) -> Unit,
@@ -193,7 +192,6 @@ fun <T: Media> MediaScreen(
                 albumsState = albumsState,
                 handler = handler,
                 activity = activity,
-                selectedMediaRepository = selectedMediaRepository,
                 onCompressClick  = onCompressClick
 
             )

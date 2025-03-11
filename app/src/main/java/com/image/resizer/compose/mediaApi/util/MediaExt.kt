@@ -8,13 +8,13 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import com.image.resizer.compose.mediaApi.model.Media
 import io.ktor.util.reflect.instanceOf
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
 /**
  * Determine if the current media is a raw format
  *
  * Checks if [Media.mimeType] starts with "image/x-" or "image/vnd."
+ *
+ *
  *
  * Most used formats:
  * - ARW: image/x-sony-arw
@@ -100,7 +100,6 @@ val Media.isEncrypted: Boolean
 fun <T : Media> T.getUri(): Uri {
     return when (this) {
         is Media.UriMedia -> uri
-        is Media.ClassifiedMedia -> uri
         else -> throw IllegalArgumentException("Media type ${this.javaClass.simpleName} not supported")
     }
 }

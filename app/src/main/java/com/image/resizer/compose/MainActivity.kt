@@ -44,7 +44,6 @@ import com.image.resizer.compose.ImageReplacer.getBitmapFromUri
 import com.image.resizer.compose.mediaApi.AlbumsViewModel
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.MediaRepositoryImpl
-import com.image.resizer.compose.mediaApi.SelectedMediaRepository
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.navigateInAnimation
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.navigateUpAnimation
 import com.image.resizer.compose.theme.AppTheme
@@ -130,7 +129,6 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
     val vm = AlbumsViewModel(mediaRepository, mediaHandleUseCase).apply {
         albumId = -1
     }
-      val selectedMediaRepository = SelectedMediaRepository(context = LocalContext.current)
     val homeScreenViewModel = HomeScreenViewModel(mediaHandleUseCase)
 
     NavHost(

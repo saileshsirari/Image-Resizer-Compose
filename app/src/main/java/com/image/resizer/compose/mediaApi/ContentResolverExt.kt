@@ -7,11 +7,9 @@ package com.image.resizer.compose.mediaApi
 
 import android.content.ContentResolver
 import android.content.ContentValues
-import android.content.Context
 import android.database.ContentObserver
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Bundle
 import android.os.CancellationSignal
@@ -21,14 +19,10 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.util.Log
-import androidx.exifinterface.media.ExifInterface
-import com.image.resizer.compose.ImageReplacer
-import com.image.resizer.compose.mediaApi.model.ExifAttributes
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.util.Constants
 import com.image.resizer.compose.mediaApi.util.getUri
 import com.image.resizer.compose.mediaApi.util.isVideo
-import com.image.resizer.compose.mediaApi.util.printWarning
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.awaitClose
@@ -38,7 +32,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.io.File
 import java.io.IOException
 
 fun ContentResolver.queryFlow(
@@ -253,83 +246,3 @@ fun ContentResolver.saveVideo(
     }
 }
 
-suspend fun <T: Media> Context.renameMedia(
-    media: T,
-    newName: String
-): Boolean = withContext(Dispatchers.IO) {
-    val contentValues = ContentValues().apply {
-        put(MediaStore.MediaColumns.DISPLAY_NAME, newName)
-    }
-    with(contentResolver) {
-        val uri = media.getUri()
-        val newPath = media.path.removeSuffix(media.label).plus(newName)
-        return@withContext runCatching {
-            val updated = update(
-                uri,
-                contentValues,
-                null
-            ) > 0
-            MediaScannerConnection.scanFile(
-                this@renameMedia,
-                arrayOf(media.path.removeSuffix(media.label)),
-                arrayOf(media.mimeType), null
-            )
-            val newFile = File(newPath)
-            if (newFile.exists()) {
-                newFile.setLastModified(media.timestamp)
-            }
-            updated
-        }.getOrElse {
-            printWarning(it.message.toString())
-            false
-        }
-    }
-}
-
-suspend fun <T : Media> Context.updateMedia(
-    media: T,
-    contentValues: ContentValues
-): Boolean = withContext(Dispatchers.IO) {
-    with(contentResolver) {
-        val uri = media.getUri()
-        return@withContext runCatching {
-            val updated = update(
-                uri,
-                contentValues,
-                null
-            ) > 0
-            MediaScannerConnection.scanFile(
-                this@updateMedia,
-                arrayOf(media.path.removeSuffix(media.label)),
-                arrayOf(media.mimeType), null
-            )
-            updated
-        }.getOrElse {
-            printWarning(it.message.toString())
-            false
-        }
-    }
-}
-
-suspend fun <T : Media> ContentResolver.updateMediaExif(
-    media: T,
-    exifAttributes: ExifAttributes
-) = withContext(Dispatchers.IO) {
-    return@withContext try {
-        openFileDescriptor(media.getUri(), "rw").use { imagePfd ->
-            if (imagePfd != null) {
-                val exif = ExifInterface(imagePfd.fileDescriptor)
-                exifAttributes.writeExif(exif)
-                runCatching {
-                    exif.saveAttributes()
-                }.onFailure {
-                    it.printStackTrace()
-                }
-            }
-            true
-        }
-    } catch (e: java.lang.Exception) {
-        e.printStackTrace()
-        false
-    }
-}

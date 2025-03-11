@@ -142,13 +142,6 @@ class MediaRepositoryImpl(
         result.launch(senderRequest)
     }
 
-    override suspend fun <T : Media> updateMediaExif(
-        media: T,
-        exifAttributes: ExifAttributes
-    ): Boolean = contentResolver.updateMediaExif(
-        media = media,
-        exifAttributes = exifAttributes
-    )
 
     override fun saveImage(
         bitmap: Bitmap,

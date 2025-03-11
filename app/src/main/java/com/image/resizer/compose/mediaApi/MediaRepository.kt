@@ -45,10 +45,6 @@ interface MediaRepository {
     fun getVaults(): Flow<Resource<List<Vault>>>
 
 
-    suspend fun <T: Media> updateMediaExif(
-        media: T,
-        exifAttributes: ExifAttributes
-    ): Boolean
 
     fun saveImage(
         bitmap: Bitmap,
