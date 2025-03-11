@@ -133,9 +133,7 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
     val vm = AlbumsViewModel(mediaRepository, mediaHandleUseCase).apply {
         albumId = -1
     }
-    val albumsState =
-        vm.albumsFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
-    val selectedMediaRepository = SelectedMediaRepository(context = LocalContext.current)
+      val selectedMediaRepository = SelectedMediaRepository(context = LocalContext.current)
     val homeScreenViewModel = HomeScreenViewModel(selectedMediaRepository, mediaHandleUseCase)
 
     NavHost(
@@ -155,7 +153,6 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
                 homeScreenViewModel = homeScreenViewModel,
                 albumsViewModel = vm,
                 mediaState = mediaState,
-                albumsState = albumsState,
                 selectionState = vm.multiSelectState,
                 selectedMedia = vm.selectedPhotoState,
                 paddingValues = innerPadding,

@@ -25,6 +25,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisallowComposableCalls
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
@@ -82,7 +83,9 @@ fun <T: Media> MediaScreen(
     onCompressClick:(List<Uri>)-> Unit,
     selectedMediaRepository: SelectedMediaRepository,
     activity: Activity,
+    onMediaClick: @DisallowComposableCalls (media: T) -> Unit = {},
     onActivityResult: (result: ActivityResult) -> Unit,
+
 
 ) {
     val showSearchBar = remember { albumId == -1L && target == null }
@@ -176,18 +179,9 @@ fun <T: Media> MediaScreen(
                     isScrolling = isScrolling,
                     emptyContent = emptyContent,
                     sharedTransitionScope = sharedTransitionScope,
-                    animatedContentScope = animatedContentScope
-                ) {
-                    if (customViewingNavigation == null) {
-                        val albumRoute = "albumId=$albumId"
-                        val targetRoute = "target=$target"
-                        val param =
-                            if (target != null) targetRoute else albumRoute
-                        navigate(Screen.MediaViewScreen.route + "?mediaId=${it.id}&$param")
-                    } else {
-                        customViewingNavigation(it)
-                    }
-                }
+                    animatedContentScope = animatedContentScope,
+                    onMediaClick = onMediaClick
+                )
             }
         }
         if (target != TARGET_TRASH) {

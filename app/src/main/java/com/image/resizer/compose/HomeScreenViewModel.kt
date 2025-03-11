@@ -18,13 +18,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class HomeScreenViewModel(private val selectedMediaRepository: SelectedMediaRepository,
-                          private val mediaHandler: MediaHandleUseCase) : ViewModel() {
-    private  val _showToast = MutableStateFlow("")
+class HomeScreenViewModel(
+    private val selectedMediaRepository: SelectedMediaRepository,
+    private val mediaHandler: MediaHandleUseCase
+) : ViewModel() {
+    private val _showToast = MutableStateFlow("")
     val showToast: StateFlow<String> = _showToast
     private val _cropState = MutableStateFlow<CropState>(CropState.Idle)
     val cropState: StateFlow<CropState> = _cropState
-   // val selectedUris: Flow<List<Uri>> = selectedMediaRepository.getSelectedMedia()
+
+    // val selectedUris: Flow<List<Uri>> = selectedMediaRepository.getSelectedMedia()
     private val _compressState = MutableStateFlow<CompressState>(CompressState.Idle)
     val compressState: StateFlow<CompressState> = _compressState
     private val _isSaving = MutableStateFlow(true)
@@ -43,9 +46,11 @@ class HomeScreenViewModel(private val selectedMediaRepository: SelectedMediaRepo
             _cropState.value = CropState.Success(CropStateData(croppedUri))
         }
     }
-    fun showToast(value: String="Image saved"){
+
+    fun showToast(value: String = "Image saved") {
         _showToast.value = value
     }
+
     fun onCropScreenLaunched() {
         viewModelScope.launch {
             _cropState.value = CropState.Idle
@@ -76,24 +81,27 @@ class HomeScreenViewModel(private val selectedMediaRepository: SelectedMediaRepo
         onReset()
         _scaleState.value = ScaleState.Success(ScaleStateData(scaleParamsList))
     }
-      fun handlePickedImages(
+
+    fun handlePickedImages(
         uris: List<@JvmSuppressWildcards Uri>,
         context: Context,
-        callBack:()->Unit
+        callBack: () -> Unit
     ) {
-        if (uris.isNotEmpty()) {
-            val selectedImageItems = uris.map { uri ->
-                val (imageName, fileSize) = getFileNameAndSize(context, uri)
-                val imagesDimensions = imageDimensionsFromUri(context, uri)
-                ImageItem(
-                    uri,
-                    imageName = imageName,
-                    fileSize = fileSize,
-                    imageDimension = imagesDimensions
-                )
+        viewModelScope.launch(Dispatchers.IO) {
+            if (uris.isNotEmpty()) {
+                callBack()
+                val selectedImageItems = uris.map { uri ->
+                    val (imageName, fileSize) = getFileNameAndSize(context, uri)
+                    val imagesDimensions = imageDimensionsFromUri(context, uri)
+                    ImageItem(
+                        uri,
+                        imageName = imageName,
+                        fileSize = fileSize,
+                        imageDimension = imagesDimensions
+                    )
+                }
+                onGalleryImagesSelected(selectedImageItems)
             }
-            onGalleryImagesSelected(selectedImageItems)
-            callBack()
         }
     }
 
@@ -141,7 +149,7 @@ class HomeScreenViewModel(private val selectedMediaRepository: SelectedMediaRepo
         }
     }
 
-    fun onCompressShowImages(size:Int) {
+    fun onCompressShowImages(size: Int) {
         viewModelScope.launch {
             onReset()
             _compressState.value = CompressState.Success(CompressStateData(size))
@@ -157,13 +165,13 @@ class HomeScreenViewModel(private val selectedMediaRepository: SelectedMediaRepo
     }
 
     fun onFabClicked(navigate: (String) -> Unit): () -> Unit = {
-        navigate(Screen.AlbumsScreen.route )
+        navigate(Screen.AlbumsScreen.route)
     }
 
-     fun clearSelectedUri() {
-         viewModelScope.launch {
-             selectedMediaRepository.clearSelectedMedia()
-         }
+    fun clearSelectedUri() {
+        viewModelScope.launch {
+            selectedMediaRepository.clearSelectedMedia()
+        }
     }
 
     fun saveOverride(
@@ -176,7 +184,7 @@ class HomeScreenViewModel(private val selectedMediaRepository: SelectedMediaRepo
             delay(500)
             selectedImageItems.forEach {
                 val media = it
-                val currentBitmap =it.scaledBitmap
+                val currentBitmap = it.scaledBitmap
                 currentBitmap?.let { bitmap ->
                     try {
                         if (mediaHandler.overrideImage(

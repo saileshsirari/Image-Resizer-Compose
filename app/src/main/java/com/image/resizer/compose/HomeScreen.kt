@@ -53,6 +53,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisallowComposableCalls
@@ -115,7 +116,6 @@ fun <T : Media> HomeScreen(
     paddingValues: PaddingValues,
     mediaState: State<MediaState<Media.UriMedia>>,
     selectionState: MutableState<Boolean>,
-    albumsState: State<AlbumState> = remember { mutableStateOf(AlbumState()) },
     selectedMedia: SnapshotStateList<T>,
     albumName: String = stringResource(R.string.app_name),
     navigate: (route: String) -> Unit,
@@ -125,6 +125,9 @@ fun <T : Media> HomeScreen(
 ) {
 // Preloaded viewModels
     val copySheetState = rememberAppBottomSheetState()
+    val albumsState =
+        albumsViewModel.albumsFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+
     val context = LocalContext.current
     var scaledParams by remember { mutableStateOf(listOf<ScaleParams>()) }
     val viewModel = ScaleImageViewModel()
@@ -189,12 +192,12 @@ fun <T : Media> HomeScreen(
                     homeScreenViewModel.onShowCompressPopup()
                 },
                 navigateUp = navigateUp,
-                albumName = albumName,
                 selectedMedia = selectedMedia,
                 selectionState = selectionState
             )
         },
         floatingActionButton = {
+            AnimatedVisibility(visible =albumsState.value.albums.isNotEmpty() ) {
             // Custom position for the FloatingActionButton
             Box(modifier = Modifier.fillMaxSize()) {
                 PickerMediaSheet(
@@ -206,28 +209,30 @@ fun <T : Media> HomeScreen(
                     homeScreenViewModel = homeScreenViewModel,
                     activity = context as Activity
                 )
-                FloatingActionButton(
-                    onClick = {
-                        showDialog = true
-                        if (galleryPermissionState.status.isGranted) {
-                            if (albumsState.value.albums.isNotEmpty()) {
-                                scope.launch {
-                                    copySheetState.show()
+
+                    FloatingActionButton(
+                        onClick = {
+                            showDialog = true
+                            if (galleryPermissionState.status.isGranted) {
+                                if (albumsState.value.albums.isNotEmpty()) {
+                                    scope.launch {
+                                        copySheetState.show()
+                                    }
+                                } else {
+                                    homeScreenViewModel.showToast("No Pictures found")
                                 }
 
                             } else {
-                                homeScreenViewModel.showToast("No Pictures found")
+                                showRationale = true
                             }
-
-                        } else {
-                            showRationale = true
-                        }
-                    },
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                ) {
-                    Icon(Icons.Filled.Add, "Select Images")
+                        },
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                    ) {
+                        Icon(Icons.Filled.Add, "Select Images")
+                    }
                 }
+
             }
         }
     ) { innerPadding ->
@@ -754,12 +759,11 @@ fun <T : Media> HomeScreenTopAppBar(
     onShowCompress: () -> Unit,
     albumId: Long = -1L,
     target: String? = remember { null },
-    albumName: String = stringResource(R.string.app_name),
     navigateUp: () -> Unit,
     selectionState: MutableState<Boolean>,
     selectedMedia: SnapshotStateList<T>,
 ) {
-    LargeTopAppBar(
+    TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             titleContentColor = MaterialTheme.colorScheme.primary
@@ -787,9 +791,10 @@ fun <T : Media> HomeScreenTopAppBar(
                 )
                 Row(
                     modifier = Modifier
+                        .weight(3f)
                         .padding(end = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceAround
 
                 ) {
 

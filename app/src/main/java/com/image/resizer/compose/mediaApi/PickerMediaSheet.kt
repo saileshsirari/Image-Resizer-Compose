@@ -171,11 +171,15 @@ fun <T : Media> PickerMediaSheet(
                             animatedContentScope = this,
                             selectedMediaRepository = selectedMediaRepository,
                             onCompressClick = {
-
                                 homeScreenViewModel.handlePickedImages(it, context) {
                                     hideSheet = true
                                 }
+                            },
+                            onMediaClick = {
+                                homeScreenViewModel.handlePickedImages(listOf(it.uri), context) {
+                                    hideSheet = true
 
+                                }
                             }
                         )
                     }

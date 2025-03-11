@@ -47,6 +47,7 @@ inline fun <reified T: Media> TimelineScreen(
     animatedContentScope: AnimatedContentScope,
     selectedMediaRepository: SelectedMediaRepository,
     activity: Activity,
+    noinline onMediaClick: @DisallowComposableCalls (media: T) -> Unit = {},
     noinline onCompressClick:(List<Uri>)-> Unit
 ) {
     MediaScreen(
@@ -86,6 +87,7 @@ inline fun <reified T: Media> TimelineScreen(
         sharedTransitionScope = sharedTransitionScope,
         animatedContentScope = animatedContentScope,
         selectedMediaRepository = selectedMediaRepository,
+        onMediaClick = onMediaClick
 
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
