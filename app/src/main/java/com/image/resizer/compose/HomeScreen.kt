@@ -16,6 +16,10 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VisibilityThreshold
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -36,12 +40,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.ChevronLeft
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -49,12 +56,17 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
+import androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldRole
+import androidx.compose.material3.adaptive.navigation.rememberSupportingPaneScaffoldNavigator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisallowComposableCalls
 import androidx.compose.runtime.LaunchedEffect
@@ -79,13 +91,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.image.resizer.compose.ImageReplacer.deleteImage
 import com.image.resizer.compose.mediaApi.AlbumsViewModel
+import com.image.resizer.compose.mediaApi.EditorDestination
+import com.image.resizer.compose.mediaApi.EditorDestination.ExternalEditor
+import com.image.resizer.compose.mediaApi.EditorNavigator
 import com.image.resizer.compose.mediaApi.PickerMediaSheet
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.NavigationButton
@@ -93,6 +110,8 @@ import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.model.MediaState
 import com.image.resizer.compose.mediaApi.rememberAppBottomSheetState
+import com.image.resizer.compose.mediaApi.util.Constants.Animation.enterAnimation
+import com.image.resizer.compose.mediaApi.util.Constants.Animation.exitAnimation
 import com.image.resizer.compose.mediaApi.util.rememberActivityResult
 import com.image.resizer.compose.mediaApi.util.writeRequests
 import kotlinx.coroutines.Dispatchers
@@ -107,7 +126,7 @@ fun HomeScreenPreview1() {
 
 @OptIn(
     ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class,
-    ExperimentalSharedTransitionApi::class
+    ExperimentalSharedTransitionApi::class, ExperimentalMaterial3AdaptiveApi::class
 )
 @Composable
 fun <T : Media> HomeScreen(
@@ -127,6 +146,7 @@ fun <T : Media> HomeScreen(
     val copySheetState = rememberAppBottomSheetState()
     val albumsState =
         albumsViewModel.albumsFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+    val navigator = rememberSupportingPaneScaffoldNavigator()
 
     val context = LocalContext.current
     var scaledParams by remember { mutableStateOf(listOf<ScaleParams>()) }
@@ -145,6 +165,7 @@ fun <T : Media> HomeScreen(
     val galleryState by homeScreenViewModel.galleryState.collectAsState()
     val showToast by homeScreenViewModel.showToast.collectAsState()
     val scope = rememberCoroutineScope()
+    val imagesSelected by remember { mutableStateOf(homeScreenViewModel.selectedImageItems.isNotEmpty()) }
 
 
     val showImages by remember {
@@ -173,6 +194,7 @@ fun <T : Media> HomeScreen(
 
     }
     Log.d(TAG, " entering composition ")
+    val navController = rememberNavController()
 
 
     Scaffold(
@@ -196,19 +218,90 @@ fun <T : Media> HomeScreen(
                 selectionState = selectionState
             )
         },
+        bottomBar = {
+            AnimatedVisibility(
+                visible =
+                    galleryState is GalleryState.Success || cropState is CropState.Success
+                            || scaleState is ScaleState.Success || compressState is CompressState.Success,
+                enter = enterAnimation,
+                exit = exitAnimation
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .animateContentSize(
+                            animationSpec = spring(
+                                stiffness = Spring.StiffnessHigh,
+                                visibilityThreshold = IntSize.VisibilityThreshold
+                            )
+                        )
+                        .systemBarsPadding(),
+                ) {
+                    AnimatedVisibility(
+                        visible =
+                            navigator.scaffoldValue[SupportingPaneScaffoldRole.Supporting] == PaneAdaptedValue.Hidden,
+                        enter = enterAnimation,
+                        exit = exitAnimation
+                    ) {
+                        EditorNavigator(
+                            modifier = Modifier
+                                .animateContentSize()
+                                .fillMaxWidth(),
+                            navController = navController,
+                            targetImage = null,
+                            targetUri = null,
+                            startCropping = {
+                            },
+                            onItemClick = {
+                                when(it){
+                                    EditorDestination.Compress -> {
+                                        homeScreenViewModel.onShowCompressPopup()
+                                    }
+                                    EditorDestination.Scale -> {
+                                        homeScreenViewModel.onShowScalePopup()
+                                    }
+                                    EditorDestination.Crop -> {
+                                        homeScreenViewModel.onShowCropPopup()
+                                    }
+                                    EditorDestination.Undo -> {
+                                        homeScreenViewModel.onUndo()
+                                    }
+                                    EditorDestination.Editor -> {
+
+                                    }
+                                    ExternalEditor->{
+
+                                    }
+
+                                }
+                            },
+                        )
+                    }
+                    val icon =
+                        Icons.Outlined.ChevronLeft
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = icon.name,
+                        tint = LocalContentColor.current
+                    )
+                }
+            }
+        },
+
         floatingActionButton = {
-            AnimatedVisibility(visible =albumsState.value.albums.isNotEmpty() ) {
-            // Custom position for the FloatingActionButton
-            Box(modifier = Modifier.fillMaxSize()) {
-                PickerMediaSheet(
-                    sheetState = copySheetState,
-                    mediaList = selectedMedia,
-                    albumsState = albumsState,
-                    paddingValues = paddingValues,
-                    mediaState = mediaState,
-                    homeScreenViewModel = homeScreenViewModel,
-                    activity = context as Activity
-                )
+            AnimatedVisibility(visible = albumsState.value.albums.isNotEmpty()) {
+                // Custom position for the FloatingActionButton
+                Box(modifier = Modifier.fillMaxSize()) {
+                    PickerMediaSheet(
+                        sheetState = copySheetState,
+                        mediaList = selectedMedia,
+                        albumsState = albumsState,
+                        paddingValues = paddingValues,
+                        mediaState = mediaState,
+                        homeScreenViewModel = homeScreenViewModel,
+                        activity = context as Activity
+                    )
+
 
                     FloatingActionButton(
                         onClick = {

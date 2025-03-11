@@ -9,7 +9,6 @@ import android.app.Activity.RESULT_CANCELED
 import android.app.Activity.RESULT_OK
 import android.content.ContentResolver
 import android.content.Context
-import android.database.Cursor
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Matrix
@@ -25,20 +24,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.ShareCompat
 import androidx.core.content.FileProvider
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import androidx.core.net.toFile
-import androidx.exifinterface.media.ExifInterface
 import com.image.resizer.compose.BuildConfig
 import com.image.resizer.compose.mediaApi.model.Media
-import com.image.resizer.compose.mediaApi.util.ExifMetadata
-import com.image.resizer.compose.mediaApi.util.FileUtils
 import com.image.resizer.compose.mediaApi.util.getUri
-import com.image.resizer.compose.mediaApi.util.isFromApps
-import java.io.IOException
 
 val sdcardRegex = "^/storage/[A-Z0-9]+-[A-Z0-9]+/.*$".toRegex()
 
@@ -159,66 +152,6 @@ fun Uri.writeRequest(
     contentResolver: ContentResolver,
 ) = IntentSenderRequest.Builder(MediaStore.createWriteRequest(contentResolver, arrayListOf(this)))
     .build()
-
-@Composable
-fun <T: Media> rememberMediaInfo(
-    media: T,
-    exifMetadata: ExifMetadata?,
-    onLabelClick: () -> Unit
-): List<InfoRow> {
-    val context = LocalContext.current
-    return remember(media) {
-        media.retrieveMetadata(context, exifMetadata, onLabelClick)
-    }
-}
-
-@Composable
-fun <T: Media> rememberExifMetadata(media: T, exifInterface: ExifInterface?): ExifMetadata? {
-    return remember(media, exifInterface) {
-        exifInterface?.let { ExifMetadata(it) }
-    }
-}
-
-@Composable
-fun <T: Media> rememberExifInterface(media: T, useDirectPath: Boolean = false): ExifInterface? {
-    val context = LocalContext.current
-    return remember(media) {
-        if (useDirectPath) try {
-            ExifInterface(media.path)
-        } catch (_: IOException) {
-            null
-        }
-        else getExifInterface(context, media.getUri())
-    }
-}
-
-@Throws(IOException::class)
-fun getExifInterface(context: Context, uri: Uri): ExifInterface? {
-    if (uri.isFromApps()) return null
-    return try {
-        ExifInterface(context.uriToPath(uri).toString())
-    } catch (_: IOException) {
-        null
-    }
-}
-
-fun Context.uriToPath(uri: Uri?): String? {
-    if (uri == null) return null
-    val proj = arrayOf(MediaStore.MediaColumns.DATA)
-    var path: String? = null
-    val cursor: Cursor? = contentResolver.query(uri, proj, null, null, null)
-    if (cursor != null && cursor.count != 0) {
-        cursor.moveToFirst()
-        path = try {
-            val columnIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA)
-            cursor.getString(columnIndex)
-        } catch (_: IllegalArgumentException) {
-            null
-        }
-    }
-    cursor?.close()
-    return path ?: FileUtils(this).getPath(uri)
-}
 
 fun Uri.authorizedUri(context: Context): Uri = if (this.toString()
         .startsWith("content://")

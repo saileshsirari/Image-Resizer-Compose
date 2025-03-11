@@ -21,7 +21,6 @@ import com.image.resizer.compose.mediaApi.model.Media.UriMedia
 import com.image.resizer.compose.mediaApi.model.MediaOrder
 import com.image.resizer.compose.mediaApi.model.MediaStoreBuckets
 import com.image.resizer.compose.mediaApi.model.OrderType
-import com.image.resizer.compose.mediaApi.model.Vault
 import com.image.resizer.compose.mediaApi.util.getUri
 import com.image.resizer.compose.mediaApi.util.mapAsResource
 import kotlinx.coroutines.Dispatchers
@@ -124,9 +123,7 @@ class MediaRepositoryImpl(
         result.launch(senderRequest, ActivityOptionsCompat.makeTaskLaunchBehind())
     }
 
-    override fun getVaults(): Flow<Resource<List<Vault>>> = flow {
-        Resource.Success(emptyList<Vault>())
-    }
+
 
     override suspend fun <T : Media> deleteMedia(
         result: ActivityResultLauncher<IntentSenderRequest>,

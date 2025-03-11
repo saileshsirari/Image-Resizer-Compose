@@ -1,21 +1,13 @@
 package com.image.resizer.compose.mediaApi
 
-import android.R.attr.bitmap
 import android.content.Context
 import android.graphics.Bitmap.CompressFormat
-import android.net.Uri
-import android.os.Environment
-import android.util.Log.e
 import androidx.annotation.Keep
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.image.resizer.compose.ImageItem
 import com.image.resizer.compose.ImageReplacer
-import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.model.MediaState
-import com.image.resizer.compose.mediaApi.model.Vault
-import com.image.resizer.compose.mediaApi.model.VaultState
 import com.image.resizer.compose.mediaApi.util.Constants
 import com.image.resizer.compose.mediaApi.util.mapMediaToItem
 import com.image.resizer.compose.mediaApi.util.mediaFlow
@@ -26,7 +18,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -72,17 +63,6 @@ open class MediaViewModel(
                 weeklyDateFormat = Constants.WEEKLY_DATE_FORMAT
             )
         }.stateIn(viewModelScope, started = SharingStarted.Eagerly, MediaState())
-    }
-
-    val vaultsFlow = repository.getVaults()
-        .map { it.data ?: emptyList() }
-        .map { VaultState(it, isLoading = false) }
-        .stateIn(viewModelScope, started = SharingStarted.Eagerly, VaultState())
-
-    fun <T : Media> addMedia(vault: Vault, media: T) {
-        viewModelScope.launch(Dispatchers.IO) {
-            // repository.addMedia(vault, media)
-        }
     }
 
     private val _isSaving = MutableStateFlow(true)

@@ -60,6 +60,9 @@
     <string name="trash">Trash</string>
     <string name="selection_dialog_close_cd">Close selection dialog</string>
     <string name="compress">Compress</string>
+    <string name="crop">Crop</string>
+    <string name="scale">Scale</string>
+    <string name="undo">Undo</string>
 
     <plurals name="item_count">
         <item quantity="one">%s item</item>

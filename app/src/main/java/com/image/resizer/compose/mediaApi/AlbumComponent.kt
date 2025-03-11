@@ -61,19 +61,7 @@ fun AlbumComponent(
             .alpha(if (isEnabled) 1f else 0.4f)
             .padding(horizontal = 8.dp),
     ) {
-        if (onTogglePinClick != null) {
-            val secondaryContainer = MaterialTheme.colorScheme.secondaryContainer
-            val onSecondaryContainer = MaterialTheme.colorScheme.onSecondaryContainer
-            val primaryContainer = MaterialTheme.colorScheme.primaryContainer
-            val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
 
-            LaunchedEffect(onToggleIgnoreClick) {
-                if (onToggleIgnoreClick != null) {
-
-                }
-            }
-
-        }
         Box(
             modifier = Modifier
                 .aspectRatio(1f)
@@ -144,59 +132,30 @@ fun AlbumImage(
     val radius = if (isPressed.value) 32.dp else 16.dp
     val cornerRadius by animateDpAsState(targetValue = radius, label = "cornerRadius")
     val feedbackManager = rememberFeedbackManager()
-    if (album.id == -200L && album.count == 0L) {
-        Icon(
-            imageVector = Icons.Outlined.AddCircleOutline,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = modifier
-                .fillMaxSize()
-                .border(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-                    shape = RoundedCornerShape(cornerRadius)
-                )
-                .alpha(0.8f)
-                .clip(RoundedCornerShape(cornerRadius))
-                .combinedClickable(
-                    enabled = isEnabled,
-                    interactionSource = interactionSource,
-                    indication = LocalIndication.current,
-                    onClick = { onItemClick(album) },
-                    onLongClick = {
-                        onItemLongClick?.let {
-                            feedbackManager.vibrate()
-                            it(album)
-                        }
+
+    AsyncImage(
+        modifier = modifier
+            .fillMaxSize()
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                shape = RoundedCornerShape(cornerRadius)
+            )
+            .clip(RoundedCornerShape(cornerRadius))
+            .combinedClickable(
+                enabled = isEnabled,
+                interactionSource = interactionSource,
+                indication = LocalIndication.current,
+                onClick = { onItemClick(album) },
+                onLongClick = {
+                    onItemLongClick?.let {
+                        feedbackManager.vibrate()
+                        it(album)
                     }
-                )
-                .padding(48.dp)
-        )
-    } else {
-        AsyncImage(
-            modifier = modifier
-                .fillMaxSize()
-                .border(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-                    shape = RoundedCornerShape(cornerRadius)
-                )
-                .clip(RoundedCornerShape(cornerRadius))
-                .combinedClickable(
-                    enabled = isEnabled,
-                    interactionSource = interactionSource,
-                    indication = LocalIndication.current,
-                    onClick = { onItemClick(album) },
-                    onLongClick = {
-                        onItemLongClick?.let {
-                            feedbackManager.vibrate()
-                            it(album)
-                        }
-                    }
-                ),
-            uri = album.uri.toString(),
-            contentDescription = album.label,
-            contentScale = ContentScale.Crop,
-        )
-    }
+                }
+            ),
+        uri = album.uri.toString(),
+        contentDescription = album.label,
+        contentScale = ContentScale.Crop,
+    )
 }

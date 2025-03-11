@@ -111,6 +111,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
+
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
@@ -134,6 +135,9 @@ dependencies {
         implementation(libs.androidx.security.crypto)
     implementation(libs.compose.material3)
     implementation(libs.compose.material3.window.size)
+    implementation(libs.androidx.adaptive)
+    implementation(libs.androidx.adaptive.layout)
+    implementation(libs.androidx.adaptive.navigation)
 //    implementation(libs.androidx.biometric)
     // Room
 //    implementation(libs.room.runtime)

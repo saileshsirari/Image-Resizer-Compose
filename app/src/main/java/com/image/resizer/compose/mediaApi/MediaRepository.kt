@@ -10,11 +10,9 @@ import android.net.Uri
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
 import com.image.resizer.compose.mediaApi.model.Album
-import com.image.resizer.compose.mediaApi.model.ExifAttributes
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.model.Media.UriMedia
 import com.image.resizer.compose.mediaApi.model.MediaOrder
-import com.image.resizer.compose.mediaApi.model.Vault
 import kotlinx.coroutines.flow.Flow
 
 interface MediaRepository {
@@ -42,7 +40,6 @@ interface MediaRepository {
         result: ActivityResultLauncher<IntentSenderRequest>,
         mediaList: List<T>
     )
-    fun getVaults(): Flow<Resource<List<Vault>>>
 
 
 
