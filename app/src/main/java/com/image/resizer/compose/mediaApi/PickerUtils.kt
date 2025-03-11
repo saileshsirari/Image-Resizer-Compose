@@ -1,35 +1,11 @@
 package com.image.resizer.compose.mediaApi
 
-import android.content.Intent
-import android.provider.MediaStore
 import com.image.resizer.compose.mediaApi.model.MediaType
 
 object PickerUtils {
     private const val MIME_TYPE_IMAGE_ANY = "image/*"
     private const val MIME_TYPE_VIDEO_ANY = "video/*"
     private const val MIME_TYPE_ANY = "*/*"
-
-    /**
-     * Get a fixed up MIME type from an [Intent].
-     * @param intent An [Intent]
-     * @return A simpler MIME type, null if not supported
-     */
-    fun translateMimeType(intent: Intent?) = when (intent?.action) {
-        Intent.ACTION_SET_WALLPAPER -> MIME_TYPE_IMAGE_ANY
-        else -> (intent?.type ?: MIME_TYPE_ANY).let {
-            when (it) {
-                MediaStore.Images.Media.CONTENT_TYPE -> MIME_TYPE_IMAGE_ANY
-                MediaStore.Video.Media.CONTENT_TYPE -> MIME_TYPE_VIDEO_ANY
-                else -> when {
-                    it == MIME_TYPE_ANY
-                            || it.startsWith("image/")
-                            || it.startsWith("video/") -> it
-
-                    else -> null
-                }
-            }
-        }
-    }
 
     /**
      * Get a [MediaType] only if the provided MIME type is a generic one, else return null.

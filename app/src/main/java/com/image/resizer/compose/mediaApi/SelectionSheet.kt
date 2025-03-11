@@ -183,7 +183,6 @@ fun <T: Media> SelectionSheet(
                 ) {
                     scope.launch {
                         val uriList = selectedMedia.map{ it }
-                        selectedMediaRepository.addSelectedMedias(uriList.map { it.getUri() })
                         onCompressClick(uriList.map { it.getUri() })
                     }
 

@@ -8,18 +8,14 @@ import androidx.lifecycle.viewModelScope
 import com.image.resizer.compose.ImageHelper.getFileNameAndSize
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.SaveFormat
-import com.image.resizer.compose.mediaApi.SelectedMediaRepository
-import com.image.resizer.compose.mediaApi.model.Album
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class HomeScreenViewModel(
-    private val selectedMediaRepository: SelectedMediaRepository,
     private val mediaHandler: MediaHandleUseCase
 ) : ViewModel() {
     private val _showToast = MutableStateFlow("")
@@ -162,16 +158,6 @@ class HomeScreenViewModel(
 
     fun dismissScalePopup() {
         _scaleState.value = ScaleState.Idle
-    }
-
-    fun onFabClicked(navigate: (String) -> Unit): () -> Unit = {
-        navigate(Screen.AlbumsScreen.route)
-    }
-
-    fun clearSelectedUri() {
-        viewModelScope.launch {
-            selectedMediaRepository.clearSelectedMedia()
-        }
     }
 
     fun saveOverride(

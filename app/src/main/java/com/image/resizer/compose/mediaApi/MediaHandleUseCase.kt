@@ -5,21 +5,17 @@
 
 package com.image.resizer.compose.mediaApi
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
-import com.image.resizer.compose.mediaApi.model.ExifAttributes
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.util.mediaPair
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
 
 class MediaHandleUseCase(
-    private val repository: MediaRepository,
-    private val context: Context
+    private val repository: MediaRepository
 ) {
 
 
@@ -54,12 +50,6 @@ class MediaHandleUseCase(
     ) = repository.deleteMedia(result, mediaList)
 
 
-
-    suspend fun <T: Media> updateMediaExif(
-        media: T,
-        exifAttributes: ExifAttributes
-    ): Boolean = repository.updateMediaExif(media, exifAttributes)
-
     fun saveImage(
         bitmap: Bitmap,
         format: Bitmap.CompressFormat,
@@ -67,8 +57,6 @@ class MediaHandleUseCase(
         relativePath: String,
         displayName: String
     ) = repository.saveImage(bitmap, format, mimeType, relativePath, displayName)
-
-    suspend fun getCategoryForMediaId(mediaId: Long) = repository.getCategoryForMediaId(mediaId)
 
     fun overrideImage(
         uri: Uri,

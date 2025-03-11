@@ -49,6 +49,7 @@ import com.image.resizer.compose.mediaApi.model.isHeaderKey
 import com.image.resizer.compose.mediaApi.model.isIgnoredKey
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.enterAnimation
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.exitAnimation
+import com.image.resizer.compose.mediaApi.util.rememberedDerivedState
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 
@@ -74,6 +75,7 @@ fun <T : Media> PinchZoomGridScope.MediaGridView(
     animatedContentScope: AnimatedContentScope,
     onMediaClick: @DisallowComposableCalls (media: T) -> Unit = {},
 ) {
+
     val mappedData by rememberedDerivedState(mediaState, showMonthlyHeader) {
         (if (showMonthlyHeader) mediaState.value.mappedMediaWithMonthly
         else mediaState.value.mappedMedia).toMutableStateList()
@@ -114,7 +116,7 @@ fun <T : Media> PinchZoomGridScope.MediaGridView(
             mappedData = mappedData
         )
 
-        val hideSearchBarSetting by remember {  mutableStateOf(true)}
+        val hideSearchBarSetting by remember { mutableStateOf(true) }
         val searchBarPadding by animateDpAsState(
             targetValue = remember(
                 isScrolling.value,

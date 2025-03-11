@@ -1,18 +1,15 @@
 package com.image.resizer.compose.mediaApi.util
 
-import android.content.Context
-import android.graphics.Bitmap
 import android.net.Uri
-import com.github.panpf.zoomimage.subsampling.ContentImageSource
-import com.github.panpf.zoomimage.subsampling.SubsamplingImage
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisallowComposableCalls
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.remember
 import com.image.resizer.compose.mediaApi.model.Media
 import io.ktor.util.reflect.instanceOf
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.io.ByteArrayInputStream
-import java.io.ObjectInputStream
-import java.io.Serializable
-import java.util.UUID
 
 /**
  * Determine if the current media is a raw format
@@ -58,6 +55,24 @@ val Media.fileExtension: String
 val Media.volume: String
     get() = path.substringBeforeLast("/").removeSuffix(relativePath.removeSuffix("/"))
 
+@Composable
+fun <T> rememberedDerivedState(
+    key: Any? = Unit,
+    block: @DisallowComposableCalls () -> T
+): State<T> {
+    return remember(key) {
+        derivedStateOf(block)
+    }
+}
+@Composable
+fun <T> rememberedDerivedState(
+    vararg keys: Any? = arrayOf(Unit),
+    block: @DisallowComposableCalls () -> T
+): State<T> {
+    return remember(keys) {
+        derivedStateOf(block)
+    }
+}
 /**
  * Used to determine if the Media object is not accessible
  * via MediaStore.
@@ -69,7 +84,6 @@ val Media.volume: String
  * If it's readUriOnly then we know that we should expect a barebone
  * Media object with limited functionality (no favorites, trash, timestamp etc)
  */
-val Media.readUriOnly: Boolean get() = albumID == -99L && albumLabel == "" && instanceOf(Media.UriMedia::class)
 
 val Media.isVideo: Boolean get() = mimeType.startsWith("video/") && duration != null
 
@@ -83,108 +97,6 @@ val Media.isEncrypted: Boolean
     get() = instanceOf(Media.UriMedia::class) /*&& getUri().toString()
         .contains(BuildConfig.APPLICATION_ID)*/
 
-val Media.isLocalContent: Boolean
-    get() = instanceOf(Media.UriMedia::class) && getUri().toString().startsWith("content://media")
-
-val Media.canMakeActions: Boolean get() = !isEncrypted && isLocalContent && !instanceOf(Media.ClassifiedMedia::class) && !readUriOnly
-
-val Media.isClassified: Boolean get() = instanceOf(Media.ClassifiedMedia::class)
-
-val Media.getCategory: String?
-    get() = if (this is Media.ClassifiedMedia) {
-        this.category
-    } else null
-
-@Suppress("UNCHECKED_CAST")
-fun <T : Serializable> fromByteArray(byteArray: ByteArray): T {
-    ByteArrayInputStream(byteArray).use { byteArrayInputStream ->
-        ObjectInputStream(byteArrayInputStream).use { objectInput ->
-            return objectInput.readObject() as T
-        }
-    }
-}
-
-@Suppress("UNCHECKED_CAST")
-inline fun <reified T> fromKotlinByteArray(byteArray: ByteArray): T =
-    Json.decodeFromString(String(byteArray, Charsets.UTF_8))
-
-inline fun <reified T> T.toKotlinByteArray() = Json.encodeToString(this).toByteArray(Charsets.UTF_8)
-
-fun Media.EncryptedMedia.migrate(uuid: UUID): Media.EncryptedMedia2 = Media.EncryptedMedia2(
-    id = id,
-    label = label,
-    uuid = uuid,
-    path = path,
-    timestamp = timestamp,
-    mimeType = mimeType,
-    duration = duration,
-    trashed = trashed,
-    favorite = favorite,
-    albumID = albumID,
-    albumLabel = albumLabel,
-    relativePath = relativePath,
-    fullDate = fullDate,
-    size = size,
-)
-
-fun <T : Media> T.toEncryptedMedia(bytes: ByteArray): Media.EncryptedMedia {
-    return Media.EncryptedMedia(
-        id = id,
-        label = label,
-        bytes = bytes,
-        path = path,
-        timestamp = timestamp,
-        mimeType = mimeType,
-        duration = duration,
-        trashed = trashed,
-        favorite = favorite,
-        albumID = albumID,
-        albumLabel = albumLabel,
-        relativePath = relativePath,
-        fullDate = fullDate,
-        size = size,
-    )
-}
-
-fun <T : Media> T.asSubsamplingImage(context: Context): SubsamplingImage {
-    return SubsamplingImage(imageSource = ContentImageSource(context, getUri()))
-}
-
-fun <T : Media> T.compatibleMimeType(): String {
-    return if (isImage) when (mimeType) {
-        "image/jpeg" -> "image/jpeg"
-        "image/png" -> "image/png"
-        else -> "image/png"
-    } else mimeType
-}
-
-fun <T : Media> T.compatibleBitmapFormat(): Bitmap.CompressFormat {
-    return when (mimeType) {
-        "image/jpeg" -> Bitmap.CompressFormat.JPEG
-        "image/png" -> Bitmap.CompressFormat.PNG
-        else -> Bitmap.CompressFormat.PNG
-    }
-}
-
-fun <T : Media> T.asUriMedia(uri: Uri): Media.UriMedia {
-    return Media.UriMedia(
-        id = id,
-        label = label,
-        uri = uri,
-        path = path,
-        timestamp = timestamp,
-        mimeType = mimeType,
-        duration = duration,
-        trashed = trashed,
-        favorite = favorite,
-        albumID = albumID,
-        albumLabel = albumLabel,
-        relativePath = relativePath,
-        fullDate = fullDate,
-        size = size,
-    )
-}
-
 fun <T : Media> T.getUri(): Uri {
     return when (this) {
         is Media.UriMedia -> uri
@@ -193,11 +105,3 @@ fun <T : Media> T.getUri(): Uri {
     }
 }
 
-val Any.isHeaderKey: Boolean
-    get() = this is String && this.startsWith("header_")
-
-val Any.isBigHeaderKey: Boolean
-    get() = this is String && this.startsWith("header_big_")
-
-val Any.isIgnoredKey: Boolean
-    get() = this is String && this == "aboveGrid"

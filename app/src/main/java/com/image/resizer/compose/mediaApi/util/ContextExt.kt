@@ -17,7 +17,6 @@ import android.content.pm.ResolveInfo
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
-import android.provider.Settings
 import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.Window
@@ -27,7 +26,6 @@ import android.view.WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
 import android.view.accessibility.AccessibilityManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.LocalActivity
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -59,8 +57,6 @@ import com.image.resizer.compose.R
 import com.image.resizer.compose.mediaApi.model.Media
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 val LocalFixedInsets = compositionLocalOf<FixedInsets> { error("no FixedInsets provided!") }
@@ -122,15 +118,6 @@ fun rememberNavigationBarHeight(): Dp {
         } else {
             navigationBarPaddingEnd
         }
-    }
-}
-
-@Composable
-fun rememberGestureNavigationEnabled(): Boolean {
-    val navigationBarHeight = rememberNavigationBarHeight()
-
-    return remember(navigationBarHeight) {
-        navigationBarHeight < 48.dp
     }
 }
 

@@ -15,7 +15,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -34,7 +33,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
@@ -46,7 +44,6 @@ import com.image.resizer.compose.ImageReplacer.getBitmapFromUri
 import com.image.resizer.compose.mediaApi.AlbumsViewModel
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.MediaRepositoryImpl
-import com.image.resizer.compose.mediaApi.MediaViewModel
 import com.image.resizer.compose.mediaApi.SelectedMediaRepository
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.navigateInAnimation
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.navigateUpAnimation
@@ -129,12 +126,12 @@ fun BottomNavigationBar(navController: NavHostController) {
 fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
     val mediaRepository = MediaRepositoryImpl(LocalContext.current)
     val mediaHandleUseCase =
-        MediaHandleUseCase(repository = mediaRepository, context = LocalContext.current)
+        MediaHandleUseCase(repository = mediaRepository)
     val vm = AlbumsViewModel(mediaRepository, mediaHandleUseCase).apply {
         albumId = -1
     }
       val selectedMediaRepository = SelectedMediaRepository(context = LocalContext.current)
-    val homeScreenViewModel = HomeScreenViewModel(selectedMediaRepository, mediaHandleUseCase)
+    val homeScreenViewModel = HomeScreenViewModel(mediaHandleUseCase)
 
     NavHost(
         navController = navController,

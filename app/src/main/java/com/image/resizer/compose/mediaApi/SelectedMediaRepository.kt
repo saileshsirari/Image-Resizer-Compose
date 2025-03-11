@@ -20,9 +20,6 @@ data class SelectedMediaUris(
     val uris: List<String>
 ) {
     companion object {
-        fun fromUriList(uris: List<Uri>): SelectedMediaUris {
-            return SelectedMediaUris(uris.map { it.toString() })
-        }
     }
 
     fun toUriList(): List<Uri> = uris.map { Uri.parse(it) }

@@ -45,6 +45,7 @@ import com.image.resizer.compose.mediaApi.util.Constants.Animation.exitAnimation
 import com.image.resizer.compose.mediaApi.util.isImage
 import com.image.resizer.compose.mediaApi.util.mediaSharedElement
 import com.image.resizer.compose.mediaApi.util.rememberFeedbackManager
+import com.image.resizer.compose.mediaApi.util.rememberedDerivedState
 import com.image.resizer.compose.mediaApi.util.update
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest

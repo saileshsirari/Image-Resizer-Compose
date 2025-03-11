@@ -53,7 +53,7 @@ fun <T : Media> PickerMediaSheet(
     val scope = rememberCoroutineScope()
     val mediaRepository = MediaRepositoryImpl(LocalContext.current)
     val mediaHandleUseCase =
-        MediaHandleUseCase(repository = mediaRepository, context = LocalContext.current)
+        MediaHandleUseCase(repository = mediaRepository)
     val albumsViewModel = AlbumsViewModel(mediaRepository, mediaHandleUseCase)
 
     if (sheetState.isVisible) {
