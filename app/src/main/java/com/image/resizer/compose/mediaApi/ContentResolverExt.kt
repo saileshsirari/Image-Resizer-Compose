@@ -21,6 +21,7 @@ import android.provider.MediaStore
 import android.util.Log
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.util.Constants
+import com.image.resizer.compose.mediaApi.util.Constants.CUSTOM_FOLDER_NAME
 import com.image.resizer.compose.mediaApi.util.getUri
 import com.image.resizer.compose.mediaApi.util.isVideo
 import kotlinx.coroutines.Dispatchers
@@ -172,8 +173,8 @@ fun ContentResolver.restoreImage(
 
 fun ContentResolver.saveImage(
     bitmap: Bitmap,
-    format: Bitmap.CompressFormat = Bitmap.CompressFormat.PNG,
-    mimeType: String = "image/png",
+    format: Bitmap.CompressFormat = Bitmap.CompressFormat.JPEG,
+    mimeType: String = "image/jpeg",
     relativePath: String = Environment.DIRECTORY_PICTURES,
     displayName: String
 ): Uri? {
@@ -182,8 +183,7 @@ fun ContentResolver.saveImage(
         put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
         put(
             MediaStore.MediaColumns.RELATIVE_PATH,
-            if (relativePath.contains("DCIM") || relativePath.contains("Pictures")) relativePath
-            else Environment.DIRECTORY_PICTURES + "/Edited"
+            relativePath
         )
     }
 

@@ -63,6 +63,8 @@
     <string name="crop">Crop</string>
     <string name="scale">Scale</string>
     <string name="undo">Undo</string>
+    <string name="save">Save</string>
+    <string name="replace">Replace</string>
 
     <plurals name="item_count">
         <item quantity="one">%s item</item>

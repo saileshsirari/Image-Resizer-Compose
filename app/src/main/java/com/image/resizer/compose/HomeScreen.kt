@@ -48,14 +48,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.ChevronLeft
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -106,7 +104,6 @@ import com.image.resizer.compose.mediaApi.EditorNavigator
 import com.image.resizer.compose.mediaApi.PickerMediaSheet
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.NavigationButton
-import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.model.MediaState
 import com.image.resizer.compose.mediaApi.rememberAppBottomSheetState
@@ -252,24 +249,48 @@ fun <T : Media> HomeScreen(
                             targetUri = null,
                             startCropping = {
                             },
+                            homeScreenViewModel = homeScreenViewModel,
                             onItemClick = {
-                                when(it){
+                                when (it) {
                                     EditorDestination.Compress -> {
                                         homeScreenViewModel.onShowCompressPopup()
                                     }
+
                                     EditorDestination.Scale -> {
                                         homeScreenViewModel.onShowScalePopup()
                                     }
+
                                     EditorDestination.Crop -> {
                                         homeScreenViewModel.onShowCropPopup()
                                     }
+
                                     EditorDestination.Undo -> {
                                         homeScreenViewModel.onUndo()
                                     }
+
                                     EditorDestination.Editor -> {
 
                                     }
-                                    ExternalEditor->{
+
+                                    EditorDestination.Save -> {
+                                        homeScreenViewModel.saveCopy(onSuccess = {
+                                            homeScreenViewModel.showToast()
+                                        }, onFail = {
+                                            homeScreenViewModel.showToast("Failed")
+                                        })
+
+                                    }
+
+                                    EditorDestination.Replace -> {
+                                        homeScreenViewModel.saveOverride(onSuccess = {
+                                            homeScreenViewModel.showToast()
+                                        }, onFail = {
+                                            homeScreenViewModel.showToast("Failed")
+                                        })
+
+                                    }
+
+                                    ExternalEditor -> {
 
                                     }
 

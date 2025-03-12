@@ -61,11 +61,8 @@ class MediaHandleUseCase(
     fun overrideImage(
         uri: Uri,
         bitmap: Bitmap,
-        format: Bitmap.CompressFormat,
-        mimeType: String,
-        relativePath: String,
-        displayName: String
-    ) = repository.overrideImage(uri, bitmap, format, mimeType, relativePath, displayName)
+        format: Bitmap.CompressFormat
+    ) = repository.overrideImage(uri, bitmap, format,)
 
 
 }

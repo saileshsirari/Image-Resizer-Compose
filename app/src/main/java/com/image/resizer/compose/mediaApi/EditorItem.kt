@@ -1,5 +1,6 @@
 package com.image.resizer.compose.mediaApi
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -36,6 +37,8 @@ fun EditorItem(
     onItemLongClick: (() -> Unit)? = null,
     onItemClick: () -> Unit
 ) {
+
+
     val alpha = if (enabled) 1f else 0.5f
     val tintColor = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
 
@@ -104,6 +107,6 @@ fun EditorItem(
                 color = tintColor,
                 textAlign = TextAlign.Center,
             )
-        }
+    }
     }
 }

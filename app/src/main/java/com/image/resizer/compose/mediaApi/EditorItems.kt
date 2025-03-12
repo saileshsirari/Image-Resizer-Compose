@@ -7,6 +7,7 @@ import androidx.compose.material.icons.outlined.Adjust
 import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.Draw
 import androidx.compose.material.icons.outlined.Filter
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -22,6 +23,8 @@ enum class EditorItems : Parcelable {
     Crop,
     Compress,
     Scale,
+    Save,
+    Replace,
     Undo;
 
     @get:Composable
@@ -31,6 +34,8 @@ enum class EditorItems : Parcelable {
             Compress -> stringResource(R.string.compress)
             Scale -> stringResource(R.string.scale)
             Undo -> stringResource(R.string.undo)
+            Save -> stringResource(R.string.save)
+            Replace ->stringResource(R.string.replace)
         }
 
     @IgnoredOnParcel
@@ -40,5 +45,7 @@ enum class EditorItems : Parcelable {
             Compress -> Icons.Outlined.Adjust
             Scale -> Icons.Outlined.Filter
             Undo -> Icons.Outlined.Draw
+            Replace -> Icons.Outlined.Adjust
+            Save -> Icons.Outlined.Draw
         }
 }

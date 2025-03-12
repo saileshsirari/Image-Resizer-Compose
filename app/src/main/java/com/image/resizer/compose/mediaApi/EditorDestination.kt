@@ -14,6 +14,12 @@ sealed class EditorDestination {
     @Serializable
     data object Scale : EditorDestination()
 
+    @Serializable
+    data object Save : EditorDestination()
+
+    @Serializable
+    data object Replace : EditorDestination()
+
 
     @Serializable
     data object Compress : EditorDestination()

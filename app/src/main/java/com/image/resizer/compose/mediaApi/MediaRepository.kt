@@ -54,10 +54,7 @@ interface MediaRepository {
     fun overrideImage(
         uri: Uri,
         bitmap: Bitmap,
-        format: Bitmap.CompressFormat,
-        mimeType: String,
-        relativePath: String,
-        displayName: String
+        format: Bitmap.CompressFormat
     ): Boolean
 
 }

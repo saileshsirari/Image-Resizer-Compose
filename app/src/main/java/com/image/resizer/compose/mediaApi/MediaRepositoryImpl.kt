@@ -152,9 +152,6 @@ class MediaRepositoryImpl(
         uri: Uri,
         bitmap: Bitmap,
         format: Bitmap.CompressFormat,
-        mimeType: String,
-        relativePath: String,
-        displayName: String
     ) = contentResolver.overrideImage(uri, bitmap, format)
 
 }

@@ -8,12 +8,17 @@ import androidx.lifecycle.viewModelScope
 import com.image.resizer.compose.ImageHelper.getFileNameAndSize
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.SaveFormat
+import com.image.resizer.compose.mediaApi.util.Constants.CUSTOM_FOLDER_NAME
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlin.text.format
 
 class HomeScreenViewModel(
     private val mediaHandler: MediaHandleUseCase
@@ -160,6 +165,58 @@ class HomeScreenViewModel(
         _scaleState.value = ScaleState.Idle
     }
 
+    fun saveImagesToGallery(
+        imageItems: List<ImageItem?>,
+        customDirectoryName: String = "ImageResizer"
+    ) {
+        _isSaving.value = true
+
+
+    }
+
+    fun saveCopy(
+        saveFormat: SaveFormat = SaveFormat.PNG,
+        onSuccess: () -> Unit = {},
+        onFail: () -> Unit = {}
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch(Dispatchers.IO) {
+                _isSaving.value = true
+                delay(500)
+                selectedImageItems.forEach {
+                    val media = it
+                    val currentBitmap = it.scaledBitmap
+                    currentBitmap?.let { bitmap ->
+                        try {
+                            val displayName =
+                                (media.imageName?:"")+"imageResizer_${
+                                    SimpleDateFormat(
+                                        "MM_dd_HH_mm_ss",
+                                        Locale.getDefault()
+                                    ).format(Date())
+                                }.jpg"
+                            if (mediaHandler.saveImage(
+                                    bitmap = bitmap,
+                                    format = saveFormat.format,
+                                    relativePath = Environment.DIRECTORY_PICTURES + "/" + CUSTOM_FOLDER_NAME,
+                                    displayName = media.imageName?:displayName,
+                                    mimeType = saveFormat.mimeType
+                                ) != null
+                            ) {
+                                onSuccess().also { _isSaving.value = false }
+                            } else {
+                                onFail().also { _isSaving.value = false }
+                            }
+                        } catch (_: Exception) {
+                            _isSaving.value = false
+                            onFail().also { _isSaving.value = false }
+                        }
+                    } ?: onFail().also { _isSaving.value = false }
+                }
+            }
+        }
+    }
+
     fun saveOverride(
         saveFormat: SaveFormat = SaveFormat.PNG,
         onSuccess: () -> Unit = {},
@@ -176,10 +233,7 @@ class HomeScreenViewModel(
                         if (mediaHandler.overrideImage(
                                 uri = media.uri,
                                 bitmap = bitmap,
-                                format = saveFormat.format,
-                                relativePath = Environment.DIRECTORY_PICTURES + "/Edited",
-                                displayName = media.imageName ?: "test",
-                                mimeType = saveFormat.mimeType
+                                format = saveFormat.format
                             )
                         ) {
                             onSuccess().also { _isSaving.value = false }

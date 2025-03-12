@@ -80,11 +80,11 @@ data class ImageItem(
     var originalBitmap: Bitmap? = null,
     val fileSize: Long? = null, // Size in bytes
     val imageName: String? = null,// Original name of the image file
-    val imageDimension: Pair<Int, Int>?=null,
-    var scaledImageDimension: Pair<Int, Int>?=null,
-    var scaledFileSize: Long?=null,
-    var scaledUri: Uri ? =null
-    )
+    val imageDimension: Pair<Int, Int>? = null,
+    var scaledImageDimension: Pair<Int, Int>? = null,
+    var scaledFileSize: Long? = null,
+    var scaledUri: Uri? = null
+)
 
 
 @Preview
@@ -136,6 +136,7 @@ fun ScaledImageScreenPreview() {
         }
     )
 }
+
 const val TAG = "ScaledImageScreen"
 
 @Composable
@@ -159,24 +160,26 @@ fun ScaledImageScreen(
             }
         }
     }
-    Box(modifier = Modifier
-        .fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+    ) {
         Column(
             modifier = Modifier.Companion
                 .fillMaxWidth(),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.Companion.CenterHorizontally
         ) {
-            Log.d(TAG,"ScaledImageScreen $imagesScaled ${scaleParamsList?.size}" )
-             if(imagesScaled) {
-                 ScaledImagesGrid(
-                     modifier = Modifier
-                         .fillMaxSize()
-                         .padding(bottom = 10.dp), scaledImages, imageItems
-                 )
-             }else{
-                 Text("Scaling...")
-             }
+            Log.d(TAG, "ScaledImageScreen $imagesScaled ${scaleParamsList?.size}")
+            if (imagesScaled) {
+                ScaledImagesGrid(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 10.dp), scaledImages, imageItems
+                )
+            } else {
+                Text("Scaling...")
+            }
         }
         // Save button at the bottom, above the FAB
         if (imagesScaled) {
@@ -189,7 +192,7 @@ fun ScaledImageScreen(
             ) {
                 Button(
                     onClick = {
-                       // saveImagesToGallery(context, imageItems)
+                        // saveImagesToGallery(context, imageItems)
                         onSaveClicked()
                     },
                     modifier = Modifier.fillMaxWidth()
@@ -253,9 +256,8 @@ fun GalleryImagesComponentPreview1() {
 }
 
 
-
 @Composable
- fun GalleryImagesComponent(imageItems: List<ImageItem>) {
+fun GalleryImagesComponent(imageItems: List<ImageItem>) {
     val columns = if (imageItems.size > 1) {
         GridCells.Fixed(2)
     } else {
@@ -269,7 +271,7 @@ fun GalleryImagesComponentPreview1() {
         horizontalArrangement = Arrangement.spacedBy(1.dp)
     ) {
         items(imageItems) { imageItem ->
-            Column   (
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
@@ -279,7 +281,7 @@ fun GalleryImagesComponentPreview1() {
             ) {
 
                 imageItem.imageDimension?.let {
-                    Text(" ${it.first}x${it.second}"  )
+                    Text(" ${it.first}x${it.second}")
                 }
                 imageItem.fileSize?.let {
                     Text("${it / 1024} kb", maxLines = 1)
@@ -344,7 +346,7 @@ internal fun ScaledImagesGrid(
             ) {
                 ImageComparisonView(imageItem = selectedImageItem!!)
             }
-        }else if(!showComparisonView) {
+        } else if (!showComparisonView) {
             LazyVerticalGrid(
                 state = lazyGridState,
                 columns = GridCells.Fixed(1),
@@ -461,7 +463,7 @@ internal fun ScaledImagesGrid(
 }
 
 
-private  fun scaleImages(
+private fun scaleImages(
     imageItems: List<ImageItem>,
     scaleParamsList: List<ScaleParams>,
     context: Context,
@@ -487,7 +489,7 @@ private  fun scaleImages(
             imageItem.scaledFileSize = sizeInBytes
         }
 
-        imageItem.scaledImageDimension = Pair(scaledWidth,scaledHeight)
+        imageItem.scaledImageDimension = Pair(scaledWidth, scaledHeight)
         imageItem.scaledBitmap = scaledBitmap
     }
     onComplete()
@@ -509,72 +511,79 @@ internal fun imageDimensionsFromUri(
     return Pair(originalWidth, originalHeight)
 }
 
-internal fun saveImagesToGallery(context: Context, imageItems: List<ImageItem?>,
-                                 customDirectoryName: String="ImageResizer") {
+internal fun saveImagesToGallery(
+    context: Context, imageItems: List<ImageItem?>,
+    customDirectoryName: String = "ImageResizer"
+) {
     val customDirectoryName = customDirectoryName
     val resolver = context.contentResolver
 
-    imageItems.filterNotNull().forEach { imageItem ->
-        imageItem.scaledBitmap?.let { bitmap ->
-            val displayName =
-                "imageResizer_${
-                    SimpleDateFormat(
-                        "MMdd_HHmm",
-                        Locale.getDefault()
-                    ).format(Date())
-                }.jpg"
-            val mimeType = "image/jpeg"
+    return runCatching {
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                // For Android 10 (Q) and above
-                val values = ContentValues().apply {
-                    put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
-                    put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
-                    put(
-                        MediaStore.MediaColumns.RELATIVE_PATH,
-                        "${Environment.DIRECTORY_PICTURES}/$customDirectoryName"
-                    )
-                }
+        imageItems.filterNotNull().forEach { imageItem ->
+            imageItem.scaledBitmap?.let { bitmap ->
+                val displayName =
+                    "imageResizer_${
+                        SimpleDateFormat(
+                            "MMdd_HHmmss",
+                            Locale.getDefault()
+                        ).format(Date())
+                    }.jpg"
+                val mimeType = "image/jpeg"
 
-                try {
-                    val uri =
-                        resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-                    uri?.let {
-                        resolver.openOutputStream(uri)?.use { outputStream ->
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    // For Android 10 (Q) and above
+                    val values = ContentValues().apply {
+                        put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
+                        put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+                        put(
+                            MediaStore.MediaColumns.RELATIVE_PATH,
+                            "${Environment.DIRECTORY_PICTURES}/$customDirectoryName"
+                        )
+                    }
+
+                    try {
+                        val uri =
+                            resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                        uri?.let {
+                            resolver.openOutputStream(uri)?.use { outputStream ->
+                                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                            }
+                        }
+                        Log.d("SaveImage", "Image saved to gallery (Q+): $uri")
+
+                    } catch (e: IOException) {
+                        Log.e("SaveImage", "Error saving image (Q+): ${e.message}")
+                    }
+                } else {
+                    // For Android versions before 10 (Q)
+                    val picturesDir =
+                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                    val customDir = File(picturesDir, customDirectoryName)
+                    if (!customDir.exists()) {
+                        customDir.mkdirs()
+                    }
+                    val file = File(customDir, displayName)
+                    try {
+                        FileOutputStream(file).use { outputStream ->
                             bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
                         }
+                        // Make sure the file is visible in the gallery immediately
+                        MediaScannerConnection.scanFile(
+                            context,
+                            arrayOf(file.toString()),
+                            arrayOf(mimeType),
+                            null
+                        )
+                        Log.d("SaveImage", "Image saved to gallery (pre-Q): $file")
+                    } catch (e: IOException) {
+                        Log.e("SaveImage", "Error saving image (pre-Q): ${e.message}")
                     }
-                    Log.d("SaveImage", "Image saved to gallery (Q+): $uri")
-
-                } catch (e: IOException) {
-                    Log.e("SaveImage", "Error saving image (Q+): ${e.message}")
-                }
-            } else {
-                // For Android versions before 10 (Q)
-                val picturesDir =
-                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-                val customDir = File(picturesDir, customDirectoryName)
-                if (!customDir.exists()) {
-                    customDir.mkdirs()
-                }
-                val file = File(customDir, displayName)
-                try {
-                    FileOutputStream(file).use { outputStream ->
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                    }
-                    // Make sure the file is visible in the gallery immediately
-                    MediaScannerConnection.scanFile(
-                        context,
-                        arrayOf(file.toString()),
-                        arrayOf(mimeType),
-                        null
-                    )
-                    Log.d("SaveImage", "Image saved to gallery (pre-Q): $file")
-                } catch (e: IOException) {
-                    Log.e("SaveImage", "Error saving image (pre-Q): ${e.message}")
                 }
             }
         }
+    }.getOrElse {
+        throw it
     }
 }
 
