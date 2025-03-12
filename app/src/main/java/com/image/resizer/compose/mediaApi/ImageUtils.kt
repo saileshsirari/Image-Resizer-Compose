@@ -14,6 +14,7 @@ import android.graphics.Canvas
 import android.graphics.Matrix
 import android.net.Uri
 import android.provider.MediaStore
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -29,9 +30,12 @@ import androidx.core.content.FileProvider
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import androidx.core.net.toFile
+import androidx.exifinterface.media.ExifInterface
 import com.image.resizer.compose.BuildConfig
+import com.image.resizer.compose.TAG
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.util.getUri
+import java.io.InputStream
 
 val sdcardRegex = "^/storage/[A-Z0-9]+-[A-Z0-9]+/.*$".toRegex()
 
@@ -160,7 +164,41 @@ fun Uri.authorizedUri(context: Context): Uri = if (this.toString()
     BuildConfig.CONTENT_AUTHORITY,
     this.toFile()
 )
-
+ fun rotateBitmap(bitmap: Bitmap, orientation: Int): Bitmap {
+    val matrix = Matrix()
+    when (orientation) {
+        ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+        ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+        ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+        ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
+        ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
+        ExifInterface.ORIENTATION_TRANSPOSE -> {
+            matrix.postRotate(90f)
+            matrix.postScale(-1f, 1f)
+        }
+        ExifInterface.ORIENTATION_TRANSVERSE -> {
+            matrix.postRotate(270f)
+            matrix.postScale(-1f, 1f)
+        }
+    }
+    return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+}
+ fun getExifOrientation(context: Context, imageUri: Uri): Int {
+    var inputStream: InputStream? = null
+    return try {
+        inputStream = context.contentResolver.openInputStream(imageUri)
+        val exifInterface = ExifInterface(inputStream!!)
+        exifInterface.getAttributeInt(
+            ExifInterface.TAG_ORIENTATION,
+            ExifInterface.ORIENTATION_NORMAL
+        )
+    } catch (e: Exception) {
+        Log.e(TAG, "Error getting EXIF orientation for URI: $imageUri", e)
+        ExifInterface.ORIENTATION_NORMAL
+    } finally {
+        inputStream?.close()
+    }
+}
 fun <T: Media> Context.shareMedia(media: T) {
     val originalUri = media.getUri()
     val uri = if (originalUri.toString()

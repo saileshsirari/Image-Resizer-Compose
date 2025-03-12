@@ -700,7 +700,7 @@ fun CompressToKbImageScreen(
         withContext(Dispatchers.IO) {
             val imageScalar = ImageScalar(context)
             val scaledUris = withContext(Dispatchers.IO) {
-                imageScalar.compressImagesToTargetSize(imageItems, sizeInKb = sizeInKb)
+                imageScalar.compressImagesToTargetSize(context,imageItems, sizeInKb = sizeInKb)
             }
             imagesScaled = true
             scaledImages = scaledUris.filterNotNull()

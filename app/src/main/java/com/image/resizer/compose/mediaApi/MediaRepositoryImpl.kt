@@ -12,6 +12,7 @@ import android.net.Uri
 import android.provider.MediaStore
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.ActivityOptionsCompat
 import com.dot.gallery.feature_node.data.data_source.mediastore.queries.AlbumsFlow
 import com.image.resizer.compose.mediaApi.model.Album
@@ -146,12 +147,12 @@ class MediaRepositoryImpl(
         mimeType: String,
         relativePath: String,
         displayName: String
-    ) = contentResolver.saveImage(bitmap, format, mimeType, relativePath, displayName)
+    ) = contentResolver.saveImage(context,bitmap, format, mimeType, relativePath, displayName)
 
     override fun overrideImage(
         uri: Uri,
         bitmap: Bitmap,
         format: Bitmap.CompressFormat,
-    ) = contentResolver.overrideImage(uri, bitmap, format)
+    ) = contentResolver.overrideImage(context,uri, bitmap, format)
 
 }

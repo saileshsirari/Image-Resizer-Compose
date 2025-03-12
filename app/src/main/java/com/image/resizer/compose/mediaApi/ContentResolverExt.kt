@@ -7,10 +7,14 @@ package com.image.resizer.compose.mediaApi
 
 import android.content.ContentResolver
 import android.content.ContentValues
+import android.content.Context
+import android.content.Intent
 import android.database.ContentObserver
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.media.MediaScannerConnection
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.CancellationSignal
 import android.os.Environment
@@ -33,6 +37,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
 
 fun ContentResolver.queryFlow(
@@ -133,45 +139,73 @@ suspend fun <T : Media> ContentResolver.copyMedia(
     }
 }
 
+private fun replaceImageBelowQ(context: Context, originalUri: Uri, newBitmap: Bitmap): Boolean {
+    val contentResolver: ContentResolver = context.contentResolver
+    val projection = arrayOf(MediaStore.Images.Media.DATA)
+
+    val cursor = contentResolver.query(originalUri, projection, null, null, null)
+    cursor?.use {
+        if (it.moveToFirst()) {
+            val dataColumnIndex = it.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
+            val imagePath = it.getString(dataColumnIndex)
+            val file = File(imagePath)
+
+            // Check if the file exists and is writable
+            if (file.exists() && file.canWrite()) {
+                FileOutputStream(file).use { outputStream ->
+                    newBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                    outputStream.flush()
+                }
+            }
+        }
+    }
+    //Trigger media scanner
+    context.sendBroadcast(
+        Intent(
+            Intent.ACTION_MEDIA_SCANNER_SCAN_FILE,
+            Uri.fromFile(File(originalUri.path.orEmpty()))
+        )
+    )
+    return true
+}
+
 fun ContentResolver.overrideImage(
+    context: Context,
     uri: Uri,
     bitmap: Bitmap,
     format: Bitmap.CompressFormat = Bitmap.CompressFormat.PNG
 ): Boolean {
 
-
     val values = ContentValues().apply {
         put(MediaStore.MediaColumns.DATE_MODIFIED, System.currentTimeMillis())
     }
-
-    return runCatching {
-        update(uri, values, null)
-        openOutputStream(uri)?.use { stream ->
-            if (!bitmap.compress(format, 100, stream))
-                throw IOException("Failed to save bitmap.")
-        } ?: throw IOException("Failed to open output stream.")
-        update(
-            uri,
-            ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) },
-            null
-        ) > 0
-    }.getOrElse {
-        throw it
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        return runCatching {
+            update(uri, values, null)
+            openOutputStream(uri)?.use { stream ->
+                if (!bitmap.compress(format, 100, stream))
+                    throw IOException("Failed to save bitmap.")
+            } ?: throw IOException("Failed to open output stream.")
+            update(
+                uri,
+                ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) },
+                null
+            ) > 0
+        }.getOrElse {
+            throw it
+        }
+    } else {
+        return runCatching {
+            replaceImageBelowQ(context, uri, bitmap)
+        }.getOrElse {
+            throw it
+        }
     }
 }
 
-fun ContentResolver.restoreImage(
-    byteArray: ByteArray,
-    format: Bitmap.CompressFormat = Bitmap.CompressFormat.PNG,
-    mimeType: String = "image/png",
-    relativePath: String = Environment.DIRECTORY_PICTURES + "/Restored",
-    displayName: String
-): Uri? {
-    val bitmap = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
-    return saveImage(bitmap, format, mimeType, relativePath, displayName)
-}
 
 fun ContentResolver.saveImage(
+    context: Context,
     bitmap: Bitmap,
     format: Bitmap.CompressFormat = Bitmap.CompressFormat.JPEG,
     mimeType: String = "image/jpeg",
@@ -188,24 +222,54 @@ fun ContentResolver.saveImage(
     }
 
     var uri: Uri? = null
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
 
-    return runCatching {
-        insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)?.also {
-            uri = it // Keep uri reference so it can be removed on failure
+        return runCatching {
+            insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)?.also {
+                uri = it // Keep uri reference so it can be removed on failure
 
-            openOutputStream(it)?.use { stream ->
-                if (!bitmap.compress(format, 95, stream))
-                    throw IOException("Failed to save bitmap.")
-            } ?: throw IOException("Failed to open output stream.")
+                openOutputStream(it)?.use { stream ->
+                    if (!bitmap.compress(format, 100, stream))
+                        throw IOException("Failed to save bitmap.")
+                } ?: throw IOException("Failed to open output stream.")
 
-        } ?: throw IOException("Failed to create new MediaStore record.")
-    }.getOrElse {
-        uri?.let { orphanUri ->
-            // Don't leave an orphan entry in the MediaStore
-            delete(orphanUri, null, null)
+            } ?: throw IOException("Failed to create new MediaStore record.")
+        }.getOrElse {
+            uri?.let { orphanUri ->
+                // Don't leave an orphan entry in the MediaStore
+                delete(orphanUri, null, null)
+            }
+
+            return null
         }
+    } else {
 
-        return null
+        // For Android versions before 10 (Q)
+        return runCatching {
+            val customDir = File(relativePath)
+            if (!customDir.exists()) {
+                customDir.mkdirs()
+            }
+            val file = File(customDir, displayName)
+            FileOutputStream(file).use { outputStream ->
+                if (mimeType.contains("png")) {
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+                } else {
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                }
+            }
+            // Make sure the file is visible in the gallery immediately
+            MediaScannerConnection.scanFile(
+                context,
+                arrayOf(file.toString()),
+                arrayOf(mimeType),
+                null
+            )
+            Log.d("SaveImage", "Image saved to gallery (pre-Q): $file")
+            return null
+        }.getOrElse {
+            return null
+        }
     }
 }
 
