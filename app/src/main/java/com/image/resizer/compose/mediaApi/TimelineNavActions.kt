@@ -78,7 +78,7 @@ inline fun <reified T: Media> TimelineNavActions(
                 }
             )
         ).apply {
-            if (albumId != -1L && T::class == Media.UriMedia::class) {
+            /* if (albumId != -1L && T::class == Media.UriMedia::class) {
                 add(
                     OptionItem(
                         text = context.getString(R.string.move_album_to_trash),
@@ -97,7 +97,7 @@ inline fun <reified T: Media> TimelineNavActions(
                     )
                 )
             }
-          /*  add(
+           add(
                 OptionItem(
                     text = context.getString(R.string.favorites),
                     enabled = !selectionState.value,
@@ -147,7 +147,7 @@ inline fun <reified T: Media> TimelineNavActions(
         onDismiss = {
             expandedDropDown.value = false
         },
-        optionList = arrayOf(optionList, settingsOption)
+        optionList = arrayOf(optionList)
     )
 }
 

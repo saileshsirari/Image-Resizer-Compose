@@ -36,6 +36,7 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.CopyAll
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.FileOpen
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -176,9 +177,9 @@ fun <T: Media> SelectionSheet(
                     context.shareMedia(selectedMedia)
                 }
                 SelectionBarColumn(
-                    imageVector = Icons.Outlined.FavoriteBorder,
+                    imageVector = Icons.Outlined.FileOpen,
                     tabletMode = tabletMode,
-                    title = stringResource(R.string.compress)
+                    title = stringResource(R.string.open)
                 ) {
                     scope.launch {
                         val uriList = selectedMedia.map{ it }
@@ -212,25 +213,8 @@ fun <T: Media> SelectionSheet(
         }
     }
 
-    if (albumsState.value.albums.isNotEmpty()) {
-     /*   MoveMediaSheet(
-            sheetState = moveSheetState,
-            mediaList = selectedMedia,
-            albumState = albumsState,
-            handler = handler,
-            onFinish = ::clearSelection
-        )
 
-        CopyMediaSheet(
-            sheetState = copySheetState,
-            mediaList = selectedMedia,
-            albumsState = albumsState,
-            handler = handler,
-            onFinish = ::clearSelection
-        )*/
-    }
-
-  /*  TrashDialog(
+    TrashDialog(
         appBottomSheetState = trashSheetState,
         data = selectedMedia,
         action = remember(shouldMoveToTrash) {
@@ -242,7 +226,7 @@ fun <T: Media> SelectionSheet(
         } else {
             handler.deleteMedia(result, it)
         }
-    }*/
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
