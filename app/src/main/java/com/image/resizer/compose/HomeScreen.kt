@@ -103,6 +103,8 @@ import com.image.resizer.compose.mediaApi.EditorNavigator
 import com.image.resizer.compose.mediaApi.PickerMediaSheet
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.NavigationButton
+import com.image.resizer.compose.mediaApi.model.Album
+import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.model.MediaState
 import com.image.resizer.compose.mediaApi.rememberAppBottomSheetState
@@ -135,14 +137,14 @@ fun <T : Media> HomeScreen(
     albumName: String = stringResource(R.string.app_name),
     navigate: (route: String) -> Unit,
     onItemClick: () -> Unit,
+    albumsState: State<AlbumState>,
     handler: MediaHandleUseCase,
     navController: NavHostController,
     navigateUp: @DisallowComposableCalls () -> Unit,
 ) {
 // Preloaded viewModels
     val copySheetState = rememberAppBottomSheetState()
-    val albumsState =
-        albumsViewModel.albumsFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+
     val navigator = rememberSupportingPaneScaffoldNavigator()
 
     val context = LocalContext.current

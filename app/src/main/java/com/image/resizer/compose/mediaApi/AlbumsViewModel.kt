@@ -20,7 +20,7 @@ class AlbumsViewModel(
       repository: MediaRepository, handleUseCase: MediaHandleUseCase
 ) : MediaViewModel(repository,handleUseCase) {
     private val albumOrder: MediaOrder
-        get() = MediaOrder.Date(OrderType.Ascending)
+        get() = MediaOrder.Date(OrderType.Descending)
 
 
     val albumsFlow = repository.getAlbums(mediaOrder = albumOrder).map { result ->

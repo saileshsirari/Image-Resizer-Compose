@@ -1,6 +1,7 @@
 package com.image.resizer.compose
 
 import android.Manifest
+import android.app.Activity
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
@@ -12,9 +13,11 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -29,8 +32,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -47,8 +52,13 @@ import com.image.resizer.compose.mediaApi.AlbumsViewModel
 import com.image.resizer.compose.mediaApi.ImageDetailsScreen
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.MediaRepositoryImpl
+import com.image.resizer.compose.mediaApi.MediaViewModel
+import com.image.resizer.compose.mediaApi.TimelineScreen
+import com.image.resizer.compose.mediaApi.model.Media.UriMedia
+import com.image.resizer.compose.mediaApi.model.MediaState
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.navigateInAnimation
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.navigateUpAnimation
+import com.image.resizer.compose.mediaApi.util.Constants.CUSTOM_FOLDER_NAME
 import com.image.resizer.compose.theme.AppTheme
 import kotlinx.coroutines.Dispatchers
 import java.io.File
@@ -129,57 +139,125 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
     val mediaRepository = MediaRepositoryImpl(LocalContext.current)
     val mediaHandleUseCase =
         MediaHandleUseCase(repository = mediaRepository)
-    val vm = AlbumsViewModel(mediaRepository, mediaHandleUseCase).apply {
+    val albumsViewModel = AlbumsViewModel(mediaRepository, mediaHandleUseCase).apply {
         albumId = -1
     }
+    val albumsState =
+        albumsViewModel.albumsFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
     val homeScreenViewModel = HomeScreenViewModel(mediaHandleUseCase)
+    val activity = LocalActivity.current as Activity
 
-    NavHost(
-        navController = navController,
-        startDestination = Screen.Home.route,
-        enterTransition = { navigateInAnimation },
-        exitTransition = { navigateUpAnimation },
-        popEnterTransition = { navigateInAnimation },
-        popExitTransition = { navigateUpAnimation },
-        modifier = Modifier.padding(innerPadding)
-    ) {
+    val context = LocalContext.current
 
-        composable(Screen.Home.route) {
+    val hideTimeline by remember { mutableStateOf(true) }
 
-            val mediaState = vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
-            HomeScreen(
-                homeScreenViewModel = homeScreenViewModel,
-                albumsViewModel = vm,
-                mediaState = mediaState,
-                selectionState = vm.multiSelectState,
-                selectedMedia = vm.selectedPhotoState,
-                paddingValues = innerPadding,
-                navController = navController,
-                onItemClick = {
-                    navController.navigate(Screen.AlbumsScreen.route) {
-                        launchSingleTop = true
-                        restoreState = true
+    SharedTransitionLayout {
+        NavHost(
+            navController = navController,
+            startDestination = Screen.Home.route,
+            enterTransition = { navigateInAnimation },
+            exitTransition = { navigateUpAnimation },
+            popEnterTransition = { navigateInAnimation },
+            popExitTransition = { navigateUpAnimation },
+            modifier = Modifier.padding(innerPadding)
+        ) {
+
+            composable(Screen.Home.route) {
+
+                val mediaState =
+                    albumsViewModel.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+                HomeScreen(
+                    homeScreenViewModel = homeScreenViewModel,
+                    albumsViewModel = albumsViewModel,
+                    mediaState = mediaState,
+                    selectionState = albumsViewModel.multiSelectState,
+                    selectedMedia = albumsViewModel.selectedPhotoState,
+                    paddingValues = innerPadding,
+                    navController = navController,
+                    albumsState = albumsState,
+                    onItemClick = {
+                        navController.navigate(Screen.AlbumsScreen.route) {
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    navigate = {
+                        navController.navigate(it) {
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    handler = albumsViewModel.handler,
+                    navigateUp = {
+                        navController.navigateUp()
+                    },
+                )
+            }
+            composable(
+                route = Screen.MyImages.route
+            ) { backStackEntry ->
+
+                val myImages =
+                    albumsState.value.albums.firstOrNull { it.label == CUSTOM_FOLDER_NAME }
+                if (myImages != null) {
+                    var myImagesVm = MediaViewModel(
+                        repository = mediaRepository,
+                        handler = mediaHandleUseCase
+                    ).apply {
+                        albumId = myImages.id
                     }
-                },
-                navigate = {
-                    navController.navigate(it) {
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-                handler = vm.handler,
-                navigateUp = {
-                    navController.navigateUp()
-                },
-            )
-        }
-        composable(Screen.MyImages.route) {
-              MyImagesScreen()
-        }
+                    val myImagesMediaState =
+                        myImagesVm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
 
-        composable(ImageDetailScreen.route) {
-            homeScreenViewModel.selectedItem?.let {
-                ImageDetailsScreen(it)
+
+                    TimelineScreen(
+                        paddingValues = innerPadding,
+                        albumId = myImages.id,
+                        albumName = myImages.label,
+                        handler = myImagesVm.handler,
+                        mediaState = myImagesMediaState,
+                        albumsState = albumsState,
+                        selectionState = myImagesVm.multiSelectState,
+                        selectedMedia = myImagesVm.selectedPhotoState,
+                        allowNavBar = false,
+                        allowHeaders = !hideTimeline,
+                        enableStickyHeaders = !hideTimeline,
+                        toggleSelection = myImagesVm::toggleSelection,
+                        activity = activity,
+                        navigate = {
+                            navController.navigate(it) {
+                            }
+                        },
+                        navigateUp = {
+                            navController.navigateUp()
+                        },
+                        toggleNavbar = {
+
+                        },
+                        isScrolling = mutableStateOf(false),
+                        sharedTransitionScope = this@SharedTransitionLayout,
+                        animatedContentScope = this,
+                        onCompressClick = {
+                            homeScreenViewModel.handlePickedImages(it, context) {
+
+                            }
+                        },
+                        onMediaClick = {
+                            homeScreenViewModel.handlePickedImages(listOf(it.uri), context) {
+
+
+                            }
+                        }
+                    )
+
+                }
+            }
+
+
+            composable(ImageDetailScreen.route) {
+                homeScreenViewModel.selectedItem?.let {
+                    ImageDetailsScreen(it)
+                }
             }
         }
     }
