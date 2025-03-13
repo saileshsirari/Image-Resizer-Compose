@@ -58,6 +58,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextFieldDefaults.contentPadding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -342,18 +343,19 @@ fun MyImagesScreen() {
         } else {
             LazyVerticalGrid(
                 state = lazyGridState,
-                columns = GridCells.Fixed(3),
+                columns = GridCells.Fixed(2),
                 modifier = Modifier
                     .fillMaxSize()
+                    .height(200.dp)
                     .padding(innerPadding)
                     .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
                 contentPadding = PaddingValues(0.dp)
             ) {
                 itemsIndexed(
                     items = actualImageItems,
-                    key = { index, imageItem -> imageItem.uri },
+                    key = { index, imageItem -> imageItem.key },
                 ) { index, imageItem ->
                     AnimatedVisibility(
                         visible = true,

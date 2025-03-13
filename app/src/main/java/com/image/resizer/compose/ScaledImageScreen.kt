@@ -58,9 +58,12 @@ import java.io.File
 import java.io.FileOutputStream
 import androidx.core.net.toUri
 import androidx.core.graphics.createBitmap
+import java.util.UUID
+import kotlin.uuid.Uuid
 
 
 data class ImageItem(
+    val key : String= UUID.randomUUID().toString(),
     val uri: Uri,
     var scaledBitmap: Bitmap? = null,
     var originalBitmap: Bitmap? = null,

@@ -97,7 +97,7 @@ class HomeScreenViewModel(
                     val (imageName, fileSize) = getFileNameAndSize(context, uri)
                     val imagesDimensions = imageDimensionsFromUri(context, uri)
                     ImageItem(
-                        uri,
+                        uri = uri,
                         imageName = imageName,
                         fileSize = fileSize,
                         imageDimension = imagesDimensions
