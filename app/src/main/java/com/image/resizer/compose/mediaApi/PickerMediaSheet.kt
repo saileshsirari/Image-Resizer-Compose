@@ -1,6 +1,7 @@
 package com.image.resizer.compose.mediaApi
 
 import android.app.Activity
+import android.net.http.SslCertificate.restoreState
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.layout.PaddingValues
@@ -21,6 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.SecureFlagPolicy
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -46,8 +48,8 @@ fun <T : Media> PickerMediaSheet(
     homeScreenViewModel: HomeScreenViewModel,
     activity: Activity,
 ) {
-    var progress by remember(mediaList) { mutableFloatStateOf(0f) }
     val navController = rememberNavController()
+    var progress by remember(mediaList) { mutableFloatStateOf(0f) }
     var hideSheet by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val mediaRepository = MediaRepositoryImpl(LocalContext.current)
@@ -100,8 +102,6 @@ fun <T : Media> PickerMediaSheet(
                             onAlbumClick =
                                 albumsViewModel.onAlbumClick {
                                     navController.navigate(it) {
-                                        launchSingleTop = true
-                                        restoreState = true
                                     }
                                 },
                             onAlbumLongClick = {
@@ -132,31 +132,30 @@ fun <T : Media> PickerMediaSheet(
                             backStackEntry.arguments?.getLong("albumId") ?: -1
                         }
 
-
+                        val vm = MediaViewModel(repository = mediaRepository, handler = mediaHandleUseCase).apply {
+                            albumId = argumentAlbumId
+                        }
                         val context = LocalContext.current
 
                         val hideTimeline by remember { mutableStateOf(true) }
-                        val mediaState =
-                            albumsViewModel.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+                        val mediaState = vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
 
                         TimelineScreen(
                             paddingValues = paddingValues,
                             albumId = argumentAlbumId,
                             albumName = argumentAlbumName,
-                            handler = albumsViewModel.handler,
+                            handler = vm.handler,
                             mediaState = mediaState,
                             albumsState = albumsState,
-                            selectionState = albumsViewModel.multiSelectState,
-                            selectedMedia = albumsViewModel.selectedPhotoState,
+                            selectionState = vm.multiSelectState,
+                            selectedMedia = vm.selectedPhotoState,
                             allowNavBar = false,
                             allowHeaders = !hideTimeline,
                             enableStickyHeaders = !hideTimeline,
-                            toggleSelection = albumsViewModel::toggleSelection,
+                            toggleSelection = vm::toggleSelection,
                             activity = activity,
                             navigate = {
                                 navController.navigate(it) {
-                                    launchSingleTop = true
-                                    restoreState = true
                                 }
                             },
                             navigateUp = {
@@ -170,12 +169,18 @@ fun <T : Media> PickerMediaSheet(
                             animatedContentScope = this,
                             onCompressClick = {
                                 homeScreenViewModel.handlePickedImages(it, context) {
-                                    hideSheet = true
+                                    scope.launch (Dispatchers.Main){
+                                        sheetState.hide()
+                                        navController.popBackStack(Screen.AlbumsScreen.route,false)
+                                    }
                                 }
                             },
                             onMediaClick = {
                                 homeScreenViewModel.handlePickedImages(listOf(it.uri), context) {
-                                    hideSheet = true
+                                        scope.launch (Dispatchers.Main){
+                                            sheetState.hide()
+                                            navController.popBackStack(Screen.AlbumsScreen.route,false)
+                                    }
 
                                 }
                             }

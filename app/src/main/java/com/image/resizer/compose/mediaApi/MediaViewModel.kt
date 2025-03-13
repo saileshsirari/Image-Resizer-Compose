@@ -3,14 +3,18 @@ package com.image.resizer.compose.mediaApi
 import android.content.Context
 import android.graphics.Bitmap.CompressFormat
 import androidx.annotation.Keep
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.image.resizer.compose.ImageItem
 import com.image.resizer.compose.ImageReplacer
+import com.image.resizer.compose.mediaApi.model.Media.UriMedia
 import com.image.resizer.compose.mediaApi.model.MediaState
 import com.image.resizer.compose.mediaApi.util.Constants
 import com.image.resizer.compose.mediaApi.util.mapMediaToItem
 import com.image.resizer.compose.mediaApi.util.mediaFlow
+import com.image.resizer.compose.mediaApi.util.update
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +45,8 @@ open class MediaViewModel(
     var target: String? = null
     var category: String? = null
     private val permissionState = MutableStateFlow(false)
+    val multiSelectState = mutableStateOf(false)
+    val selectedPhotoState = mutableStateListOf<UriMedia>()
 
 
     val mediaFlow by lazy {
@@ -65,6 +71,18 @@ open class MediaViewModel(
         }.stateIn(viewModelScope, started = SharingStarted.Eagerly, MediaState())
     }
 
+    fun toggleSelection(index: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val item = mediaFlow.value.media[index]
+            val selectedPhoto = selectedPhotoState.find { it.id == item.id }
+            if (selectedPhoto != null) {
+                selectedPhotoState.remove(selectedPhoto)
+            } else {
+                selectedPhotoState.add(item)
+            }
+            multiSelectState.update(selectedPhotoState.isNotEmpty())
+        }
+    }
     private val _isSaving = MutableStateFlow(true)
     val isSaving = _isSaving.asStateFlow()
     fun saveOverride(

@@ -21,21 +21,7 @@ class AlbumsViewModel(
 ) : MediaViewModel(repository,handleUseCase) {
     private val albumOrder: MediaOrder
         get() = MediaOrder.Date(OrderType.Ascending)
-    val multiSelectState = mutableStateOf(false)
-    val selectedPhotoState = mutableStateListOf<UriMedia>()
 
-    fun toggleSelection(index: Int) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val item = mediaFlow.value.media[index]
-            val selectedPhoto = selectedPhotoState.find { it.id == item.id }
-            if (selectedPhoto != null) {
-                selectedPhotoState.remove(selectedPhoto)
-            } else {
-                selectedPhotoState.add(item)
-            }
-            multiSelectState.update(selectedPhotoState.isNotEmpty())
-        }
-    }
 
     val albumsFlow = repository.getAlbums(mediaOrder = albumOrder).map { result ->
         val newOrder = albumOrder
