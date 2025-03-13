@@ -8,6 +8,7 @@ import android.os.Build
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.util.Log
+import com.image.resizer.compose.mediaApi.util.Constants.CUSTOM_FOLDER_NAME
 import java.io.File
 
 object ImageHelper {
@@ -34,11 +35,12 @@ object ImageHelper {
         val projection = arrayOf(
             MediaStore.Images.Media._ID,
             MediaStore.Images.Media.DISPLAY_NAME,
-            MediaStore.Images.Media.SIZE
+            MediaStore.Images.Media.SIZE,
+            MediaStore.Images.Media.RELATIVE_PATH,
         )
         val  customDirectoryName: String="ImageResizer"
-        val selection = "${MediaStore.Images.Media.DISPLAY_NAME} LIKE ?"
-        val selectionArgs = arrayOf("imageResizer_%")
+        val selection = "${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?"
+        val selectionArgs = arrayOf("%$CUSTOM_FOLDER_NAME%" )
 //    val selectionArgs = arrayOf("%$customDirectoryName/%")
         val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
         val queryUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI

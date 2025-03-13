@@ -88,6 +88,7 @@ import coil.compose.SubcomposeAsyncImage
 import coil.compose.SubcomposeAsyncImageContent
 import com.image.resizer.compose.ImageHelper.getRealCompressedImageUris
 import com.image.resizer.compose.ImageReplacer.deleteSelectedImages
+import com.image.resizer.compose.mediaApi.util.Constants.CUSTOM_FOLDER_NAME
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.collections.remove
@@ -464,10 +465,11 @@ fun getActualImageUris(context: Context, placeholders: List<Nothing?>): List<Ima
     val projection = arrayOf(
         MediaStore.Images.Media._ID,
         MediaStore.Images.Media.DISPLAY_NAME,
-        MediaStore.Images.Media.SIZE
+        MediaStore.Images.Media.SIZE,
+        MediaStore.Images.Media.RELATIVE_PATH,
     )
-    val selection = "${MediaStore.Images.Media.DISPLAY_NAME} LIKE ?"
-    val selectionArgs = arrayOf("imageResizer_%")
+    val selection = "${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?"
+    val selectionArgs = arrayOf("%$CUSTOM_FOLDER_NAME%" )
     val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
     val queryUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
     val contentResolver = context.contentResolver
@@ -533,12 +535,13 @@ fun getTotalTransformedImagesCount(context: Context): Int {
     val projection = arrayOf(
         MediaStore.Images.Media._ID,
         MediaStore.Images.Media.DISPLAY_NAME,
-        MediaStore.Images.Media.SIZE
+        MediaStore.Images.Media.SIZE,
+        MediaStore.Images.Media.RELATIVE_PATH,
     )
     val customDirectoryName: String = "ImageResizer"
-    val selection = "${MediaStore.Images.Media.DISPLAY_NAME} LIKE ?"
 //    val selectionArgs = arrayOf("%$customDirectoryName/%")
-    val selectionArgs = arrayOf("imageResizer_%")
+    val selection = "${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?"
+    val selectionArgs = arrayOf("%$CUSTOM_FOLDER_NAME%" )
 
     val queryUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
     val contentResolver = context.contentResolver
