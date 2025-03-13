@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.image.resizer.compose.ImageHelper.getFileNameAndSize
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.SaveFormat
+import com.image.resizer.compose.mediaApi.model.Album
 import com.image.resizer.compose.mediaApi.util.Constants.CUSTOM_FOLDER_NAME
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -38,6 +39,7 @@ class HomeScreenViewModel(
 
     private val _galleryState = MutableStateFlow<GalleryState>(GalleryState.Idle)
     val galleryState: StateFlow<GalleryState> = _galleryState
+    var selectedItem: ImageItem? = null
 
     var selectedImageItems: List<ImageItem> = emptyList()
 
@@ -246,6 +248,12 @@ class HomeScreenViewModel(
                 } ?: onFail().also { _isSaving.value = false }
             }
         }
+    }
+
+
+    fun onSelectedItemClicked(item: ImageItem,navigate: (String) -> Unit) {
+        selectedItem = item
+        navigate(Screen.ImageDetailScreen.route )
     }
 
 }

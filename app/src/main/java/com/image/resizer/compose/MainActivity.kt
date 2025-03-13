@@ -29,6 +29,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,7 +42,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.image.resizer.compose.ImageReplacer.getBitmapFromUri
+import com.image.resizer.compose.Screen.ImageDetailScreen
 import com.image.resizer.compose.mediaApi.AlbumsViewModel
+import com.image.resizer.compose.mediaApi.ImageDetailsScreen
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.MediaRepositoryImpl
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.navigateInAnimation
@@ -151,6 +154,7 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
                 selectionState = vm.multiSelectState,
                 selectedMedia = vm.selectedPhotoState,
                 paddingValues = innerPadding,
+                navController = navController,
                 onItemClick = {
                     navController.navigate(Screen.AlbumsScreen.route) {
                         launchSingleTop = true
@@ -171,6 +175,12 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
         }
         composable(Screen.MyImages.route) {
               MyImagesScreen()
+        }
+
+        composable(ImageDetailScreen.route) {
+            homeScreenViewModel.selectedItem?.let {
+                ImageDetailsScreen(it)
+            }
         }
     }
 }
