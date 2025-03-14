@@ -304,18 +304,7 @@ fun MyImagesScreen() {
         }
         if(deleteImages) {
 
-                deleteSelectedImages(context, selectedImages.map { it.uri }, onDeleted = {
-                    val list = actualImageItems.toMutableList()
-                    selectedImages.forEach {
-                        list.remove(it)
-                    }
-                    actualImageItems = list
-                    selectedImages.clear()
-                    selectAll = false
-                    imageSelectionMode = false
-                    actualImageItems = getActualImageUris(context, placeholders)
-                    deleteImages = false
-                })
+
 
         }
         if (showShareSheet) {

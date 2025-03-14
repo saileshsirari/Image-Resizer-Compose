@@ -15,6 +15,7 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.ActivityOptionsCompat
 import com.dot.gallery.feature_node.data.data_source.mediastore.queries.AlbumsFlow
+import com.image.resizer.compose.ImageReplacer
 import com.image.resizer.compose.mediaApi.model.Album
 import com.image.resizer.compose.mediaApi.model.ExifAttributes
 import com.image.resizer.compose.mediaApi.model.Media
@@ -113,18 +114,19 @@ class MediaRepositoryImpl(
         mediaList: List<T>,
         trash: Boolean
     ) {
-        val intentSender = MediaStore.createTrashRequest(
-            contentResolver,
-            mediaList.map { it.getUri() },
-            trash
-        ).intentSender
-        val senderRequest: IntentSenderRequest = IntentSenderRequest.Builder(intentSender)
-            .setFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION, 0)
-            .build()
-        result.launch(senderRequest, ActivityOptionsCompat.makeTaskLaunchBehind())
+        ImageReplacer.deleteSelectedImages(true,context, mediaList.map { it.getUri() }, result)
+
+        /* val intentSender = MediaStore.createTrashRequest(
+             contentResolver,
+             mediaList.map { it.getUri() },
+             trash
+         ).intentSender
+         val senderRequest: IntentSenderRequest = IntentSenderRequest.Builder(intentSender)
+             .setFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION, 0)
+             .build()
+         result.launch(senderRequest, ActivityOptionsCompat.makeTaskLaunchBehind())
+       */
     }
-
-
 
     override suspend fun <T : Media> deleteMedia(
         result: ActivityResultLauncher<IntentSenderRequest>,
@@ -147,12 +149,12 @@ class MediaRepositoryImpl(
         mimeType: String,
         relativePath: String,
         displayName: String
-    ) = contentResolver.saveImage(context,bitmap, format, mimeType, relativePath, displayName)
+    ) = contentResolver.saveImage(context, bitmap, format, mimeType, relativePath, displayName)
 
     override fun overrideImage(
         uri: Uri,
         bitmap: Bitmap,
         format: Bitmap.CompressFormat,
-    ) = contentResolver.overrideImage(context,uri, bitmap, format)
+    ) = contentResolver.overrideImage(context, uri, bitmap, format)
 
 }

@@ -3,11 +3,13 @@
 package com.image.resizer.compose
 
 import android.app.Activity
+import android.app.RecoverableSecurityException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.net.http.SslCertificate.restoreState
 import android.os.Build
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -88,6 +90,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
@@ -95,7 +98,7 @@ import coil.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import com.image.resizer.compose.ImageReplacer.deleteImage
+import com.image.resizer.compose.ImageReplacer.deleteSelectedImages
 import com.image.resizer.compose.mediaApi.AlbumsViewModel
 import com.image.resizer.compose.mediaApi.EditorDestination
 import com.image.resizer.compose.mediaApi.EditorDestination.ExternalEditor
@@ -103,6 +106,7 @@ import com.image.resizer.compose.mediaApi.EditorNavigator
 import com.image.resizer.compose.mediaApi.PickerMediaSheet
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.NavigationButton
+import com.image.resizer.compose.mediaApi.SaveFormat
 import com.image.resizer.compose.mediaApi.model.Album
 import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
@@ -110,6 +114,7 @@ import com.image.resizer.compose.mediaApi.model.MediaState
 import com.image.resizer.compose.mediaApi.rememberAppBottomSheetState
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.enterAnimation
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.exitAnimation
+import com.image.resizer.compose.mediaApi.util.printError
 import com.image.resizer.compose.mediaApi.util.rememberActivityResult
 import com.image.resizer.compose.mediaApi.util.writeRequests
 import kotlinx.coroutines.Dispatchers
@@ -192,6 +197,19 @@ fun <T : Media> HomeScreen(
         }
 
     }
+    val overrideRequest = rememberActivityResult(
+        onResultOk = {
+            var replaced = false
+            homeScreenViewModel.saveOverride(onSuccess = {
+                homeScreenViewModel.showToast("Images replaced")
+
+            }, onFail = {
+                homeScreenViewModel.showToast("Error in replacing images  ")
+
+            })
+        }
+
+    )
     Scaffold(
         bottomBar = {
             AnimatedVisibility(
@@ -258,11 +276,23 @@ fun <T : Media> HomeScreen(
                                     }
 
                                     EditorDestination.Replace -> {
-                                        homeScreenViewModel.saveOverride(onSuccess = {
-                                            homeScreenViewModel.showToast()
-                                        }, onFail = {
-                                            homeScreenViewModel.showToast("Failed")
-                                        })
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                            homeScreenViewModel.selectedImageItems.let {
+                                                overrideRequest.launch(
+                                                    it.map { it.uri }
+                                                        .writeRequests((context as Activity).contentResolver)
+                                                )
+                                            }
+                                        } else {
+                                            homeScreenViewModel.saveOverride(onSuccess = {
+                                                homeScreenViewModel.showToast()
+                                                homeScreenViewModel.showSelectedImages()
+                                                saveRequested = false
+                                            }, onFail = {
+                                                homeScreenViewModel.showToast("Failed")
+                                                saveRequested = false
+                                            })
+                                        }
 
                                     }
 
@@ -458,30 +488,16 @@ fun <T : Media> HomeScreen(
 
     // Conditionally display the toast
     if (showToast.isNotEmpty()) {
-        LaunchedEffect(key1 = true) {
+        LaunchedEffect(true) {
             Toast.makeText(context, showToast, Toast.LENGTH_SHORT).show()
             homeScreenViewModel.showToast("") // Reset the state after showing the toast
         }
     }
+
+
     if (saveRequested) {
-        val overrideRequest = overrideImagesRequest(homeScreenViewModel, context)
-        LaunchedEffect(key1 = true) {
-            homeScreenViewModel.selectedImageItems.let {
-                overrideRequest.launch(
-                    it.map { it.uri }
-                        .writeRequests((context as Activity).contentResolver)
-                )
-            }
 
-            /*  homeScreenViewModel.showToast()
 
-              homeScreenViewModel.saveOverride(onSuccess = {
-                  homeScreenViewModel.showToast()
-                  homeScreenViewModel.showSelectedImages()
-              }, onFail = {
-                  homeScreenViewModel.showToast("Failed")
-              })*/
-        }
     }
     if (showDialog) {
 
@@ -528,20 +544,52 @@ private fun HandleCompressState(
     var deleteImages by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope { Dispatchers.IO }
     val context = LocalContext.current
-    if (deleteImages) {
-
-        deleteImage(
-            context,
-            homeScreenViewModel.selectedImageItems.map { it.uri }.first(),
-            onDeleted = {
-
-
-            })
-        deleteImages = false
-
+    var deletePendingUris by remember {
+        mutableStateOf<List<Uri>>(
+            emptyList()
+        )
+    }
+    var deletePendingRecoverableSecurityException by remember {
+        mutableStateOf<RecoverableSecurityException?>(
+            null
+        )
     }
 
-    val overrideRequest = overrideImagesRequest(homeScreenViewModel, context)
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { result: ActivityResult ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            // Retry deletion for all uris
+            if (deletePendingRecoverableSecurityException != null) {
+                deletePendingRecoverableSecurityException?.let { exception ->
+                    deletePendingUris.forEach { uri ->
+                        try {
+                            context.contentResolver.delete(uri, null, null)
+                        } catch (e: SecurityException) {
+                            // Handle any further errors (e.g., log them)
+                            e.printStackTrace()
+                        }
+                    }
+                }
+            }
+
+        } else {
+            // Handle failure or user cancellation
+            Log.e("MyImagesScreen", "Deletion failed or cancelled by user")
+        }
+        deletePendingUris = emptyList()
+        deletePendingRecoverableSecurityException = null
+    }
+
+    if (deleteImages) {
+        deleteSelectedImages(
+            true,
+            context,
+            result = launcher,
+            selectedImages = homeScreenViewModel.selectedImageItems.map { it.uri })
+        deleteImages = false
+    }
+
     when (currentCompressState) {
         is CompressState.Success -> {
             if (homeScreenViewModel.selectedImageItems.isNotEmpty()) {
@@ -574,38 +622,6 @@ private fun HandleCompressState(
     }
 }
 
-@Composable
-private fun overrideImagesRequest(
-    homeScreenViewModel: HomeScreenViewModel,
-    context: Context
-): ManagedActivityResultLauncher<IntentSenderRequest, ActivityResult> {
-    val overrideRequest = rememberActivityResult(
-        onResultOk = {
-            var replaced = false
-            homeScreenViewModel.selectedImageItems.forEach { imageItem ->
-                imageItem.scaledBitmap?.let {
-                    homeScreenViewModel.saveOverride(onSuccess = {
-                        replaced = true
-                    }, onFail = {
-                        replaced = false
-                    })
-                    /*  replaced = ImageReplacer.replaceOriginalImageWithBitmap(
-                          context,
-                          imageItem.uri,
-                          it
-                      )*/
-
-                }
-            }
-            if (replaced) {
-                homeScreenViewModel.showToast("Images replaced")
-            } else {
-                homeScreenViewModel.showToast("Error in replacing images  ")
-            }
-        }
-    )
-    return overrideRequest
-}
 
 @Composable
 private fun HandleGalleryState(
