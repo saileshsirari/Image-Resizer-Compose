@@ -32,14 +32,14 @@ fun CompressDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Select Compression Quality (%)") },
+        title = { Text("Select Compression in percentage of original (%)") },
         text = {
             Column {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(text = "Compression quality:")
+                    Text(text = "Compression in percentage of original:")
                     Spacer(modifier = Modifier.weight(1f))
                     Text(text = "$percentage%")
                 }

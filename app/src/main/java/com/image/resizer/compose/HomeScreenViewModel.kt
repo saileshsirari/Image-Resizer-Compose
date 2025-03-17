@@ -220,7 +220,7 @@ class HomeScreenViewModel(
     }
 
     fun saveOverride(
-        saveFormat: SaveFormat = SaveFormat.PNG,
+        saveFormat: SaveFormat = SaveFormat.JPEG,
         onSuccess: () -> Unit = {},
         onFail: () -> Unit = {}
     ) {

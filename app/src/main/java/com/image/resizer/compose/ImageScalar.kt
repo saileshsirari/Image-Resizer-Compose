@@ -33,11 +33,11 @@ class ImageScalar(private val context: Context) {
                 var bitmap = loadBitmapFromUri(imageUri) ?: return@forEach
                 // Get EXIF orientation
                 val exifOrientation = getExifOrientation(context,imageUri)
-
+               // bitmap = rotateBitmap(bitmap, exifOrientation)
                 imageItem.originalBitmap =  bitmap.config?.let { bitmap.copy(it, true)}
                 var currentFileSizeBytes = getFileSize(imageUri)
                 var scaleFactor = 1.0f
-                val desiredSize = (currentFileSizeBytes *(percentOriginal/100f)).toLong()
+                val desiredSize = (currentFileSizeBytes *(percentOriginal.toFloat()/100f)).toLong()
                 while (currentFileSizeBytes > desiredSize) {
                     scaleFactor *= 0.9f // Decrease scale factor
                     val newWidth = (bitmap.width * scaleFactor).toInt()
@@ -63,7 +63,7 @@ class ImageScalar(private val context: Context) {
                         break
                     }
                 }
-                bitmap = rotateBitmap(bitmap, exifOrientation)
+             //   bitmap = rotateBitmap(bitmap, exifOrientation)
                 // Save the scaled bitmap and add its Uri to the list
                 imageItem.scaledBitmap = bitmap
               //  val savedUri = saveImageToGallery(bitmap)

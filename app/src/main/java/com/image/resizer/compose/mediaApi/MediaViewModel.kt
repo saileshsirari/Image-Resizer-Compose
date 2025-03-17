@@ -35,6 +35,10 @@ sealed interface SaveFormat {
         override val format = CompressFormat.PNG
         override val mimeType = "image/png"
     }
+    data object JPEG : SaveFormat {
+        override val format = CompressFormat.JPEG
+        override val mimeType = "image/jpeg"
+    }
 }
 
 open class MediaViewModel(

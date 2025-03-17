@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -58,6 +59,9 @@ import java.io.File
 import java.io.FileOutputStream
 import androidx.core.net.toUri
 import androidx.core.graphics.createBitmap
+import coil.request.ImageRequest
+import coil.size.Size
+import com.github.panpf.sketch.resize.Scale
 import java.util.UUID
 import kotlin.uuid.Uuid
 
@@ -265,15 +269,18 @@ fun GalleryImagesComponent(imageItems: List<ImageItem>) {
 
                 AsyncImage(
                     placeholder = painterResource(R.drawable.ic_undo_24dp),
-                    model = imageItem.uri,
+                    model  = ImageRequest.Builder(LocalContext.current)
+                        .data(imageItem.uri)
+                        .scale(coil.size.Scale.FIT)
+                        .size(Size(300,300))
+                        .crossfade(true)
+                        .build(),
                     contentDescription = null,
-                    contentScale = ContentScale.FillHeight,
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier.Companion
                         .align(Alignment.CenterHorizontally)
-                        .fillMaxSize()
                         .padding(4.dp)
-                        .height(300.dp)
-                        .clip(RoundedCornerShape(1.dp))
+                        .height(200.dp)
                 )
             }
         }
