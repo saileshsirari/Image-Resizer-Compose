@@ -156,18 +156,11 @@ fun <T : Media> HomeScreen(
     val galleryState by homeScreenViewModel.galleryState.collectAsState()
     val showToast by homeScreenViewModel.showToast.collectAsState()
     val scope = rememberCoroutineScope()
-    val imagesSelected by remember { mutableStateOf(homeScreenViewModel.selectedImageItems.isNotEmpty()) }
-
 
     val showImages by remember {
         derivedStateOf { galleryState is GalleryState.Success }
     }
-    val imagesTransformed by remember {
-        derivedStateOf {
-            cropState is CropState.Success || scaleState is ScaleState.Success ||
-                    compressState is CompressState.Success
-        }
-    }
+
     var saveRequested by remember { mutableStateOf(false) }
 
     val cropImageLauncher = rememberLauncherForActivityResult(
@@ -378,6 +371,7 @@ fun <T : Media> HomeScreen(
                                         context,
                                         listOf(
                                             ImageItem(
+                                                context = context,
                                                 uri = currentCropState.data.croppedImageUri,
                                                 scaledBitmap = it
                                             )
@@ -409,7 +403,7 @@ fun <T : Media> HomeScreen(
 
                     is ScaleState.ShowPopup -> {
                         val originalDimensions =
-                            homeScreenViewModel.selectedImageItems.mapNotNull { it.imageDimension }
+                            homeScreenViewModel.selectedImageItems.map { it.imageDimension }
                         // Implement image scaling logic here
                         AnimatedVisibility(
                             visible = true,
@@ -665,7 +659,7 @@ fun CompressToKbImageScreen(
                 imageScalar.compressImagesToTargetSize(context, imageItems, percentOriginal = sizeInPercentage)
             }
             imagesScaled = true
-            scaledImages = scaledUris.filterNotNull()
+            scaledImages = scaledUris
         }
     }
     Box(

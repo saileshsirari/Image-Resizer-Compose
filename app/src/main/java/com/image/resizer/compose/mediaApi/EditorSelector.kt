@@ -1,6 +1,5 @@
 package com.image.resizer.compose.mediaApi
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -20,6 +19,7 @@ import com.image.resizer.compose.CompressState
 import com.image.resizer.compose.CropState
 import com.image.resizer.compose.HomeScreenViewModel
 import com.image.resizer.compose.ScaleState
+import com.image.resizer.compose.mediaApi.EditorItems.*
 
 @Composable
 fun EditorSelector(
@@ -58,27 +58,30 @@ fun EditorSelector(
             items = EditorItems.entries,
             key = { _, it -> it.name }
         ) { index, editorItem ->
-            if(editorItem == EditorItems.Undo || editorItem == EditorItems.Replace
-                || editorItem == EditorItems.Save){
-                EditorItem(
-                    enabled =   imagesTransformed,
-                    imageVector = editorItem.icon,
-                    title = editorItem.translatedName,
-                    horizontal = isSupportingPanel,
-                    onItemClick = {
-                        onItemClick(editorItem)
-                    }
-                )
+            if(editorItem == Back || editorItem == Replace
+                || editorItem == Save
+            ){
+                if(imagesTransformed) {
+                    EditorItem(
+                        imageVector = editorItem.icon,
+                        title = editorItem.translatedName,
+                        horizontal = isSupportingPanel,
+                        onItemClick = {
+                            onItemClick(editorItem)
+                        }
+                    )
+                }
             }else {
-                EditorItem(
-                    enabled =   !imagesTransformed,
-                    imageVector = editorItem.icon,
-                    title = editorItem.translatedName,
-                    horizontal = isSupportingPanel,
-                    onItemClick = {
-                        onItemClick(editorItem)
-                    }
-                )
+                if(!imagesTransformed ) {
+                    EditorItem(
+                        imageVector = editorItem.icon,
+                        title = editorItem.translatedName,
+                        horizontal = isSupportingPanel,
+                        onItemClick = {
+                            onItemClick(editorItem)
+                        }
+                    )
+                }
             }
 
             if (isSupportingPanel && index < EditorItems.entries.size - 1) {

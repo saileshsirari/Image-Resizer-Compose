@@ -156,11 +156,9 @@ fun MyScreen() {
     val context = LocalContext.current
     val uri = "content://media/external/file/25".toUri()
     val imageItem =  ImageItem(
+        context =context,
         uri = uri,
         scaledBitmap = createBitmap(300, 300),
-        originalBitmap = createBitmap(100, 200),
-        fileSize= 1024,
-        imageDimension = Pair(300,300),
         scaledFileSize = 512,
         scaledImageDimension = Pair(100,200),
         scaledUri = uri

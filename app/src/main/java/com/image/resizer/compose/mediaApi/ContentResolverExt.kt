@@ -173,7 +173,7 @@ fun ContentResolver.overrideImage(
     context: Context,
     uri: Uri,
     bitmap: Bitmap,
-    format: Bitmap.CompressFormat = Bitmap.CompressFormat.PNG
+    format: Bitmap.CompressFormat = Bitmap.CompressFormat.JPEG
 ): Boolean {
 
     val values = ContentValues().apply {

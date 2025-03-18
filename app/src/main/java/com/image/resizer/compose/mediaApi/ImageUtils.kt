@@ -5,13 +5,16 @@
 
 package com.image.resizer.compose.mediaApi
 
+import android.R.attr.bitmap
 import android.app.Activity.RESULT_CANCELED
 import android.app.Activity.RESULT_OK
 import android.content.ContentResolver
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Matrix
+import android.media.ExifInterface.ORIENTATION_NORMAL
 import android.net.Uri
 import android.provider.MediaStore
 import android.util.Log
@@ -32,9 +35,13 @@ import androidx.core.graphics.scale
 import androidx.core.net.toFile
 import androidx.exifinterface.media.ExifInterface
 import com.image.resizer.compose.BuildConfig
+import com.image.resizer.compose.ImageItem
 import com.image.resizer.compose.TAG
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.util.getUri
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import java.io.InputStream
 
 val sdcardRegex = "^/storage/[A-Z0-9]+-[A-Z0-9]+/.*$".toRegex()
@@ -142,12 +149,17 @@ fun rememberActivityResult(onResultCanceled: () -> Unit = {}, onResultOk: () -> 
     )
 
 
-fun <T: Media> T.writeRequest(
+fun <T : Media> T.writeRequest(
     contentResolver: ContentResolver,
-) = IntentSenderRequest.Builder(MediaStore.createWriteRequest(contentResolver, arrayListOf(getUri())))
+) = IntentSenderRequest.Builder(
+    MediaStore.createWriteRequest(
+        contentResolver,
+        arrayListOf(getUri())
+    )
+)
     .build()
 
-fun <T: Media> List<T>.writeRequest(
+fun <T : Media> List<T>.writeRequest(
     contentResolver: ContentResolver,
 ) = IntentSenderRequest.Builder(MediaStore.createWriteRequest(contentResolver, map { it.getUri() }))
     .build()
@@ -164,7 +176,24 @@ fun Uri.authorizedUri(context: Context): Uri = if (this.toString()
     BuildConfig.CONTENT_AUTHORITY,
     this.toFile()
 )
- fun rotateBitmap(bitmap: Bitmap, orientation: Int): Bitmap {
+
+fun loadBitmapFromUri( uri:Uri,context: Context): Bitmap? {
+   var originalBitmap = context.contentResolver.openInputStream(uri)?.use {
+        BitmapFactory.decodeStream(it)
+    }
+    var imageDimension : Pair<Int, Int> ? = null
+    originalBitmap?.let {
+        val exifOrientation = getExifOrientation(context,uri)
+        if (exifOrientation != ORIENTATION_NORMAL) {
+            originalBitmap = rotateBitmap(it, exifOrientation)
+        }
+        imageDimension = Pair(it.width,it.height)
+    }
+    return originalBitmap
+//   return ImageItem(originalBitmap = originalBitmap, imageDimension =  imageDimension)
+}
+
+fun rotateBitmap(bitmap: Bitmap, orientation: Int): Bitmap {
     val matrix = Matrix()
     when (orientation) {
         ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
@@ -176,6 +205,7 @@ fun Uri.authorizedUri(context: Context): Uri = if (this.toString()
             matrix.postRotate(90f)
             matrix.postScale(-1f, 1f)
         }
+
         ExifInterface.ORIENTATION_TRANSVERSE -> {
             matrix.postRotate(270f)
             matrix.postScale(-1f, 1f)
@@ -183,7 +213,48 @@ fun Uri.authorizedUri(context: Context): Uri = if (this.toString()
     }
     return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
 }
- fun getExifOrientation(context: Context, imageUri: Uri): Int {
+
+
+fun Bitmap.saveBitmapToTempFile(context: Context): Long? {
+    // Create a temporary file
+    val tempFile: File
+    try {
+        tempFile = File.createTempFile("temp_bitmap", ".jpg", context.cacheDir)
+    } catch (e: IOException) {
+        e.printStackTrace()
+        return null
+    }
+    // Open a FileOutputStream to write to the file
+    var fos: FileOutputStream? = null
+    try {
+        fos = FileOutputStream(tempFile)
+
+        // Compress the bitmap and write it to the file
+        compress(Bitmap.CompressFormat.JPEG, 100, fos)
+
+        // Flush the output stream
+        fos.flush()
+    } catch (e: IOException) {
+        e.printStackTrace()
+        return null
+    } finally {
+        // Close the FileOutputStream
+        fos?.close()
+    }
+
+    // Get the file size
+    val fileSize = tempFile.length()
+    // Clean up the temporary file
+    tempFile.delete()
+
+    // Return the size of the file
+    return fileSize
+}
+
+// Usage:
+// val bitmap = // Load your bitmap here
+// val fileSize = saveBitmapToTempFile(context, bitmap)
+fun getExifOrientation(context: Context, imageUri: Uri): Int {
     var inputStream: InputStream? = null
     return try {
         inputStream = context.contentResolver.openInputStream(imageUri)
@@ -199,7 +270,8 @@ fun Uri.authorizedUri(context: Context): Uri = if (this.toString()
         inputStream?.close()
     }
 }
-fun <T: Media> Context.shareMedia(media: T) {
+
+fun <T : Media> Context.shareMedia(media: T) {
     val originalUri = media.getUri()
     val uri = if (originalUri.toString()
             .startsWith("content://")
@@ -216,7 +288,7 @@ fun <T: Media> Context.shareMedia(media: T) {
         .startChooser()
 }
 
-fun <T: Media> Context.shareMedia(mediaList: List<T>) {
+fun <T : Media> Context.shareMedia(mediaList: List<T>) {
     val mimeTypes =
         if (mediaList.find { it.duration != null } != null) {
             if (mediaList.find { it.duration == null } != null) "video/*,image/*" else "video/*"

@@ -490,12 +490,10 @@ fun getActualImageUris(context: Context, placeholders: List<Nothing?>): List<Ima
                 val imageDimensions = imageDimensionsFromUri(context, contentUri)
                 imageItems.add(
                     ImageItem(
+                        context,
                         uri = contentUri,
                         imageName = imageName,
-                        fileSize = fileSize,
-                        originalBitmap = null,
                         scaledBitmap = null,
-                        imageDimension = imageDimensions
                     )
                 )
             }
@@ -506,10 +504,9 @@ fun getActualImageUris(context: Context, placeholders: List<Nothing?>): List<Ima
         for (i in 0 until remaining) {
             imageItems.add(
                 ImageItem(
+                    context,
                     uri = Uri.EMPTY,
                     imageName = null,
-                    fileSize = null,
-                    originalBitmap = null,
                     scaledBitmap = null
                 )
             )

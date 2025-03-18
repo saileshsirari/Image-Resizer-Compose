@@ -1,6 +1,7 @@
 package com.image.resizer.compose
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Environment
 import androidx.lifecycle.ViewModel
@@ -8,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.image.resizer.compose.ImageHelper.getFileNameAndSize
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.SaveFormat
+import com.image.resizer.compose.mediaApi.loadBitmapFromUri
 import com.image.resizer.compose.mediaApi.model.Album
 import com.image.resizer.compose.mediaApi.util.Constants.CUSTOM_FOLDER_NAME
 import kotlinx.coroutines.Dispatchers
@@ -94,13 +96,10 @@ class HomeScreenViewModel(
             if (uris.isNotEmpty()) {
                 callBack()
                 val selectedImageItems = uris.map { uri ->
-                    val (imageName, fileSize) = getFileNameAndSize(context, uri)
-                    val imagesDimensions = imageDimensionsFromUri(context, uri)
+                //    val (imageName, fileSize) = getFileNameAndSize(context, uri)
                     ImageItem(
+                        context = context,
                         uri = uri,
-                        imageName = imageName,
-                        fileSize = fileSize,
-                        imageDimension = imagesDimensions
                     )
                 }
                 onGalleryImagesSelected(selectedImageItems)
@@ -177,7 +176,7 @@ class HomeScreenViewModel(
     }
 
     fun saveCopy(
-        saveFormat: SaveFormat = SaveFormat.PNG,
+        saveFormat: SaveFormat=SaveFormat.JPEG ,
         onSuccess: () -> Unit = {},
         onFail: () -> Unit = {}
     ) {
@@ -191,7 +190,7 @@ class HomeScreenViewModel(
                     currentBitmap?.let { bitmap ->
                         try {
                             val displayName =
-                                (media.imageName?:"")+"imageResizer_${
+                                media.imageName?:"imageResizer_${
                                     SimpleDateFormat(
                                         "MM_dd_HH_mm_ss",
                                         Locale.getDefault()
@@ -220,7 +219,7 @@ class HomeScreenViewModel(
     }
 
     fun saveOverride(
-        saveFormat: SaveFormat = SaveFormat.JPEG,
+        saveFormat: SaveFormat= SaveFormat.JPEG,
         onSuccess: () -> Unit = {},
         onFail: () -> Unit = {}
     ) {

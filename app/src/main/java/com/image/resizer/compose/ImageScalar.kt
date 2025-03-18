@@ -1,14 +1,15 @@
 package com.image.resizer.compose
 
-import android.R.attr.height
+import android.R.attr.orientation
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.media.ExifInterface.ORIENTATION_NORMAL
 import android.net.Uri
 import android.os.Environment
 import android.util.Log
+import androidx.core.graphics.createBitmap
 import com.image.resizer.compose.mediaApi.getExifOrientation
-import com.image.resizer.compose.mediaApi.rotateBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -17,6 +18,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import androidx.core.graphics.scale
+import com.image.resizer.compose.mediaApi.rotateBitmap
 
 class ImageScalar(private val context: Context) {
 
@@ -25,16 +27,16 @@ class ImageScalar(private val context: Context) {
         private const val TARGET_FILE_SIZE_KB = 100
     }
 
-    suspend fun compressImagesToTargetSize(context: Context, imageItems: List<ImageItem>, percentOriginal:Int = TARGET_FILE_SIZE_KB): List<ImageItem?> =
+    suspend fun compressImagesToTargetSize(context: Context, imageItems: List<ImageItem>, percentOriginal:Int = TARGET_FILE_SIZE_KB): List<ImageItem> =
         withContext(Dispatchers.IO) {
-            val compressedImageUris = mutableListOf<ImageItem?>()
+            val compressedImageItems = mutableListOf<ImageItem>()
             imageItems.forEach { imageItem ->
                 val imageUri = imageItem.uri
                 var bitmap = loadBitmapFromUri(imageUri) ?: return@forEach
                 // Get EXIF orientation
-                val exifOrientation = getExifOrientation(context,imageUri)
+
                // bitmap = rotateBitmap(bitmap, exifOrientation)
-                imageItem.originalBitmap =  bitmap.config?.let { bitmap.copy(it, true)}
+                val originalBitmap =  bitmap.config?.let { bitmap.copy(it, true)}?: createBitmap(100,100)
                 var currentFileSizeBytes = getFileSize(imageUri)
                 var scaleFactor = 1.0f
                 val desiredSize = (currentFileSizeBytes *(percentOriginal.toFloat()/100f)).toLong()
@@ -65,11 +67,15 @@ class ImageScalar(private val context: Context) {
                 }
              //   bitmap = rotateBitmap(bitmap, exifOrientation)
                 // Save the scaled bitmap and add its Uri to the list
+             //   if (exifOrientation != ORIENTATION_NORMAL) {
+               //     bitmap = rotateBitmap(bitmap, exifOrientation)
+              //  }
                 imageItem.scaledBitmap = bitmap
               //  val savedUri = saveImageToGallery(bitmap)
-                compressedImageUris.add(imageItem)
+                val compressedImageItem = imageItem.copy(scaledBitmap = originalBitmap)
+                compressedImageItems.add(compressedImageItem)
             }
-            return@withContext compressedImageUris
+            return@withContext compressedImageItems
         }
 
     private fun loadBitmapFromUri(imageUri: Uri): Bitmap? {

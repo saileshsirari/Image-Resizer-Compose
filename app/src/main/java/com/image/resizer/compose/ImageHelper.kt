@@ -63,7 +63,7 @@ object ImageHelper {
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idColumn)
                 val contentUri = ContentUris.withAppendedId(queryUri, id)
-                val imageItem = ImageItem(uri = contentUri, imageName = cursor.getString(nameColumn), fileSize = cursor.getLong(sizeColumn))
+                val imageItem = ImageItem(context,uri = contentUri, imageName = cursor.getString(nameColumn))
                 compressedImageUris.add(imageItem)
             }
         }

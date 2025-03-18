@@ -7,7 +7,6 @@ import androidx.compose.material.icons.outlined.Adjust
 import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.Draw
 import androidx.compose.material.icons.outlined.Filter
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -25,7 +24,7 @@ enum class EditorItems : Parcelable {
     Scale,
     Save,
     Replace,
-    Undo;
+    Back;
 
     @get:Composable
     val translatedName : String
@@ -33,7 +32,7 @@ enum class EditorItems : Parcelable {
             Crop -> stringResource(R.string.crop)
             Compress -> stringResource(R.string.compress)
             Scale -> stringResource(R.string.scale)
-            Undo -> stringResource(R.string.undo)
+            Back -> stringResource(R.string.back_cd)
             Save -> stringResource(R.string.save)
             Replace ->stringResource(R.string.replace)
         }
@@ -44,7 +43,7 @@ enum class EditorItems : Parcelable {
             Crop -> Icons.Outlined.Crop
             Compress -> Icons.Outlined.Adjust
             Scale -> Icons.Outlined.Filter
-            Undo -> Icons.Outlined.Draw
+            Back -> Icons.Outlined.Draw
             Replace -> Icons.Outlined.Adjust
             Save -> Icons.Outlined.Draw
         }

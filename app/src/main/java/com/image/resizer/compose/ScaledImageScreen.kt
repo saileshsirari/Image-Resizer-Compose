@@ -61,72 +61,9 @@ import androidx.core.net.toUri
 import androidx.core.graphics.createBitmap
 import coil.request.ImageRequest
 import coil.size.Size
-import com.github.panpf.sketch.resize.Scale
-import java.util.UUID
-import kotlin.uuid.Uuid
+import com.image.resizer.compose.mediaApi.saveBitmapToTempFile
 
 
-data class ImageItem(
-    val key : String= UUID.randomUUID().toString(),
-    val uri: Uri,
-    var scaledBitmap: Bitmap? = null,
-    var originalBitmap: Bitmap? = null,
-    val fileSize: Long? = null, // Size in bytes
-    val imageName: String? = null,// Original name of the image file
-    val imageDimension: Pair<Int, Int>? = null,
-    var scaledImageDimension: Pair<Int, Int>? = null,
-    var scaledFileSize: Long? = null,
-    var scaledUri: Uri? = null
-)
-
-
-@Preview
-@Composable
-fun ScaledImageScreenPreview() {
-    val uri = "content://media/external/file/25".toUri()
-    val imageItems = listOf(
-        ImageItem(
-            uri = uri,
-            scaledBitmap = createBitmap(200, 200),
-            originalBitmap = createBitmap(100, 100)
-        ),
-        ImageItem(
-            uri = uri, scaledBitmap = null,
-            originalBitmap = createBitmap(100, 100)
-        ),
-        ImageItem(
-            uri = uri, scaledBitmap = null,
-            originalBitmap = createBitmap(100, 100)
-        ),
-        ImageItem(
-            uri = uri, scaledBitmap = null,
-            originalBitmap = createBitmap(100, 100)
-        ),
-        ImageItem(
-            uri = uri, scaledBitmap = null,
-            originalBitmap = createBitmap(100, 100)
-        ), ImageItem(
-            uri = uri, scaledBitmap = null,
-            originalBitmap = createBitmap(100, 100)
-        ),
-        ImageItem(
-            uri = uri, scaledBitmap = null,
-            originalBitmap = createBitmap(100, 100)
-        )
-    )
-    val scaleParams = imageItems.map {
-        ScaleParams(
-            newHeight = 100,
-            newWidth = 100,
-        )
-    }
-
-    ScaledImageScreen(
-        imageItems = imageItems,
-        scaleParamsList = scaleParams,
-        scaledImages = mutableListOf()
-    )
-}
 
 const val TAG = "ScaledImageScreen"
 
@@ -185,20 +122,13 @@ fun ScaledImageScreen(
 @Composable
 fun ScaledImagesGridPreview() {
     val uri = "content://media/external/file/25".toUri()
+    val context = LocalContext.current
     val imageItems = listOf(
         ImageItem(
+            context,
             uri = uri,
-            scaledBitmap = createBitmap(300, 300),
-            originalBitmap = createBitmap(100, 200)
-        ),
-        ImageItem(
-            uri = uri, scaledBitmap = null,
-            originalBitmap = createBitmap(100, 100)
-        ),
-        ImageItem(
-            uri = uri, scaledBitmap = null,
-            originalBitmap = createBitmap(100, 100)
-        ),
+            scaledBitmap = createBitmap(300, 300))
+
     )
     ScaledImagesGrid(
         modifier = Modifier
@@ -211,19 +141,20 @@ fun ScaledImagesGridPreview() {
 @Composable
 fun GalleryImagesComponentPreview1() {
     val uri = "content://media/external/file/25".toUri()
+    val context = LocalContext.current
     val imageItems = listOf(
         ImageItem(
+            context,
             uri = uri,
             scaledBitmap = createBitmap(300, 300),
-            originalBitmap = createBitmap(100, 200)
         ),
         ImageItem(
+            context,
             uri = uri, scaledBitmap = null,
-            originalBitmap = createBitmap(100, 100)
         ),
         ImageItem(
+            context = context,
             uri = uri, scaledBitmap = null,
-            originalBitmap = createBitmap(100, 100)
         ),
     )
     GalleryImagesComponent(
@@ -270,10 +201,11 @@ fun GalleryImagesComponent(imageItems: List<ImageItem>) {
                 AsyncImage(
                     placeholder = painterResource(R.drawable.ic_undo_24dp),
                     model  = ImageRequest.Builder(LocalContext.current)
-                        .data(imageItem.uri)
+                        .data(imageItem.originalBitmap)
                         .scale(coil.size.Scale.FIT)
                         .size(Size(300,300))
                         .crossfade(true)
+                        .diskCacheKey(imageItem.fileSize.toString()+ imageItem.imageDimension.first)
                         .build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
@@ -421,9 +353,7 @@ private fun scaleImages(
     imageItems.forEachIndexed { index, imageItem ->
         val scaleParams = scaleParamsList[index]
 
-        imageItem.originalBitmap = context.contentResolver.openInputStream(imageItem.uri)?.use {
-            BitmapFactory.decodeStream(it)
-        }
+
 
         val scaledWidth =
             scaleParams.newWidth
@@ -433,8 +363,9 @@ private fun scaleImages(
         val scaledBitmap = context.contentResolver.openInputStream(imageItem.uri)?.use {
             BitmapFactory.decodeStream(it)?.scale(scaledWidth, scaledHeight, false)
         }
+
         scaledBitmap?.let {
-            val sizeInBytes = BitmapUtils.getBitmapSize(scaledBitmap)
+           val sizeInBytes = it.saveBitmapToTempFile(context)
             imageItem.scaledFileSize = sizeInBytes
         }
 
