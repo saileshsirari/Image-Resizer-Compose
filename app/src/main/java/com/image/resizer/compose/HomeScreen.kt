@@ -105,6 +105,10 @@ import com.image.resizer.compose.mediaApi.util.Constants.Animation.exitAnimation
 import com.image.resizer.compose.mediaApi.util.rememberActivityResult
 import com.image.resizer.compose.mediaApi.util.writeRequests
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -162,6 +166,7 @@ fun <T : Media> HomeScreen(
     }
 
     var saveRequested by remember { mutableStateOf(false) }
+    val selectedImageItems = homeScreenViewModel.selectedImageItems.collectAsState()
 
     val cropImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -257,7 +262,7 @@ fun <T : Media> HomeScreen(
 
                                     Replace -> {
                                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                            homeScreenViewModel.selectedImageItems.let {
+                                            selectedImageItems.value.let {
                                                 overrideRequest.launch(
                                                     it.map { it.uri }
                                                         .writeRequests((context as Activity).contentResolver)
@@ -343,17 +348,17 @@ fun <T : Media> HomeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-                HandleGalleryState(galleryState, showImages)
+                HandleGalleryState(galleryState, showImages,homeScreenViewModel.selectedImageItems)
 
 
                 val currentCropState = cropState
                 when (currentCropState) {
                     is CropState.PopupShown -> {
-                        if (homeScreenViewModel.selectedImageItems.isNotEmpty()) {
+                        if (selectedImageItems.value.isNotEmpty()) {
                             val intent = Intent(context, CropScreen::class.java)
                             intent.putExtra(
                                 CropScreen.IMAGE_TO_CROP,
-                                homeScreenViewModel.selectedImageItems.first().uri
+                                selectedImageItems.value.first().uri
                             )
                             cropImageLauncher.launch(intent)
                             homeScreenViewModel.onCropScreenLaunched()
@@ -403,7 +408,7 @@ fun <T : Media> HomeScreen(
 
                     is ScaleState.ShowPopup -> {
                         val originalDimensions =
-                            homeScreenViewModel.selectedImageItems.map { it.imageDimension }
+                            selectedImageItems.value.map { it.imageDimension?:Pair(0,0) }
                         // Implement image scaling logic here
                         AnimatedVisibility(
                             visible = true,
@@ -432,14 +437,14 @@ fun <T : Media> HomeScreen(
                     is ScaleState.Success -> {
 
 
-                        if (homeScreenViewModel.selectedImageItems.isNotEmpty()) {
+                        if (selectedImageItems.value.isNotEmpty()) {
                             val imageItems =
-                                homeScreenViewModel.selectedImageItems
+                                selectedImageItems.value
                             var scaledImages by remember { mutableStateOf(mutableListOf<ImageItem>()) }
                             ScaledImageScreen(
                                 imageItems = imageItems,
                                 currentScaleState.data.scaleParamsList,
-                                scaledImages = scaledImages,
+                                homeScreenViewModel = homeScreenViewModel,
                                 onSelectedItemClicked = {
                                     homeScreenViewModel.onSelectedItemClicked(it) {
                                         navController.navigate(it) {
@@ -460,9 +465,10 @@ fun <T : Media> HomeScreen(
                 }
                 val currentCompressState = compressState
                 HandleCompressState(
-                    currentCompressState,
-                    homeScreenViewModel,
-                    navController
+                    currentCompressState = currentCompressState,
+                    homeScreenViewModel = homeScreenViewModel,
+                    navController = navController,
+                    selectedImageItems = selectedImageItems.value,
                 )
             }
         }
@@ -522,7 +528,8 @@ fun <T : Media> HomeScreen(
 private fun HandleCompressState(
     currentCompressState: CompressState,
     homeScreenViewModel: HomeScreenViewModel,
-    navController: NavHostController
+    navController: NavHostController,
+    selectedImageItems: List<ImageItem>
 ) {
     var deleteImages by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope { Dispatchers.IO }
@@ -569,15 +576,15 @@ private fun HandleCompressState(
             true,
             context,
             result = launcher,
-            selectedImages = homeScreenViewModel.selectedImageItems.map { it.uri })
+            selectedImages = selectedImageItems.map { it.uri })
         deleteImages = false
     }
 
     when (currentCompressState) {
         is CompressState.Success -> {
-            if (homeScreenViewModel.selectedImageItems.isNotEmpty()) {
+            if (selectedImageItems.isNotEmpty()) {
                 CompressToKbImageScreen(
-                    imageItems = homeScreenViewModel.selectedImageItems,
+                    imageItems = selectedImageItems,
                     sizeInPercentage = currentCompressState.data.size,
                     homeScreenViewModel = homeScreenViewModel,
                     navController = navController
@@ -611,7 +618,8 @@ private fun HandleCompressState(
 @Composable
 private fun HandleGalleryState(
     galleryState: GalleryState,
-    showImages: Boolean
+    showImages: Boolean,
+    selectedImageItems: StateFlow<List<ImageItem>>
 ) {
     val currentGalleryState = galleryState
     when (currentGalleryState) {
@@ -621,8 +629,7 @@ private fun HandleGalleryState(
                 enter = fadeIn(animationSpec = tween(durationMillis = 3000)),
                 exit = fadeOut(animationSpec = tween(durationMillis = 3000))
             ) {
-                val data = currentGalleryState.data
-                GalleryImagesComponent(data.imageItems)//can get data from gallery state
+                GalleryImagesComponent(selectedImageItems)//can get data from gallery state
             }
         }
 
@@ -633,7 +640,7 @@ private fun HandleGalleryState(
                 exit = fadeOut(animationSpec = tween(durationMillis = 3000))
             ) {
                 val data = emptyList<Uri>()
-                GalleryImagesComponent(data)//can get data from gallery state
+               // GalleryImagesComponent(data)//can get data from gallery state
             }
         }
 
@@ -648,18 +655,14 @@ fun CompressToKbImageScreen(
     navController: NavHostController
 ) {
     var imagesScaled by remember { mutableStateOf(false) }
-    var scaledImages by remember { mutableStateOf(listOf<ImageItem>()) }
+    // var scaledImages by remember { mutableStateOf(Flow<ImageItem>) }
     val context = LocalContext.current
 
     LaunchedEffect(sizeInPercentage) {
         imagesScaled = false
         withContext(Dispatchers.IO) {
-            val imageScalar = ImageScalar(context)
-            val scaledUris = withContext(Dispatchers.IO) {
-                imageScalar.compressImagesToTargetSize(context, imageItems, percentOriginal = sizeInPercentage)
-            }
+            homeScreenViewModel.compressImagesToTargetSize(context, imageItems, sizeInPercentage)
             imagesScaled = true
-            scaledImages = scaledUris
         }
     }
     Box(
@@ -677,7 +680,9 @@ fun CompressToKbImageScreen(
                 ScaledImagesGrid(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(bottom = 10.dp), scaledImages, imageItems,
+                        .padding(bottom = 10.dp),
+                    homeScreenViewModel = homeScreenViewModel,
+                    imageItems = imageItems,
                     onSelectedItemClicked = {
                         homeScreenViewModel.onSelectedItemClicked(it) {
                             navController.navigate(it) {

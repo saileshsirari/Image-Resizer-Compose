@@ -34,11 +34,16 @@ import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import androidx.core.net.toFile
 import androidx.exifinterface.media.ExifInterface
+import coil.ImageLoader
+import coil.request.ImageRequest
+import coil.size.Size
 import com.image.resizer.compose.BuildConfig
 import com.image.resizer.compose.ImageItem
 import com.image.resizer.compose.TAG
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.util.getUri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -176,6 +181,37 @@ fun Uri.authorizedUri(context: Context): Uri = if (this.toString()
     BuildConfig.CONTENT_AUTHORITY,
     this.toFile()
 )
+ suspend fun loadScaledBitmapFromUri(
+    context: Context,
+    uri: Uri,
+    maxWidth: Int? =300,
+    maxHeight: Int? =300
+): Bitmap?  {
+    try {
+        val imageLoader = ImageLoader(context)
+        val request = ImageRequest.Builder(context)
+            .data(uri)
+            .allowHardware(false)
+        if(maxWidth!=null && maxHeight!=null){
+            request.size(Size(maxWidth, maxHeight)) // Specify the desired size
+        }
+
+
+        val result = imageLoader.execute(request.build())
+
+        if (result.drawable != null) {
+            // Convert the drawable to a Bitmap
+            val bitmap = (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+            return bitmap
+        } else {
+            Log.e("loadBitmapFromUri", "Failed to load bitmap from URI: $uri")
+            return null
+        }
+    } catch (e: Exception) {
+        Log.e("loadBitmapFromUri", "Error loading bitmap from URI: $uri", e)
+        return null
+    }
+}
 
 fun loadBitmapFromUri( uri:Uri,context: Context): Bitmap? {
    var originalBitmap = context.contentResolver.openInputStream(uri)?.use {
