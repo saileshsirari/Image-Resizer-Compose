@@ -53,13 +53,11 @@ class ImageScalar() {
                 }
 
                 scaledBitmap?.let {
-                    val sizeInBytes = it.saveBitmapToTempFile(context)
-                    imageItem.scaledFileSize = sizeInBytes
+                    val scaledImageItem = imageItem.saveBitmapToTempAndGetUri(context,it)
+                    emit(scaledImageItem)
                 }
+                scaledBitmap?.recycle()
 
-                imageItem.scaledImageDimension = Pair(scaledWidth, scaledHeight)
-                imageItem.scaledBitmap = scaledBitmap
-                emit(imageItem)
             }
         }
 
@@ -72,50 +70,55 @@ class ImageScalar() {
             val compressedImageItems = mutableListOf<ImageItem>()
             imageItems.forEach { imageItem ->
                 val imageUri = imageItem.uri
-                var bitmap = loadBitmapFromUri(context, imageUri) ?: return@forEach
-                // Get EXIF orientation
+                var bitmap = loadBitmapFromUri(context, imageUri)
+                bitmap?.let {it->
 
-                // bitmap = rotateBitmap(bitmap, exifOrientation)
-                val originalBitmap =
-                    bitmap.config?.let { bitmap.copy(it, true) } ?: createBitmap(100, 100)
-                var currentFileSizeBytes = imageItem.fileSize
-                var scaleFactor = percentOriginal.toFloat() / 100f
-                val desiredSize = (currentFileSizeBytes * scaleFactor).toLong()
-                while (currentFileSizeBytes > desiredSize) {
-                    scaleFactor *= 0.95f // Decrease scale factor
-                    val newWidth = (bitmap.width * scaleFactor).toInt()
-                    val newHeight = (bitmap.height * scaleFactor).toInt()
-                    if (newWidth <= 10 && newHeight <= 10) {
-                        break
-                    }
-                    try {
-                        val scaledBitmap = bitmap.scale(newWidth, newHeight)
+                    // Get EXIF orientation
 
-                        // Update file size after scaling
-                        val tempFile = createTempFile(context)
-                        scaledBitmap.compress(
-                            Bitmap.CompressFormat.JPEG,
-                            100,
-                            FileOutputStream(tempFile)
-                        )
-                        currentFileSizeBytes = (tempFile.length()).toLong()
-                        bitmap = scaledBitmap // Update bitmap for next iteration
-                        imageItem.scaledFileSize = currentFileSizeBytes
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error scaling image: $imageUri", e)
-                        break
+                    // bitmap = rotateBitmap(bitmap, exifOrientation)
+                    var currentFileSizeBytes = imageItem.fileSize
+                    var scaleFactor = 1f
+                    val desiredSize = (currentFileSizeBytes * (percentOriginal *.01f)).toLong()
+                    while (currentFileSizeBytes > desiredSize) {
+                        scaleFactor *= 0.8f // Decrease scale factor
+                        val newWidth = (it.width * scaleFactor).toInt()
+                        val newHeight = (it.height * scaleFactor).toInt()
+                        if (newWidth <= 10 && newHeight <= 10) {
+                            break
+                        }
+                        try {
+                            val scaledBitmap = it.scale(newWidth, newHeight)
+
+                            // Update file size after scaling
+                            val tempFile = createTempFile(context)
+
+                            FileOutputStream(tempFile).use { outputStream ->
+                                scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                            }
+                            currentFileSizeBytes = (tempFile.length()).toLong()
+                            bitmap = scaledBitmap // Update bitmap for next iteration
+                            imageItem.scaledFileSize = currentFileSizeBytes
+
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error scaling image: $imageUri", e)
+                            break
+                        }
                     }
+                    //   bitmap = rotateBitmap(bitmap, exifOrientation)
+                    // Save the scaled bitmap and add its Uri to the list
+                    //   if (exifOrientation != ORIENTATION_NORMAL) {
+                    //     bitmap = rotateBitmap(bitmap, exifOrientation)
+                    //  }
+                   // saveBitmapToTempAndGetUri(context, imageItem)
+                    bitmap?.let {
+                        val compressedImageItem = imageItem.saveBitmapToTempAndGetUri(context, bitmap)
+                        bitmap.recycle()
+                        //  val savedUri = saveImageToGallery(bitmap)
+                        compressedImageItems.add(compressedImageItem)
+                        emit(compressedImageItem)
+                    }
+
                 }
-                //   bitmap = rotateBitmap(bitmap, exifOrientation)
-                // Save the scaled bitmap and add its Uri to the list
-                //   if (exifOrientation != ORIENTATION_NORMAL) {
-                //     bitmap = rotateBitmap(bitmap, exifOrientation)
-                //  }
-                imageItem.scaledBitmap = bitmap
-                //  val savedUri = saveImageToGallery(bitmap)
-                val compressedImageItem = imageItem.copy(scaledBitmap = originalBitmap)
-                compressedImageItems.add(compressedImageItem)
-                emit(compressedImageItem)
             }
 
             // return@withContext compressedImageItems

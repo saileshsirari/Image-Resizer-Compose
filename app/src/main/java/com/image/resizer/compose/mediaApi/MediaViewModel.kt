@@ -89,56 +89,6 @@ open class MediaViewModel(
     }
     private val _isSaving = MutableStateFlow(true)
     val isSaving = _isSaving.asStateFlow()
-    fun saveOverride(
-        context: Context,
-        listImageItems: List<ImageItem>,
-        saveFormat: SaveFormat = SaveFormat.PNG,
-        onSuccess: () -> Unit = {},
-        onFail: () -> Unit = {}
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            _isSaving.value = true
-            delay(500)
-            val mediaList =
-                repository.getMediaListByUris(listImageItems.map { it.uri }, reviewMode = false)
-                    .firstOrNull()?.data
-                    ?: emptyList()
-            var replaced = true
-            listImageItems.forEach {
-                it.let { imageItem ->
-                    try {
 
-                        imageItem.scaledBitmap?.let {
-                            replaced = ImageReplacer.replaceOriginalImageWithBitmap(
-                                context,
-                                imageItem.uri,
-                                it
-                            )
-                        }
-                        /*  if (handler.overrideImage(
-                                  uri = imageItem.uri,
-                                  bitmap = it,
-                                  format = saveFormat.format,
-                                  relativePath = Environment.DIRECTORY_PICTURES + "/Edited",
-                                  displayName = imageItem.imageName
-                                      ?: ("${System.currentTimeMillis()} ok"),
-                                  mimeType = saveFormat.mimeType
-                              )
-                              onSuccess().also { _isSaving.value = false }
-                          } else {
-                              onFail().also { _isSaving.value = false }
-                          }
-
-
-                      }
-                         */
-                        onSuccess()
-                    } catch (e: Exception) {
-                        onFail().also { _isSaving.value = false }
-                    }
-                } ?: onFail().also { _isSaving.value = false }
-            }
-        }
-    }
 
 }

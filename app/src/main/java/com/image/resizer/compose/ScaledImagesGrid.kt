@@ -1,5 +1,6 @@
 package com.image.resizer.compose
 
+import android.R.attr.bitmap
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
@@ -49,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import coil.compose.AsyncImage
+import com.image.resizer.compose.mediaApi.loadBitmapFromUri
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -86,7 +88,10 @@ fun ScaledImagesGrid(imageItems: List<ImageItem>) {
             ) {
                 items(imageItems, key = { item -> item.uri.hashCode() }) { imageItem ->
                     ImageItemCard(imageItem = imageItem) {
-                        selectedImageItem = saveBitmapToTempAndGetUri(context, imageItem)
+                        loadBitmapFromUri(imageItem.uri, context)?.also {
+                            selectedImageItem = imageItem.saveBitmapToTempAndGetUri(context, it)
+                        }
+
                         showComparisonView = true
 
                     }
@@ -148,11 +153,7 @@ fun ImageItemCard(imageItem: ImageItem, onClick: () -> Unit) {
     }
 }
 
-fun saveBitmapToTempAndGetUri(context: Context, imageItem: ImageItem): ImageItem {
-    if (imageItem.scaledBitmap == null) {
-        return imageItem
-    }
-    val bitmap = imageItem.scaledBitmap!!
+fun ImageItem.saveBitmapToTempAndGetUri(context: Context, bitmap: Bitmap): ImageItem {
 
     val file = File(context.cacheDir, "scaled_image_${System.currentTimeMillis()}.jpg")
     try {
@@ -170,12 +171,14 @@ fun saveBitmapToTempAndGetUri(context: Context, imageItem: ImageItem): ImageItem
         val tempUri = Uri.fromFile(file)
 
         // Update scaledUri in ImageItem
-        val updatedImageItem = imageItem.copy(scaledUri = tempUri,
+        val updatedImageItem = this.copy(
+            scaledUri = tempUri,
         )
 
         val fileSize = file.length()
         val imageDimension = imageDimensionsFromUri(context, tempUri)
         return updatedImageItem.copy(
+            scaledUri = tempUri,
             scaledFileSize = fileSize,
             scaledImageDimension = imageDimension
         )
@@ -183,5 +186,5 @@ fun saveBitmapToTempAndGetUri(context: Context, imageItem: ImageItem): ImageItem
         Log.e("saveBitmapToTempAndGetUri", "Error saving bitmap to temp file: ${e.message}")
         e.printStackTrace()
     }
-    return imageItem
+    return this
 }

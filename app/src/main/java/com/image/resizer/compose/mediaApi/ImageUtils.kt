@@ -226,7 +226,6 @@ fun loadBitmapFromUri( uri:Uri,context: Context): Bitmap? {
         imageDimension = Pair(it.width,it.height)
     }
     return originalBitmap
-//   return ImageItem(originalBitmap = originalBitmap, imageDimension =  imageDimension)
 }
 
 fun rotateBitmap(bitmap: Bitmap, orientation: Int): Bitmap {

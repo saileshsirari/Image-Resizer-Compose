@@ -158,7 +158,6 @@ fun MyScreen() {
     val imageItem =  ImageItem(
         context =context,
         uri = uri,
-        scaledBitmap = createBitmap(300, 300),
         scaledFileSize = 512,
         scaledImageDimension = Pair(100,200),
         scaledUri = uri

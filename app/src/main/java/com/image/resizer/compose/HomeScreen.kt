@@ -105,12 +105,8 @@ import com.image.resizer.compose.mediaApi.util.Constants.Animation.exitAnimation
 import com.image.resizer.compose.mediaApi.util.rememberActivityResult
 import com.image.resizer.compose.mediaApi.util.writeRequests
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 
 @Composable
@@ -185,7 +181,7 @@ fun <T : Media> HomeScreen(
     val overrideRequest = rememberActivityResult(
         onResultOk = {
             var replaced = false
-            homeScreenViewModel.saveOverride(onSuccess = {
+            homeScreenViewModel.saveOverride(context = context, onSuccess = {
                 homeScreenViewModel.showToast("Images replaced")
 
             }, onFail = {
@@ -252,11 +248,14 @@ fun <T : Media> HomeScreen(
                                     }
 
                                     Save -> {
-                                        homeScreenViewModel.saveCopy(onSuccess = {
-                                            homeScreenViewModel.showToast()
-                                        }, onFail = {
-                                            homeScreenViewModel.showToast("Failed")
-                                        })
+                                        homeScreenViewModel.saveCopy(
+                                            context = context,
+                                            onSuccess = {
+                                                homeScreenViewModel.showToast()
+                                            },
+                                            onFail = {
+                                                homeScreenViewModel.showToast("Failed")
+                                            })
 
                                     }
 
@@ -269,14 +268,17 @@ fun <T : Media> HomeScreen(
                                                 )
                                             }
                                         } else {
-                                            homeScreenViewModel.saveOverride(onSuccess = {
-                                                homeScreenViewModel.showToast()
-                                                homeScreenViewModel.showSelectedImages()
-                                                saveRequested = false
-                                            }, onFail = {
-                                                homeScreenViewModel.showToast("Failed")
-                                                saveRequested = false
-                                            })
+                                            homeScreenViewModel.saveOverride(
+                                                context = context,
+                                                onSuccess = {
+                                                    homeScreenViewModel.showToast()
+                                                    homeScreenViewModel.showSelectedImages()
+                                                    saveRequested = false
+                                                },
+                                                onFail = {
+                                                    homeScreenViewModel.showToast("Failed")
+                                                    saveRequested = false
+                                                })
                                         }
 
                                     }
@@ -348,7 +350,7 @@ fun <T : Media> HomeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-                HandleGalleryState(galleryState, showImages,homeScreenViewModel.selectedImageItems)
+                HandleGalleryState(galleryState, showImages, homeScreenViewModel.selectedImageItems)
 
 
                 val currentCropState = cropState
@@ -378,7 +380,7 @@ fun <T : Media> HomeScreen(
                                             ImageItem(
                                                 context = context,
                                                 uri = currentCropState.data.croppedImageUri,
-                                                scaledBitmap = it
+                                                scaledUri = currentCropState.data.croppedImageUri
                                             )
                                         )
                                     )
@@ -408,7 +410,7 @@ fun <T : Media> HomeScreen(
 
                     is ScaleState.ShowPopup -> {
                         val originalDimensions =
-                            selectedImageItems.value.map { it.imageDimension?:Pair(0,0) }
+                            selectedImageItems.value.map { it.imageDimension ?: Pair(0, 0) }
                         // Implement image scaling logic here
                         AnimatedVisibility(
                             visible = true,
@@ -429,7 +431,7 @@ fun <T : Media> HomeScreen(
                                 //  }
                                 // showScaledImages = true
                                 scaledParams = it
-                                homeScreenViewModel.onImagesScaled(it)
+                                homeScreenViewModel.onImagesScaled(context,it)
                             })
                         }
                     }
@@ -440,10 +442,8 @@ fun <T : Media> HomeScreen(
                         if (selectedImageItems.value.isNotEmpty()) {
                             val imageItems =
                                 selectedImageItems.value
-                            var scaledImages by remember { mutableStateOf(mutableListOf<ImageItem>()) }
                             ScaledImageScreen(
                                 imageItems = imageItems,
-                                currentScaleState.data.scaleParamsList,
                                 homeScreenViewModel = homeScreenViewModel,
                                 onSelectedItemClicked = {
                                     homeScreenViewModel.onSelectedItemClicked(it) {
@@ -583,12 +583,22 @@ private fun HandleCompressState(
     when (currentCompressState) {
         is CompressState.Success -> {
             if (selectedImageItems.isNotEmpty()) {
-                CompressToKbImageScreen(
-                    imageItems = selectedImageItems,
-                    sizeInPercentage = currentCompressState.data.size,
+                ScaledImagesGrid(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 10.dp),
                     homeScreenViewModel = homeScreenViewModel,
-                    navController = navController
+                    imageItems = selectedImageItems,
+                    onSelectedItemClicked = {
+                        homeScreenViewModel.onSelectedItemClicked(it) {
+                            navController.navigate(it) {
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    }
                 )
+
             }
         }
 
@@ -600,7 +610,7 @@ private fun HandleCompressState(
             CompressDialog(onDismiss = {
                 homeScreenViewModel.onCompressCancel()
             }, onConfirm = {
-                homeScreenViewModel.onCompressShowImages(it)
+                homeScreenViewModel.onCompressShowImages(context, it)
             })
         }
 
@@ -640,7 +650,7 @@ private fun HandleGalleryState(
                 exit = fadeOut(animationSpec = tween(durationMillis = 3000))
             ) {
                 val data = emptyList<Uri>()
-               // GalleryImagesComponent(data)//can get data from gallery state
+                // GalleryImagesComponent(data)//can get data from gallery state
             }
         }
 
@@ -654,17 +664,7 @@ fun CompressToKbImageScreen(
     homeScreenViewModel: HomeScreenViewModel,
     navController: NavHostController
 ) {
-    var imagesScaled by remember { mutableStateOf(false) }
-    // var scaledImages by remember { mutableStateOf(Flow<ImageItem>) }
-    val context = LocalContext.current
 
-    LaunchedEffect(sizeInPercentage) {
-        imagesScaled = false
-        withContext(Dispatchers.IO) {
-            homeScreenViewModel.compressImagesToTargetSize(context, imageItems, sizeInPercentage)
-            imagesScaled = true
-        }
-    }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -675,26 +675,8 @@ fun CompressToKbImageScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.Companion.CenterHorizontally
         ) {
-            if (imagesScaled) {
 
-                ScaledImagesGrid(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom = 10.dp),
-                    homeScreenViewModel = homeScreenViewModel,
-                    imageItems = imageItems,
-                    onSelectedItemClicked = {
-                        homeScreenViewModel.onSelectedItemClicked(it) {
-                            navController.navigate(it) {
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }
-                    }
-                )
-            } else {
-                Text("Scaling...")
-            }
+
         }
     }
 }
