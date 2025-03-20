@@ -29,7 +29,6 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import com.image.resizer.compose.R
-import com.image.resizer.compose.TAG
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.util.ExifMetadata
 import com.image.resizer.compose.mediaApi.util.formatMinSec

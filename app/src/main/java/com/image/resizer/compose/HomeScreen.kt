@@ -431,7 +431,7 @@ fun <T : Media> HomeScreen(
                                 //  }
                                 // showScaledImages = true
                                 scaledParams = it
-                                homeScreenViewModel.onImagesScaled(context,it)
+                                homeScreenViewModel.onImagesScaled(context, it)
                             })
                         }
                     }
@@ -442,9 +442,12 @@ fun <T : Media> HomeScreen(
                         if (selectedImageItems.value.isNotEmpty()) {
                             val imageItems =
                                 selectedImageItems.value
-                            ScaledImageScreen(
-                                imageItems = imageItems,
+                            ScaledImagesGrid(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(bottom = 10.dp),
                                 homeScreenViewModel = homeScreenViewModel,
+                                imageItems = imageItems,
                                 onSelectedItemClicked = {
                                     homeScreenViewModel.onSelectedItemClicked(it) {
                                         navController.navigate(it) {
@@ -454,6 +457,7 @@ fun <T : Media> HomeScreen(
                                     }
                                 }
                             )
+
                         }
 
                     }

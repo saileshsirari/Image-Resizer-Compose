@@ -5,7 +5,6 @@
 
 package com.image.resizer.compose.mediaApi
 
-import android.R.attr.bitmap
 import android.app.Activity.RESULT_CANCELED
 import android.app.Activity.RESULT_OK
 import android.content.ContentResolver
@@ -38,18 +37,15 @@ import coil.ImageLoader
 import coil.request.ImageRequest
 import coil.size.Size
 import com.image.resizer.compose.BuildConfig
-import com.image.resizer.compose.ImageItem
-import com.image.resizer.compose.TAG
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.util.getUri
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
 
 val sdcardRegex = "^/storage/[A-Z0-9]+-[A-Z0-9]+/.*$".toRegex()
+const val TAG = "ScaledImageScreen"
 
 
 @Composable

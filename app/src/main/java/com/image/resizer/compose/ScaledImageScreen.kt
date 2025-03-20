@@ -14,7 +14,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -63,38 +62,6 @@ import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.MediaRepositoryImpl
 import com.image.resizer.compose.mediaApi.loadBitmapFromUri
 import kotlinx.coroutines.flow.StateFlow
-
-
-const val TAG = "ScaledImageScreen"
-
-@Composable
-fun ScaledImageScreen(
-    imageItems: List<ImageItem>,
-    homeScreenViewModel: HomeScreenViewModel,
-    onSelectedItemClicked: (ImageItem) -> Unit = {}
-) {
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-    ) {
-        Column(
-            modifier = Modifier.Companion
-                .fillMaxWidth(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.Companion.CenterHorizontally
-        ) {
-                ScaledImagesGrid(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom = 10.dp),
-                    homeScreenViewModel =homeScreenViewModel,
-                    imageItems = imageItems,
-                    onSelectedItemClicked = onSelectedItemClicked
-                )
-        }
-    }
-}
 
 
 /*@Preview
