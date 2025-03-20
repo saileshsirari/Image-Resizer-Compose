@@ -1,10 +1,6 @@
 package com.image.resizer.compose
 
-import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
-import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
@@ -16,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -34,16 +29,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import java.io.FileNotFoundException
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.core.graphics.createBitmap
 import androidx.core.net.toUri
 
 @Composable
@@ -158,9 +149,8 @@ fun MyScreen() {
     val imageItem =  ImageItem(
         context =context,
         uri = uri,
-        scaledFileSize = 512,
         scaledImageDimension = Pair(100,200),
-        scaledUri = uri
+        scaledFileSize = 512,
     )
     ImageComparisonView(imageItem = imageItem)
 }

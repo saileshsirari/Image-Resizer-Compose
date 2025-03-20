@@ -64,25 +64,6 @@ import com.image.resizer.compose.mediaApi.loadBitmapFromUri
 import kotlinx.coroutines.flow.StateFlow
 
 
-/*@Preview
-@Composable
-fun ScaledImagesGridPreview() {
-    val uri = "content://media/external/file/25".toUri()
-    val context = LocalContext.current
-    val imageItems = listOf(
-        ImageItem(
-            context,
-            uri = uri,
-            scaledBitmap = createBitmap(300, 300))
-
-    )
-    ScaledImagesGrid(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(bottom = 10.dp), scaledImages = imageItems, imageItems
-    )
-}*/
-
 @Preview
 @Composable
 fun GalleryImagesComponentPreview1() {
@@ -98,11 +79,11 @@ fun GalleryImagesComponentPreview1() {
         ),
         ImageItem(
             context,
-            uri = uri, scaledUri = uri,
+            uri = uri,
         ),
         ImageItem(
             context = context,
-            uri = uri, scaledUri = uri,
+            uri = uri,
         ),
     )
     GalleryImagesComponent(homeScreenViewModel.selectedImageItems)
@@ -176,6 +157,7 @@ internal fun ScaledImagesGrid(
     val scaledImages by homeScreenViewModel.scaledImageItems.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lazyGridState = rememberLazyGridState()
+
     if (imageItems.isEmpty()) {
         Text(
             text = "No images selected.",
@@ -256,15 +238,20 @@ internal fun ScaledImagesGrid(
                         horizontalAlignment = Alignment.CenterHorizontally, // Center image
                         verticalArrangement = Arrangement.SpaceBetween
                     ) {
-                        if (imageItem.scaledImageDimension != null) {
-                            Text("Scaled : ${imageItem.scaledImageDimension?.first ?: 0}x${imageItem.scaledImageDimension?.second ?: 0}")
-                            imageItem.scaledFileSize?.let {
-                                val fileSizeInKb = it / 1024
-                                val fileSizeText = if (fileSizeInKb > 1000) {
-                                    "${fileSizeInKb / 1024} mb"
-                                } else "$fileSizeInKb kb"
-                                Text(fileSizeText, maxLines = 1)
+
+                        imageItem.scaledUri?.let {
+                            if (imageItem.scaledImageDimension != null) {
+                                Text("Scaled : ${imageItem.scaledImageDimension?.first ?: 0}x${imageItem.scaledImageDimension?.second ?: 0}")
+                                imageItem.scaledFileSize?.let {
+                                    val fileSizeInKb = it / 1024
+                                    val fileSizeText = if (fileSizeInKb > 1000) {
+                                        "${fileSizeInKb / 1024} mb"
+                                    } else "$fileSizeInKb kb"
+                                    Text(fileSizeText, maxLines = 1)
+                                }
                             }
+                        }
+                        if (imageItem.scaledUri != null) {
                             AsyncImage(
                                 model = imageItem.scaledUri,
                                 contentDescription = "Scaled Image",

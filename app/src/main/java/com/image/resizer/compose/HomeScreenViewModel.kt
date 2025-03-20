@@ -3,7 +3,6 @@ package com.image.resizer.compose
 import android.content.Context
 import android.net.Uri
 import android.os.Environment
-import android.util.Log.e
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
@@ -18,6 +17,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import  com.image.resizer.compose.compressImagesToTargetSize as compress
 
 class HomeScreenViewModel(
     private val mediaHandler: MediaHandleUseCase
@@ -50,11 +50,11 @@ class HomeScreenViewModel(
         percentOriginal: Int = TARGET_FILE_SIZE_KB
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            _scaledImageItems.value = emptyList<ImageItem>()
-            ImageScalar().compressImagesToTargetSize(context, imageItems.take(25), percentOriginal)
+            _scaledImageItems.value = imageItems
+           /* compress(context, imageItems, percentOriginal)
                 .collect {
                     _scaledImageItems.value = _scaledImageItems.value + it
-                }
+                }*/
         }
     }
 
@@ -63,16 +63,22 @@ class HomeScreenViewModel(
         scaleParamsList: List<ScaleParams>,
         context: Context,
     ) {
+        onReset()
         viewModelScope.launch(Dispatchers.IO) {
             _scaledImageItems.value = emptyList<ImageItem>()
-            ImageScalar().scaleImages(
+            imageItems.forEachIndexed { index,imageItem->
+                imageItem.scaleParams = scaleParamsList[index]
+            }
+            _scaledImageItems.value = imageItems
+
+         /*   ImageScalar().scaleImages(
                 context = context,
                 imageItems = imageItems,
                 scaleParamsList = scaleParamsList
             )
                 .collect {
                     _scaledImageItems.value = _scaledImageItems.value + it
-                }
+                }*/
         }
 
     }
@@ -177,6 +183,11 @@ class HomeScreenViewModel(
         _compressState.value = CompressState.Idle
         _scaleState.value = ScaleState.Idle
         _galleryState.value = GalleryState.Idle
+        _scaledImageItems.value =emptyList<ImageItem>()
+        _selectedImageItems.value.forEach {
+            it.scaleParams = null
+        }
+        ImageItem.percentScale = null
     }
 
     fun onCompressCancel() {
@@ -190,6 +201,7 @@ class HomeScreenViewModel(
     fun onCompressShowImages(context:Context , size: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             onReset()
+            ImageItem.percentScale = size
             compressImagesToTargetSize(context,selectedImageItems.value,size)
             _compressState.value = CompressState.Success(CompressStateData(size))
         }

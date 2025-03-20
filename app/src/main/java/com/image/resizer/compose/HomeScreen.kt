@@ -96,6 +96,7 @@ import com.image.resizer.compose.mediaApi.EditorNavigator
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.NavigationButton
 import com.image.resizer.compose.mediaApi.PickerMediaSheet
+import com.image.resizer.compose.mediaApi.TAG
 import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.model.MediaState
@@ -191,6 +192,10 @@ fun <T : Media> HomeScreen(
         }
 
     )
+    LaunchedEffect(scaleState,galleryState,cropState,compressState) {
+        Log.d(TAG, "HomeScreen: $scaleState $galleryState $cropState $compressState")
+
+    }
     Scaffold(
         bottomBar = {
             AnimatedVisibility(
@@ -380,7 +385,7 @@ fun <T : Media> HomeScreen(
                                             ImageItem(
                                                 context = context,
                                                 uri = currentCropState.data.croppedImageUri,
-                                                scaledUri = currentCropState.data.croppedImageUri
+                                                computedUri = currentCropState.data.croppedImageUri,
                                             )
                                         )
                                     )

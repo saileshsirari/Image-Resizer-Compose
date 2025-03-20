@@ -23,7 +23,8 @@ data class ScaleParams(
     val newWidth: Int,
     val newHeight: Int,
     val scaleFactor: Float? = null,
-    val keepAspectRatio: Boolean = true
+    val keepAspectRatio: Boolean = true,
+    val compressPercentage: Int = 100
 )
 
 class ScaleImageViewModel : ViewModel() {

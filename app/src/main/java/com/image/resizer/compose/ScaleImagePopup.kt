@@ -260,8 +260,8 @@ fun PercentageScaleTabContent(viewModel: ScaleImageViewModel) {
         Slider(
             value = viewModel.percentage,
             onValueChange = { viewModel.updatePercentage(it) },
-            valueRange = 1f..200f,
-            steps = 199,
+            valueRange = 10f..100f,
+            steps = 89,
 
         )
     }
