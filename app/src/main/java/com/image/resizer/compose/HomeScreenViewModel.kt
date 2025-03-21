@@ -10,6 +10,7 @@ import com.image.resizer.compose.mediaApi.SaveFormat
 import com.image.resizer.compose.mediaApi.loadBitmapFromUri
 import com.image.resizer.compose.mediaApi.util.Constants.CUSTOM_FOLDER_NAME
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,7 +18,6 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import  com.image.resizer.compose.compressImagesToTargetSize as compress
 
 class HomeScreenViewModel(
     private val mediaHandler: MediaHandleUseCase
@@ -40,9 +40,10 @@ class HomeScreenViewModel(
     var selectedItem: ImageItem? = null
     private val _scaledImageItems = MutableStateFlow<List<ImageItem>>(emptyList())
     val scaledImageItems = _scaledImageItems.asStateFlow()
-    var _selectedImageItems = MutableStateFlow<List<ImageItem>>(emptyList())
-
+    private var _selectedImageItems = MutableStateFlow<List<ImageItem>>(emptyList())
     var selectedImageItems = _selectedImageItems.asStateFlow()
+    private  var _savingState =  MutableStateFlow<List<ImageItem>>(emptyList())
+    var savingState = _savingState.asStateFlow()
 
     fun compressImagesToTargetSize(
         context: Context,
@@ -51,10 +52,10 @@ class HomeScreenViewModel(
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             _scaledImageItems.value = imageItems
-           /* compress(context, imageItems, percentOriginal)
-                .collect {
-                    _scaledImageItems.value = _scaledImageItems.value + it
-                }*/
+            /* compress(context, imageItems, percentOriginal)
+                 .collect {
+                     _scaledImageItems.value = _scaledImageItems.value + it
+                 }*/
         }
     }
 
@@ -66,19 +67,19 @@ class HomeScreenViewModel(
         onReset()
         viewModelScope.launch(Dispatchers.IO) {
             _scaledImageItems.value = emptyList<ImageItem>()
-            imageItems.forEachIndexed { index,imageItem->
+            imageItems.forEachIndexed { index, imageItem ->
                 imageItem.scaleParams = scaleParamsList[index]
             }
             _scaledImageItems.value = imageItems
 
-         /*   ImageScalar().scaleImages(
-                context = context,
-                imageItems = imageItems,
-                scaleParamsList = scaleParamsList
-            )
-                .collect {
-                    _scaledImageItems.value = _scaledImageItems.value + it
-                }*/
+            /*   ImageScalar().scaleImages(
+                   context = context,
+                   imageItems = imageItems,
+                   scaleParamsList = scaleParamsList
+               )
+                   .collect {
+                       _scaledImageItems.value = _scaledImageItems.value + it
+                   }*/
         }
 
     }
@@ -120,7 +121,7 @@ class HomeScreenViewModel(
         _scaleState.value = ScaleState.ShowPopup
     }
 
-    fun onImagesScaled(context: Context,scaleParamsList: List<ScaleParams>) {
+    fun onImagesScaled(context: Context, scaleParamsList: List<ScaleParams>) {
         onReset()
         scaleImages(selectedImageItems.value, scaleParamsList, context)
         _scaleState.value = ScaleState.Success(ScaleStateData(scaleParamsList))
@@ -183,7 +184,7 @@ class HomeScreenViewModel(
         _compressState.value = CompressState.Idle
         _scaleState.value = ScaleState.Idle
         _galleryState.value = GalleryState.Idle
-        _scaledImageItems.value =emptyList<ImageItem>()
+        _scaledImageItems.value = emptyList<ImageItem>()
         _selectedImageItems.value.forEach {
             it.scaleParams = null
         }
@@ -198,11 +199,11 @@ class HomeScreenViewModel(
         }
     }
 
-    fun onCompressShowImages(context:Context , size: Int) {
+    fun onCompressShowImages(context: Context, size: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             onReset()
             ImageItem.percentScale = size
-            compressImagesToTargetSize(context,selectedImageItems.value,size)
+            compressImagesToTargetSize(context, selectedImageItems.value, size)
             _compressState.value = CompressState.Success(CompressStateData(size))
         }
     }
@@ -233,9 +234,12 @@ class HomeScreenViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             _isSaving.value = true
             val currentSelectedItems = _scaledImageItems.value
-            currentSelectedItems.forEach {
-                val media = it
-                try {
+            _savingState.value = emptyList<ImageItem>()
+            try {
+                currentSelectedItems.forEach {
+                    delay(100)
+                    val media = it
+
                     it.scaledUri?.let { scaledUri ->
                         val currentBitmap = loadBitmapFromUri(scaledUri, context)
                         currentBitmap?.let { bitmap ->
@@ -257,15 +261,18 @@ class HomeScreenViewModel(
                             ) {
                                 throw Exception("Unable to save")
                             }
+                            _savingState.value =_savingState.value+ it
                         }
                     }
-                } catch (_: Exception) {
-                    _isSaving.value = false
-                    onFail().also { _isSaving.value = false }
+                }
+            } catch (_: Exception) {
+                _isSaving.value = false
+                onFail().also { _isSaving.value = false }
+                return@launch
 
-                } ?: onFail().also { _isSaving.value = false }
-                onSuccess().also { _isSaving.value = false }
             }
+            _isSaving.value = false
+            onSuccess()
         }
     }
 

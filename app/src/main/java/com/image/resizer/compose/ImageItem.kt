@@ -65,7 +65,6 @@ data class ImageItem(
     fun computeScaledUriBySize(): ImageItem {
             percentScale?.let {
                 val imageItem = compressImageToTargetSize(context, this, it)
-
                 return imageItem
             }
         return  this

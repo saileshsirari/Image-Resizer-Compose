@@ -5,6 +5,7 @@ package com.image.resizer.compose
 import android.app.Activity
 import android.app.RecoverableSecurityException
 import android.content.Intent
+import android.content.res.Resources
 import android.net.Uri
 import android.os.Build
 import android.util.Log
@@ -17,17 +18,20 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VisibilityThreshold
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -50,6 +54,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -66,6 +71,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -164,6 +170,8 @@ fun <T : Media> HomeScreen(
 
     var saveRequested by remember { mutableStateOf(false) }
     val selectedImageItems = homeScreenViewModel.selectedImageItems.collectAsState()
+    var savingState = homeScreenViewModel.savingState.collectAsState()
+    var isSaving = homeScreenViewModel.isSaving.collectAsState()
 
     val cropImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -192,7 +200,7 @@ fun <T : Media> HomeScreen(
         }
 
     )
-    LaunchedEffect(scaleState,galleryState,cropState,compressState) {
+    LaunchedEffect(scaleState, galleryState, cropState, compressState) {
         Log.d(TAG, "HomeScreen: $scaleState $galleryState $cropState $compressState")
 
     }
@@ -284,6 +292,7 @@ fun <T : Media> HomeScreen(
                                                     homeScreenViewModel.showToast("Failed")
                                                     saveRequested = false
                                                 })
+
                                         }
 
                                     }
@@ -343,142 +352,176 @@ fun <T : Media> HomeScreen(
     ) { innerPadding ->
         Box(
             modifier = Modifier.Companion
-                .fillMaxSize()
-                .padding(innerPadding)
-
-        ) {
-            Column(
-                modifier = Modifier
+                .fillMaxSize()) {
+            Box(
+                modifier = Modifier.Companion
                     .fillMaxSize()
-                    .padding(bottom = 14.dp), // Add padding at the bottom for the FAB
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(innerPadding)
+
             ) {
 
-                HandleGalleryState(galleryState, showImages, homeScreenViewModel.selectedImageItems)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 14.dp), // Add padding at the bottom for the FAB
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+
+                    HandleGalleryState(
+                        galleryState,
+                        showImages,
+                        homeScreenViewModel.selectedImageItems
+                    )
 
 
-                val currentCropState = cropState
-                when (currentCropState) {
-                    is CropState.PopupShown -> {
-                        if (selectedImageItems.value.isNotEmpty()) {
-                            val intent = Intent(context, CropScreen::class.java)
-                            intent.putExtra(
-                                CropScreen.IMAGE_TO_CROP,
-                                selectedImageItems.value.first().uri
-                            )
-                            cropImageLauncher.launch(intent)
-                            homeScreenViewModel.onCropScreenLaunched()
+                    val currentCropState = cropState
+                    when (currentCropState) {
+                        is CropState.PopupShown -> {
+                            if (selectedImageItems.value.isNotEmpty()) {
+                                val intent = Intent(context, CropScreen::class.java)
+                                intent.putExtra(
+                                    CropScreen.IMAGE_TO_CROP,
+                                    selectedImageItems.value.first().uri
+                                )
+                                cropImageLauncher.launch(intent)
+                                homeScreenViewModel.onCropScreenLaunched()
+                            }
                         }
-                    }
 
-                    is CropState.Success -> {
-                        currentCropState.data.croppedImageUri?.let {
-                            CroppedImageComponent(currentCropState.data.croppedImageUri) {
-                                getBitmapFromUri(
-                                    currentCropState.data.croppedImageUri,
-                                    context
-                                )?.let {
-                                    saveImagesToGallery(
-                                        context,
-                                        listOf(
-                                            ImageItem(
-                                                context = context,
-                                                uri = currentCropState.data.croppedImageUri,
-                                                computedUri = currentCropState.data.croppedImageUri,
+                        is CropState.Success -> {
+                            currentCropState.data.croppedImageUri?.let {
+                                CroppedImageComponent(currentCropState.data.croppedImageUri) {
+                                    getBitmapFromUri(
+                                        currentCropState.data.croppedImageUri,
+                                        context
+                                    )?.let {
+                                        saveImagesToGallery(
+                                            context,
+                                            listOf(
+                                                ImageItem(
+                                                    context = context,
+                                                    uri = currentCropState.data.croppedImageUri,
+                                                    computedUri = currentCropState.data.croppedImageUri,
+                                                )
                                             )
                                         )
-                                    )
-                                    homeScreenViewModel.showToast()
-                                    homeScreenViewModel.showSelectedImages()
+                                        homeScreenViewModel.showToast()
+                                        homeScreenViewModel.showSelectedImages()
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    is CropState.Loading -> {
-                    }
+                        is CropState.Loading -> {
+                        }
 
-                    is CropState.Error -> {
-                        Text("Crop error: ${currentCropState.message}")
-                    }
+                        is CropState.Error -> {
+                            Text("Crop error: ${currentCropState.message}")
+                        }
 
-                    is CropState.Idle -> {
+                        is CropState.Idle -> {
 
-                    }
-                }
-                val currentScaleState = scaleState
-                when (currentScaleState) {
-                    is ScaleState.Idle, is ScaleState.Loading -> {
-
-                    }
-
-                    is ScaleState.ShowPopup -> {
-                        val originalDimensions =
-                            selectedImageItems.value.map { it.imageDimension ?: Pair(0, 0) }
-                        // Implement image scaling logic here
-                        AnimatedVisibility(
-                            visible = true,
-                            enter = fadeIn(animationSpec = tween(durationMillis = 2000)) + expandVertically(
-                                expandFrom = Alignment.Companion.CenterVertically,
-                                animationSpec = tween(durationMillis = 1300)
-                            ),
-                            exit = fadeOut(animationSpec = tween(durationMillis = 2000)) + shrinkVertically(
-                                shrinkTowards = Alignment.Companion.CenterVertically,
-                                animationSpec = tween(durationMillis = 1300)
-                            ),
-                        ) {
-                            ScaleImagePopup(true, onDismiss = {
-                                homeScreenViewModel.dismissScalePopup()
-                            }, originalDimensions, viewModel = viewModel, onScale = {
-                                //  it.forEachIndexed { index, it ->
-                                //  Log.d(TAG, " $it here  ${originalDimensions[index]} ")
-                                //  }
-                                // showScaledImages = true
-                                scaledParams = it
-                                homeScreenViewModel.onImagesScaled(context, it)
-                            })
                         }
                     }
+                    val currentScaleState = scaleState
+                    when (currentScaleState) {
+                        is ScaleState.Idle, is ScaleState.Loading -> {
 
-                    is ScaleState.Success -> {
+                        }
+
+                        is ScaleState.ShowPopup -> {
+                            val originalDimensions =
+                                selectedImageItems.value.map { it.imageDimension ?: Pair(0, 0) }
+                            // Implement image scaling logic here
+                            AnimatedVisibility(
+                                visible = true,
+                                enter = fadeIn(animationSpec = tween(durationMillis = 2000)) + expandVertically(
+                                    expandFrom = Alignment.Companion.CenterVertically,
+                                    animationSpec = tween(durationMillis = 1300)
+                                ),
+                                exit = fadeOut(animationSpec = tween(durationMillis = 2000)) + shrinkVertically(
+                                    shrinkTowards = Alignment.Companion.CenterVertically,
+                                    animationSpec = tween(durationMillis = 1300)
+                                ),
+                            ) {
+                                ScaleImagePopup(true, onDismiss = {
+                                    homeScreenViewModel.dismissScalePopup()
+                                }, originalDimensions, viewModel = viewModel, onScale = {
+                                    //  it.forEachIndexed { index, it ->
+                                    //  Log.d(TAG, " $it here  ${originalDimensions[index]} ")
+                                    //  }
+                                    // showScaledImages = true
+                                    scaledParams = it
+                                    homeScreenViewModel.onImagesScaled(context, it)
+                                })
+                            }
+                        }
+
+                        is ScaleState.Success -> {
 
 
-                        if (selectedImageItems.value.isNotEmpty()) {
-                            val imageItems =
-                                selectedImageItems.value
-                            ScaledImagesGrid(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(bottom = 10.dp),
-                                homeScreenViewModel = homeScreenViewModel,
-                                imageItems = imageItems,
-                                onSelectedItemClicked = {
-                                    homeScreenViewModel.onSelectedItemClicked(it) {
-                                        navController.navigate(it) {
-                                            launchSingleTop = true
-                                            restoreState = true
+                            if (selectedImageItems.value.isNotEmpty()) {
+                                val imageItems =
+                                    selectedImageItems.value
+                                ScaledImagesGrid(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(bottom = 10.dp),
+                                    homeScreenViewModel = homeScreenViewModel,
+                                    imageItems = imageItems,
+                                    onSelectedItemClicked = {
+                                        homeScreenViewModel.onSelectedItemClicked(it) {
+                                            navController.navigate(it) {
+                                                launchSingleTop = true
+                                                restoreState = true
+                                            }
                                         }
                                     }
-                                }
-                            )
+                                )
+
+                            }
+
+                        }
+
+                        is ScaleState.Error -> {
 
                         }
 
                     }
-
-                    is ScaleState.Error -> {
-
-                    }
+                    val currentCompressState = compressState
+                    HandleCompressState(
+                        currentCompressState = currentCompressState,
+                        homeScreenViewModel = homeScreenViewModel,
+                        navController = navController,
+                        selectedImageItems = selectedImageItems.value,
+                    )
 
                 }
-                val currentCompressState = compressState
-                HandleCompressState(
-                    currentCompressState = currentCompressState,
-                    homeScreenViewModel = homeScreenViewModel,
-                    navController = navController,
-                    selectedImageItems = selectedImageItems.value,
+            }
+            if (isSaving.value && savingState.value.isNotEmpty()) {
+                val animatedProgress by animateFloatAsState(
+                    targetValue = savingState.value.size.toFloat(),
+                    animationSpec = tween(durationMillis = 10), // Animation duration
+                    label = "slider animation"
                 )
+                AnimatedVisibility(isSaving.value) {
+                    Column(modifier = Modifier.padding(horizontal = 6.dp).align(Alignment.BottomCenter)
+                        .background( MaterialTheme.colorScheme.background)) {
+                        Slider(
+                            value = animatedProgress,
+                            onValueChange = { },
+                            enabled = false,
+                            modifier = Modifier
+                                .padding(bottom = 8.dp),
+                            valueRange = 0f..selectedImageItems.value.size.toFloat()
+                        )
+                        Text(
+                            "Saving: ${(animatedProgress/selectedImageItems.value.size.toFloat())*100}%"
+                        )
+
+                    }
+                }
             }
         }
     }

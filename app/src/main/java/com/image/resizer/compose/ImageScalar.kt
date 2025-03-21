@@ -34,6 +34,7 @@ private fun createTempFile(context: Context): File {
     val storageDir: File? = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
     return File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir)
 }
+
 fun compressImageToTargetSize(
     context: Context,
     imageItem: ImageItem,
@@ -45,7 +46,6 @@ fun compressImageToTargetSize(
             var bitmap = loadBitmapFromUri(imageUri,context)
             bitmap?.let {it->
                 // Get EXIF orientation
-
                 // bitmap = rotateBitmap(bitmap, exifOrientation)
                 var currentFileSizeBytes = imageItem.fileSize
                 var scaleFactor = 1f
