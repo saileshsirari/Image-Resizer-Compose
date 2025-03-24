@@ -21,6 +21,7 @@ import java.util.Locale
 
 class HomeScreenViewModel(
     private val mediaHandler: MediaHandleUseCase
+
 ) : ViewModel() {
     private val _showToast = MutableStateFlow("")
     val showToast: StateFlow<String> = _showToast
@@ -50,43 +51,26 @@ class HomeScreenViewModel(
         imageItems: List<ImageItem>,
         percentOriginal: Int = TARGET_FILE_SIZE_KB
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
             _scaledImageItems.value = imageItems
+        ImageItem.percentScale = percentOriginal
             /* compress(context, imageItems, percentOriginal)
                  .collect {
                      _scaledImageItems.value = _scaledImageItems.value + it
                  }*/
-        }
     }
 
     fun scaleImages(
         imageItems: List<ImageItem>,
-        scaleParamsList: List<ScaleParams>,
-        context: Context,
+        scaleParams: ScaleParams?,
     ) {
-        onReset()
-        viewModelScope.launch(Dispatchers.IO) {
             _scaledImageItems.value = emptyList<ImageItem>()
-            imageItems.forEachIndexed { index, imageItem ->
-                imageItem.scaleParams = scaleParamsList[index]
-            }
+            ImageItem.scaleParams = scaleParams
             _scaledImageItems.value = imageItems
-
-            /*   ImageScalar().scaleImages(
-                   context = context,
-                   imageItems = imageItems,
-                   scaleParamsList = scaleParamsList
-               )
-                   .collect {
-                       _scaledImageItems.value = _scaledImageItems.value + it
-                   }*/
-        }
-
     }
 
-    fun onCropSuccess(croppedUri: Uri?) {
+    fun onCropSuccess(context: Context,croppedUri: Uri?) {
         viewModelScope.launch {
-            onReset()
+            onReset(context)
             _cropState.value = CropState.Success(CropStateData(croppedUri))
         }
     }
@@ -108,23 +92,25 @@ class HomeScreenViewModel(
         }
     }
 
-    fun onShowCompressPopup() {
+    fun onShowCompressPopup(context: Context) {
         viewModelScope.launch {
-            onReset()
+            onReset(context)
             _compressState.value = CompressState.PopupShown
         }
     }
 
 
-    fun onShowScalePopup() {
-        onReset()
+    fun onShowScalePopup(context: Context) {
+        onReset(context)
         _scaleState.value = ScaleState.ShowPopup
     }
 
-    fun onImagesScaled(context: Context, scaleParamsList: List<ScaleParams>) {
-        onReset()
-        scaleImages(selectedImageItems.value, scaleParamsList, context)
-        _scaleState.value = ScaleState.Success(ScaleStateData(scaleParamsList))
+    fun onImagesScaled(context: Context,scaleParams: ScaleParams?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            onReset(context)
+            scaleImages(selectedImageItems.value, scaleParams)
+            _scaleState.value = ScaleState.Success(ScaleStateData(scaleParams))
+        }
     }
 
     fun handlePickedImages(
@@ -142,21 +128,18 @@ class HomeScreenViewModel(
                         uri = uri,
                     )
                 }
-                onGalleryImagesSelected(selectedImageItems)
+                onGalleryImagesSelected(context,selectedImageItems)
             }
         }
     }
 
-    fun onGalleryImagesSelected(imageItems: List<ImageItem>) {
-        viewModelScope.launch(Dispatchers.IO) {
-            onReset()
+    fun onGalleryImagesSelected(context: Context,imageItems: List<ImageItem>) {
             _galleryState.value = GalleryState.Loading
 
             _galleryState.value = GalleryState.Success(GalleryStateData(emptyList()))
 
             // list.addAll(chunkedItems)
             _selectedImageItems.value = imageItems
-        }
     }
 
     fun onUndo() {
@@ -179,21 +162,28 @@ class HomeScreenViewModel(
         }
     }
 
-    fun onReset() {
+    fun onReset(context: Context) {
         _cropState.value = CropState.Idle
         _compressState.value = CompressState.Idle
         _scaleState.value = ScaleState.Idle
         _galleryState.value = GalleryState.Idle
         _scaledImageItems.value = emptyList<ImageItem>()
-        _selectedImageItems.value.forEach {
-            it.scaleParams = null
+        val selectedImageItems = _selectedImageItems.value.map { it ->
+            //    val (imageName, fileSize) = getFileNameAndSize(context, uri)
+            ImageItem(
+                context = context,
+                uri = it.uri,
+            )
         }
+        _selectedImageItems.value = selectedImageItems
+        //onGalleryImagesSelected(context,selectedImageItems)
         ImageItem.percentScale = null
+        ImageItem.scaleParams = null
     }
 
-    fun onCompressCancel() {
+    fun onCompressCancel(context: Context) {
         viewModelScope.launch {
-            onReset()
+            onReset(context)
             _compressState.value = CompressState.Idle
             _galleryState.value = GalleryState.Success(GalleryStateData(_selectedImageItems.value))
         }
@@ -201,19 +191,19 @@ class HomeScreenViewModel(
 
     fun onCompressShowImages(context: Context, size: Int) {
         viewModelScope.launch(Dispatchers.IO) {
-            onReset()
-            ImageItem.percentScale = size
+            onReset(context)
             compressImagesToTargetSize(context, selectedImageItems.value, size)
             _compressState.value = CompressState.Success(CompressStateData(size))
         }
     }
 
-    fun onShowCropPopup() {
+    fun onShowCropPopup(context: Context) {
         _cropState.value = CropState.PopupShown
     }
 
     fun dismissScalePopup() {
         _scaleState.value = ScaleState.Idle
+        _galleryState.value = GalleryState.Success(GalleryStateData(_selectedImageItems.value))
     }
 
     fun saveImagesToGallery(
@@ -237,7 +227,7 @@ class HomeScreenViewModel(
             _savingState.value = emptyList<ImageItem>()
             try {
                 currentSelectedItems.forEach {
-                    delay(100)
+                    delay(40)
                     val media = it
 
                     it.scaledUri?.let { scaledUri ->

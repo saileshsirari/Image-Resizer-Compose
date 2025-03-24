@@ -239,6 +239,7 @@ internal fun ScaledImagesGrid(
                         verticalArrangement = Arrangement.SpaceBetween
                     ) {
 
+                        imageItem.scaledUri?.toString()
                         imageItem.scaledUri?.let {
                             if (imageItem.scaledImageDimension != null) {
                                 Text("Scaled : ${imageItem.scaledImageDimension?.first ?: 0}x${imageItem.scaledImageDimension?.second ?: 0}")

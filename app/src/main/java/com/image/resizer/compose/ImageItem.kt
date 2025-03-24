@@ -12,7 +12,6 @@ data class ImageItem(
     val imageName: String? = null,// Original name of the image file
     var scaledImageDimension: Pair<Int, Int>? = null,
     var scaledFileSize: Long? = null,
-    var scaleParams: ScaleParams? = null,
     var computedUri: Uri? = null
 
 ) {
@@ -56,7 +55,7 @@ data class ImageItem(
 
     fun computeScaledUriByScale(): ImageItem {
             scaleParams?.let {
-                val imageItem = scaleImage(this, it, context)
+                val imageItem = scaleImage( it, context)
                 return imageItem
             }
         return  this
@@ -72,6 +71,7 @@ data class ImageItem(
 
     companion object {
         var percentScale: Int? = null
+        var scaleParams: ScaleParams? = null
 
     }
 

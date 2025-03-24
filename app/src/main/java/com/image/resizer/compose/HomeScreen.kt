@@ -5,7 +5,6 @@ package com.image.resizer.compose
 import android.app.Activity
 import android.app.RecoverableSecurityException
 import android.content.Intent
-import android.content.res.Resources
 import android.net.Uri
 import android.os.Build
 import android.util.Log
@@ -21,17 +20,14 @@ import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -71,7 +67,6 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -147,7 +142,6 @@ fun <T : Media> HomeScreen(
     val navigator = rememberSupportingPaneScaffoldNavigator()
 
     val context = LocalContext.current
-    var scaledParams by remember { mutableStateOf(listOf<ScaleParams>()) }
     val viewModel = ScaleImageViewModel()
     // State to control the popup's visibility
     val galleryPermissionState = rememberPermissionState(
@@ -183,7 +177,7 @@ fun <T : Media> HomeScreen(
             } else {
                 data?.getParcelableExtra<Uri>(CropScreen.CROPPED_IMAGE_BITMAP_URI)
             }
-            homeScreenViewModel.onCropSuccess(croppedBitmapUri!!)
+            homeScreenViewModel.onCropSuccess(context,croppedBitmapUri!!)
         }
 
     }
@@ -201,7 +195,7 @@ fun <T : Media> HomeScreen(
 
     )
     LaunchedEffect(scaleState, galleryState, cropState, compressState) {
-        Log.d(TAG, "HomeScreen: $scaleState $galleryState $cropState $compressState")
+        Log.d(TAG, "HomeScreen: scale =$scaleState, cropState = $cropState, compress =$compressState, gallery=$galleryState ")
 
     }
     Scaffold(
@@ -241,15 +235,15 @@ fun <T : Media> HomeScreen(
                             onItemClick = {
                                 when (it) {
                                     Compress -> {
-                                        homeScreenViewModel.onShowCompressPopup()
+                                        homeScreenViewModel.onShowCompressPopup(context)
                                     }
 
                                     Scale -> {
-                                        homeScreenViewModel.onShowScalePopup()
+                                        homeScreenViewModel.onShowScalePopup(context)
                                     }
 
                                     Crop -> {
-                                        homeScreenViewModel.onShowCropPopup()
+                                        homeScreenViewModel.onShowCropPopup(context)
                                     }
 
                                     Undo -> {
@@ -431,31 +425,17 @@ fun <T : Media> HomeScreen(
                         }
 
                         is ScaleState.ShowPopup -> {
-                            val originalDimensions =
-                                selectedImageItems.value.map { it.imageDimension ?: Pair(0, 0) }
+                            Log.d(TAG,"ScaleState.ShowPopup here")
                             // Implement image scaling logic here
-                            AnimatedVisibility(
-                                visible = true,
-                                enter = fadeIn(animationSpec = tween(durationMillis = 2000)) + expandVertically(
-                                    expandFrom = Alignment.Companion.CenterVertically,
-                                    animationSpec = tween(durationMillis = 1300)
-                                ),
-                                exit = fadeOut(animationSpec = tween(durationMillis = 2000)) + shrinkVertically(
-                                    shrinkTowards = Alignment.Companion.CenterVertically,
-                                    animationSpec = tween(durationMillis = 1300)
-                                ),
-                            ) {
-                                ScaleImagePopup(true, onDismiss = {
+                                ScaleImagePopup(onDismiss = {
                                     homeScreenViewModel.dismissScalePopup()
-                                }, originalDimensions, viewModel = viewModel, onScale = {
+                                },homeScreenViewModel= homeScreenViewModel , viewModel = viewModel, onScale = {
                                     //  it.forEachIndexed { index, it ->
                                     //  Log.d(TAG, " $it here  ${originalDimensions[index]} ")
                                     //  }
                                     // showScaledImages = true
-                                    scaledParams = it
-                                    homeScreenViewModel.onImagesScaled(context, it)
+                                    homeScreenViewModel.onImagesScaled(context,it)
                                 })
-                            }
                         }
 
                         is ScaleState.Success -> {
@@ -660,7 +640,7 @@ private fun HandleCompressState(
 
         is CompressState.PopupShown -> {
             CompressDialog(onDismiss = {
-                homeScreenViewModel.onCompressCancel()
+                homeScreenViewModel.onCompressCancel(context)
             }, onConfirm = {
                 homeScreenViewModel.onCompressShowImages(context, it)
             })

@@ -34,7 +34,7 @@ sealed class CompressState : OperationState() {
 }
 
 // Scale
-data class ScaleStateData(val scaleParamsList: List<ScaleParams>) : OperationStateData
+data class ScaleStateData(val scaleParamsList: ScaleParams?) : OperationStateData
 sealed class ScaleState : OperationState() {
     data object Idle : ScaleState()
     data object Loading : ScaleState()
