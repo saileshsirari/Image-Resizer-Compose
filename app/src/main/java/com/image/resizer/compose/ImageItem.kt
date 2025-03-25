@@ -17,31 +17,22 @@ data class ImageItem(
 ) {
 
     val scaledUri: Uri? by lazy {
-        if(percentScale!=null) {
-            val imageItem = computeScaledUriBySize()
-            this.scaledImageDimension = imageItem.scaledImageDimension
-            this.scaledFileSize = imageItem.scaledFileSize
-            this.computedUri = imageItem.computedUri
-            imageItem.computedUri
-        }else  if(scaleParams!=null){
-           val imageItem =  computeScaledUriByScale()
-            this.scaledImageDimension = imageItem.scaledImageDimension
-            this.scaledFileSize = imageItem.scaledFileSize
-            this.computedUri = imageItem.computedUri
-            imageItem.computedUri
+        val imageItem = if(percentScale!=null){
+            computeScaledUriBySize()
+        }else if(scaleParams!=null){
+            computeScaledUriByScale()
         }else {
             null
         }
+        if(imageItem!=null) {
+            this.scaledImageDimension = imageItem.scaledImageDimension
+            this.scaledFileSize = imageItem.scaledFileSize
+            this.computedUri = imageItem.computedUri
+        }
+        imageItem?.computedUri
     }
 
-    /* suspend fun loadBitmap(maxWidth: Int? =300,
-                           maxHeight: Int? =300): Bitmap?  {
-        return loadScaledBitmapFromUri( context,uri ,maxWidth,maxHeight) ?: createBitmap(100, 200)
-    }*/
-
-
     val fileSize: Long by lazy {
-
         with(context.contentResolver.openFileDescriptor(uri, "r")) {
             val size = this?.statSize ?: 0
             this?.close()

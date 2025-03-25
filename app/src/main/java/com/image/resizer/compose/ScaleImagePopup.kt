@@ -85,62 +85,40 @@ fun ScaleImagePopup(
     }
 
     AlertDialog(
-        onDismissRequest = { },
+        onDismissRequest = { onDismiss() }, // Dismiss on outside click
         title = { Text("Scale Image") },
         modifier = modifier,
         text = {
-
             Column(
                 modifier = Modifier
                     .wrapContentHeight()
                     .fillMaxWidth()
             ) {
-                TabRow(selectedTabIndex = tabIndex) {
-                    tabs.forEachIndexed { index, title ->
-                        Tab(
-                            text = { Text(title) },
-                            selected = tabIndex == index,
-                            onClick = {
-                                tabIndex = index
-                                viewModel.changeMode(if (index == 0) "custom" else "percentage")
-                                hasPredefinedSelection = false
-                            }
-                        )
-                    }
-                }
-                HorizontalDivider()
-                // Use a fixed height container
-                Column(
-                    modifier = Modifier
-                        .height(fixedContentHeight) // Fixed height!
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    when (tabIndex) {
-                        0 -> CustomScaleTabContent(
-                            viewModel,
-                            onPredefinedSelect = { hasPredefinedSelection = it })
-
-                        1 -> PercentageScaleTabContent(viewModel)
-                    }
-                }
+                // Removed TabRow and HorizontalDivider
+                // Added CustomScaleTabContent directly
+                CustomScaleTabContent(
+                    viewModel,
+                    onPredefinedSelect = { hasPredefinedSelection = it },
+                )
 
             }
         },
         confirmButton = {
-            Button(onClick = {
-                val scaleParam  =  viewModel.onScaleForList()
-                onScale(scaleParam)
-            }, enabled = isButtonEnabled) {
+            Button(
+                onClick = {
+                    val scaleParam  =  viewModel.onScaleForList()
+                    onScale(scaleParam)
+                },
+                enabled = isButtonEnabled
+            ) {
                 Text("Apply")
             }
         },
         dismissButton = {
             Button(onClick = onDismiss) {
+                Text("Cancel")
             }
-        },
-//            properties = PopupProperties(focusable = true)
+        }
     )
 
 }

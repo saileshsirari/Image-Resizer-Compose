@@ -124,9 +124,7 @@ fun ImageItem.scaleImage(
             scaledImageDimension = Pair(newWidth, scaledHeight)
         }
     } else if (scaledWidth != null && scaledHeight != null) {
-        val aspect = width.toFloat() / height.toFloat()
-        val newHeight = (scaledWidth / aspect).toInt()
-        scaledImageDimension = Pair(scaledWidth, newHeight)
+        scaledImageDimension = Pair(scaledWidth, scaledHeight)
     }
 
     scaledImageDimension?.let { scaledImageDimension ->
