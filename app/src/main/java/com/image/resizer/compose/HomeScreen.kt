@@ -43,7 +43,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -304,6 +303,7 @@ fun <T : Media> HomeScreen(
         },
 
         floatingActionButton = {
+
             AnimatedVisibility(visible = albumsState.value.albums.isNotEmpty()) {
                 // Custom position for the FloatingActionButton
                 Box(modifier = Modifier.fillMaxSize()) {
@@ -344,6 +344,12 @@ fun <T : Media> HomeScreen(
             }
         }
     ) { innerPadding ->
+        LaunchedEffect(galleryPermissionState.status.isGranted) {
+            if (!galleryPermissionState.status.isGranted) {
+                showRationale = true
+            }
+        }
+
         Box(
             modifier = Modifier.Companion
                 .fillMaxSize()) {
@@ -385,25 +391,7 @@ fun <T : Media> HomeScreen(
 
                         is CropState.Success -> {
                             currentCropState.data.croppedImageUri?.let {
-                                CroppedImageComponent(currentCropState.data.croppedImageUri) {
-                                    getBitmapFromUri(
-                                        currentCropState.data.croppedImageUri,
-                                        context
-                                    )?.let {
-                                        saveImagesToGallery(
-                                            context,
-                                            listOf(
-                                                ImageItem(
-                                                    context = context,
-                                                    uri = currentCropState.data.croppedImageUri,
-                                                    computedUri = currentCropState.data.croppedImageUri,
-                                                )
-                                            )
-                                        )
-                                        homeScreenViewModel.showToast()
-                                        homeScreenViewModel.showSelectedImages()
-                                    }
-                                }
+                                CroppedImageComponent(currentCropState.data.croppedImageUri)
                             }
                         }
 
@@ -520,7 +508,6 @@ fun <T : Media> HomeScreen(
 
     }
     if (showDialog) {
-
 
     }
 
@@ -715,7 +702,7 @@ fun CompressToKbImageScreen(
 
 
 @Composable
-fun CroppedImageComponent(uri: Uri, onSaveClicked: () -> Unit) {
+fun CroppedImageComponent(uri: Uri) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center // Center content in the Box
@@ -732,16 +719,6 @@ fun CroppedImageComponent(uri: Uri, onSaveClicked: () -> Unit) {
                 contentDescription = null,
                 modifier = Modifier.Companion.weight(4f)
             )
-            Spacer(modifier = Modifier.weight(1f))
-            Column(modifier = Modifier.weight(1f)) {
-                Button(
-                    onClick = {
-                        onSaveClicked()
-                    }
-                ) {
-                    Text(text = "Save Cropped Image")
-                }
-            }
         }
 
     }

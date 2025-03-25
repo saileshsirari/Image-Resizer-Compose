@@ -43,7 +43,7 @@ class HomeScreenViewModel(
     val scaledImageItems = _scaledImageItems.asStateFlow()
     private var _selectedImageItems = MutableStateFlow<List<ImageItem>>(emptyList())
     var selectedImageItems = _selectedImageItems.asStateFlow()
-    private  var _savingState =  MutableStateFlow<List<ImageItem>>(emptyList())
+    private var _savingState = MutableStateFlow<List<ImageItem>>(emptyList())
     var savingState = _savingState.asStateFlow()
 
     fun compressImagesToTargetSize(
@@ -51,26 +51,32 @@ class HomeScreenViewModel(
         imageItems: List<ImageItem>,
         percentOriginal: Int = TARGET_FILE_SIZE_KB
     ) {
-            _scaledImageItems.value = imageItems
+        _scaledImageItems.value = imageItems
         ImageItem.percentScale = percentOriginal
-            /* compress(context, imageItems, percentOriginal)
-                 .collect {
-                     _scaledImageItems.value = _scaledImageItems.value + it
-                 }*/
+        /* compress(context, imageItems, percentOriginal)
+             .collect {
+                 _scaledImageItems.value = _scaledImageItems.value + it
+             }*/
     }
 
     fun scaleImages(
         imageItems: List<ImageItem>,
         scaleParams: ScaleParams?,
     ) {
-            _scaledImageItems.value = emptyList<ImageItem>()
-            ImageItem.scaleParams = scaleParams
-            _scaledImageItems.value = imageItems
+        _scaledImageItems.value = emptyList<ImageItem>()
+        ImageItem.scaleParams = scaleParams
+        _scaledImageItems.value = imageItems
     }
 
-    fun onCropSuccess(context: Context,croppedUri: Uri?) {
+    fun onCropSuccess(context: Context, croppedUri: Uri?) {
         viewModelScope.launch {
             onReset(context)
+            _scaledImageItems.value = listOf(
+                ImageItem(
+                    context = context, uri = _selectedImageItems.value.first().uri,
+                    computedUri = croppedUri
+                )
+            )
             _cropState.value = CropState.Success(CropStateData(croppedUri))
         }
     }
@@ -105,7 +111,7 @@ class HomeScreenViewModel(
         _scaleState.value = ScaleState.ShowPopup
     }
 
-    fun onImagesScaled(context: Context,scaleParams: ScaleParams?) {
+    fun onImagesScaled(context: Context, scaleParams: ScaleParams?) {
         viewModelScope.launch(Dispatchers.IO) {
             onReset(context)
             scaleImages(selectedImageItems.value, scaleParams)
@@ -128,18 +134,22 @@ class HomeScreenViewModel(
                         uri = uri,
                     )
                 }
-                onGalleryImagesSelected(context,selectedImageItems)
+                onGalleryImagesSelected(context, selectedImageItems)
             }
         }
     }
 
-    fun onGalleryImagesSelected(context: Context,imageItems: List<ImageItem>) {
-            _galleryState.value = GalleryState.Loading
+    fun onGalleryImagesSelected(context: Context, imageItems: List<ImageItem>) {
+        _cropState.value = CropState.Idle
+        _compressState.value = CompressState.Idle
+        _scaleState.value = ScaleState.Idle
+        _galleryState.value = GalleryState.Loading
 
-            _galleryState.value = GalleryState.Success(GalleryStateData(emptyList()))
+        _galleryState.value = GalleryState.Success(GalleryStateData(emptyList()))
 
-            // list.addAll(chunkedItems)
-            _selectedImageItems.value = imageItems
+
+        // list.addAll(chunkedItems)
+        _selectedImageItems.value = imageItems
     }
 
     fun onUndo() {
@@ -215,6 +225,7 @@ class HomeScreenViewModel(
 
     }
 
+
     fun saveCopy(
         context: Context,
         saveFormat: SaveFormat = SaveFormat.JPEG,
@@ -251,7 +262,7 @@ class HomeScreenViewModel(
                             ) {
                                 throw Exception("Unable to save")
                             }
-                            _savingState.value =_savingState.value+ it
+                            _savingState.value = _savingState.value + it
                         }
                     }
                 }

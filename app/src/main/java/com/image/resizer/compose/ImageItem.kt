@@ -12,24 +12,22 @@ data class ImageItem(
     val imageName: String? = null,// Original name of the image file
     var scaledImageDimension: Pair<Int, Int>? = null,
     var scaledFileSize: Long? = null,
-    var computedUri: Uri? = null
+    var computedUri: Uri? = null,
 
 ) {
 
     val scaledUri: Uri? by lazy {
-        val imageItem = if(percentScale!=null){
+        val imageItem = if (percentScale != null) {
             computeScaledUriBySize()
-        }else if(scaleParams!=null){
+        } else if (scaleParams != null) {
             computeScaledUriByScale()
-        }else {
-            null
+        } else {
+            this
         }
-        if(imageItem!=null) {
-            this.scaledImageDimension = imageItem.scaledImageDimension
-            this.scaledFileSize = imageItem.scaledFileSize
-            this.computedUri = imageItem.computedUri
-        }
-        imageItem?.computedUri
+        this.scaledImageDimension = imageItem.scaledImageDimension
+        this.scaledFileSize = imageItem.scaledFileSize
+        this.computedUri = imageItem.computedUri
+        imageItem.computedUri
     }
 
     val fileSize: Long by lazy {
@@ -45,19 +43,19 @@ data class ImageItem(
     }
 
     fun computeScaledUriByScale(): ImageItem {
-            scaleParams?.let {
-                val imageItem = scaleImage( it, context)
-                return imageItem
-            }
-        return  this
+        scaleParams?.let {
+            val imageItem = scaleImage(it, context)
+            return imageItem
+        }
+        return this
     }
 
     fun computeScaledUriBySize(): ImageItem {
-            percentScale?.let {
-                val imageItem = compressImageToTargetSize(context, this, it)
-                return imageItem
-            }
-        return  this
+        percentScale?.let {
+            val imageItem = compressImageToTargetSize(context, this, it)
+            return imageItem
+        }
+        return this
     }
 
     companion object {

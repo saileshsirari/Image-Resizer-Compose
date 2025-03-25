@@ -116,10 +116,10 @@ fun GalleryImagesComponent(selectedImageItems: StateFlow<List<ImageItem>>) {
                 verticalArrangement = Arrangement.SpaceAround
             ) {
 
-                imageItem.imageDimension?.let {
+                imageItem.imageDimension.let {
                     Text(" ${it.first}x${it.second}")
                 }
-                imageItem.fileSize?.let {
+                imageItem.fileSize.let {
                     Text("${it / 1024} kb", maxLines = 1)
                 }
 
@@ -133,7 +133,6 @@ fun GalleryImagesComponent(selectedImageItems: StateFlow<List<ImageItem>>) {
                         .scale(coil.size.Scale.FIT)
                         .size(Size(300,300))
                         .crossfade(true)
-                        .diskCacheKey(imageItem.fileSize.toString()+ imageItem.imageDimension?.first)
                         .build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
