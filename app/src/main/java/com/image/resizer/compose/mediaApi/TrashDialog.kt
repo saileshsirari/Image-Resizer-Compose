@@ -60,7 +60,7 @@ import androidx.compose.ui.unit.dp
 import com.github.panpf.sketch.AsyncImage
 import com.github.panpf.sketch.request.ComposableImageRequest
 import com.github.panpf.sketch.resize.Scale
-import com.image.resizer.compose.R
+import apps.sai.com.imageresizer.R
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.enterAnimation
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.exitAnimation

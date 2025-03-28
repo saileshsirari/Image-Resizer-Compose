@@ -35,7 +35,7 @@ import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import androidx.core.net.toFile
 import androidx.exifinterface.media.ExifInterface
-import com.image.resizer.compose.BuildConfig
+import apps.sai.com.imageresizer.BuildConfig
 import com.image.resizer.compose.mediaApi.model.Media
 import java.io.IOException
 

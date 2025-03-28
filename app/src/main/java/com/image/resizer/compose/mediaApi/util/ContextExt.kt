@@ -52,8 +52,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import com.image.resizer.compose.BuildConfig
-import com.image.resizer.compose.R
+import apps.sai.com.imageresizer.BuildConfig
+import apps.sai.com.imageresizer.R
 import com.image.resizer.compose.mediaApi.model.Media
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

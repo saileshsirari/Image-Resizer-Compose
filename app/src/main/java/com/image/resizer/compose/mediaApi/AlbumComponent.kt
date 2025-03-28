@@ -39,7 +39,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.panpf.sketch.AsyncImage
-import com.image.resizer.compose.R
+import apps.sai.com.imageresizer.R
 import com.image.resizer.compose.mediaApi.model.Album
 import com.image.resizer.compose.mediaApi.util.formatSize
 import com.image.resizer.compose.mediaApi.util.rememberFeedbackManager

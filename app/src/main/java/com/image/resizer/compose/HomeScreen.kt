@@ -84,8 +84,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import apps.sai.com.imageresizer.R
 import coil.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.image.resizer.compose.ImageReplacer.deleteSelectedImages
@@ -344,12 +346,8 @@ fun <T : Media> HomeScreen(
             }
         }
     ) { innerPadding ->
-        LaunchedEffect(galleryPermissionState.status.isGranted) {
-            if (!galleryPermissionState.status.isGranted) {
-                showRationale = true
-            }
-        }
 
+        showRationale = !galleryPermissionState.status.isGranted
         Box(
             modifier = Modifier.Companion
                 .fillMaxSize()) {
@@ -417,7 +415,7 @@ fun <T : Media> HomeScreen(
                             // Implement image scaling logic here
                                 ScaleImagePopup(onDismiss = {
                                     homeScreenViewModel.dismissScalePopup()
-                                },homeScreenViewModel= homeScreenViewModel , viewModel = viewModel, onScale = {
+                                }, viewModel = viewModel, onScale = {
                                     //  it.forEachIndexed { index, it ->
                                     //  Log.d(TAG, " $it here  ${originalDimensions[index]} ")
                                     //  }
@@ -503,44 +501,13 @@ fun <T : Media> HomeScreen(
     }
 
 
-    if (saveRequested) {
-
-
-    }
-    if (showDialog) {
-
-    }
-
-    if (showRationale) {
-        AlertDialog(
-            onDismissRequest = {
-                showRationale = false
-            },
-            title = { Text("Permission Required") },
-            text = { Text("The app needs permission to access your gallery.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showRationale = false
-                        galleryPermissionState.launchPermissionRequest()
-                    }
-                ) {
-                    Text("Grant Permission")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showRationale = false
-                    }
-                ) {
-                    Text("Dismiss")
-                }
-            }
-        )
+    if(showRationale) {
+        showRationale =  StoragePermissionDialog( galleryPermissionState)
     }
 
 }
+
+
 
 
 @Composable

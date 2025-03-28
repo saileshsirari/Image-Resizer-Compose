@@ -13,7 +13,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.res.stringResource
-import com.image.resizer.compose.R
+import apps.sai.com.imageresizer.R
 
 @Composable
 fun NavigationButton(

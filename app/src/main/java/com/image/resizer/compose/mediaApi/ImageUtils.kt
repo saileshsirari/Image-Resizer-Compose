@@ -33,10 +33,10 @@ import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import androidx.core.net.toFile
 import androidx.exifinterface.media.ExifInterface
+import apps.sai.com.imageresizer.BuildConfig
 import coil.ImageLoader
 import coil.request.ImageRequest
 import coil.size.Size
-import com.image.resizer.compose.BuildConfig
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.util.getUri
 import java.io.File

@@ -29,7 +29,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.image.resizer.compose.HomeScreenViewModel
-import com.image.resizer.compose.R
+import apps.sai.com.imageresizer.R
 import com.image.resizer.compose.Screen
 import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media

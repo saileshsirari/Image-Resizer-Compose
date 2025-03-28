@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "943162829431",
+    "firebase_url": "https://image-resizer-22b47.firebaseio.com",
+    "project_id": "image-resizer-22b47",
+    "storage_bucket": "image-resizer-22b47.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:943162829431:android:c44e4cc4d57f88c6",
+        "android_client_info": {
+          "package_name": "apps.sai.com.imageresizer.demo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "943162829431-2fs4khrlttnnkl0bvimiuq0a273j3npj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAONuESHUjwiTjjTT3RNVpXMXE5Up5T3a8"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

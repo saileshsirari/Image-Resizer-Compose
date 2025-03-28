@@ -12,7 +12,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import com.image.resizer.compose.R
+import apps.sai.com.imageresizer.R
 
 
 private val LightColors = lightColorScheme(

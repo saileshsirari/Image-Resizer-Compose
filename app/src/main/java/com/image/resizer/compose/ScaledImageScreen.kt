@@ -56,6 +56,7 @@ import java.io.File
 import java.io.FileOutputStream
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import apps.sai.com.imageresizer.R
 import coil.request.ImageRequest
 import coil.size.Size
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase

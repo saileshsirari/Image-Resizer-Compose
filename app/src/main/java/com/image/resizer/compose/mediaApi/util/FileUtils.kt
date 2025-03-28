@@ -15,7 +15,7 @@ import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.text.TextUtils
 import android.util.Log
-import com.image.resizer.compose.R
+import apps.sai.com.imageresizer.R
 import java.io.File
 import java.io.FileOutputStream
 import java.math.RoundingMode

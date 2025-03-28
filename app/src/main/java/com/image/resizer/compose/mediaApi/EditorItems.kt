@@ -10,7 +10,7 @@ import androidx.compose.material.icons.outlined.Filter
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import com.image.resizer.compose.R
+import apps.sai.com.imageresizer.R
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.Serializable
