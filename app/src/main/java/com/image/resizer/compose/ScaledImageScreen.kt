@@ -177,7 +177,7 @@ internal fun ScaledImagesGrid(
             horizontalArrangement = Arrangement.spacedBy(5.dp),
             modifier = modifier
         ) {
-            items(scaledImages, key = { item -> item.uri.hashCode() }) { imageItem ->
+            items(scaledImages, key = { item -> item.key.toString() }) { imageItem ->
                 Row(
                     modifier = Modifier
                         .clickable(onClick = {

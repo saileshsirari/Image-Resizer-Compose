@@ -35,8 +35,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,7 +45,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import androidx.navigation.Navigation
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -64,8 +61,6 @@ import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.MediaRepositoryImpl
 import com.image.resizer.compose.mediaApi.MediaViewModel
 import com.image.resizer.compose.mediaApi.TimelineScreen
-import com.image.resizer.compose.mediaApi.model.Media.UriMedia
-import com.image.resizer.compose.mediaApi.model.MediaState
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.navigateInAnimation
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.navigateUpAnimation
 import com.image.resizer.compose.mediaApi.util.Constants.CUSTOM_FOLDER_NAME
@@ -295,13 +290,13 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
                         isScrolling = mutableStateOf(false),
                         sharedTransitionScope = this@SharedTransitionLayout,
                         animatedContentScope = this,
-                        onCompressClick = {
+                        onOpenClick = {
                             homeScreenViewModel.handlePickedImages(it, context) {
 
                             }
                         },
                         onMediaClick = {
-                            homeScreenViewModel.handlePickedImages(listOf(it.uri), context) {
+                            homeScreenViewModel.handlePickedImages(listOf(it.toImageItem(context)), context) {
 
 
                             }

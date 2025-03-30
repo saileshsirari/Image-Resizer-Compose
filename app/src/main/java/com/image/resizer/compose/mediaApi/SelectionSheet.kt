@@ -31,11 +31,8 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.DriveFileMove
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.CopyAll
 import androidx.compose.material.icons.outlined.DeleteOutline
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.FileOpen
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.IconButton
@@ -67,9 +64,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import apps.sai.com.imageresizer.R
+import com.image.resizer.compose.ImageItem
 import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.util.getUri
+import com.image.resizer.compose.toImageItem
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
@@ -81,7 +80,7 @@ fun <T: Media> SelectionSheet(
     albumsState: State<AlbumState>,
     handler: MediaHandleUseCase,
     activity: Activity,
-    onCompressClick:(List<Uri>)-> Unit
+    onOpenClick:(List<ImageItem>)-> Unit
 
 ) {
     fun clearSelection() {
@@ -182,8 +181,11 @@ fun <T: Media> SelectionSheet(
                     title = stringResource(R.string.open)
                 ) {
                     scope.launch {
-                        val uriList = selectedMedia.map{ it }
-                        onCompressClick(uriList.map { it.getUri() })
+                        onOpenClick(selectedMedia.mapNotNull {
+                            (it as? Media.UriMedia)?.toImageItem(
+                                context
+                            )
+                        })
                     }
 
                 }

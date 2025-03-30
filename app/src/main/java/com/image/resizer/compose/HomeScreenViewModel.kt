@@ -9,12 +9,15 @@ import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.SaveFormat
 import com.image.resizer.compose.mediaApi.loadBitmapFromUri
 import com.image.resizer.compose.mediaApi.util.Constants.CUSTOM_FOLDER_NAME
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -120,21 +123,15 @@ class HomeScreenViewModel(
     }
 
     fun handlePickedImages(
-        uris: List<@JvmSuppressWildcards Uri>,
+        imageItems: List<@JvmSuppressWildcards ImageItem>,
         context: Context,
         callBack: () -> Unit
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            if (uris.isNotEmpty()) {
+            if (imageItems.isNotEmpty()) {
                 callBack()
-                val selectedImageItems = uris.map { uri ->
-                    //    val (imageName, fileSize) = getFileNameAndSize(context, uri)
-                    ImageItem(
-                        context = context,
-                        uri = uri,
-                    )
-                }
-                onGalleryImagesSelected(context, selectedImageItems)
+
+                onGalleryImagesSelected(context, imageItems)
             }
         }
     }
@@ -183,6 +180,8 @@ class HomeScreenViewModel(
             ImageItem(
                 context = context,
                 uri = it.uri,
+                imageName = it.imageName,
+                size = it.size
             )
         }
         _selectedImageItems.value = selectedImageItems
@@ -221,10 +220,7 @@ class HomeScreenViewModel(
         customDirectoryName: String = "ImageResizer"
     ) {
         _isSaving.value = true
-
-
     }
-
 
     fun saveCopy(
         context: Context,
@@ -232,48 +228,63 @@ class HomeScreenViewModel(
         onSuccess: () -> Unit = {},
         onFail: () -> Unit = {}
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            _isSaving.value = true
-            val currentSelectedItems = _scaledImageItems.value
-            _savingState.value = emptyList<ImageItem>()
+        val exceptionHandler = CoroutineExceptionHandler { _,e-> println("[ERROR] ${e.message}") }
+
+        viewModelScope.launch(Dispatchers.IO + exceptionHandler) {
+
             try {
+
+                _isSaving.value = true
+                val mutex = Mutex()
+                val currentSelectedItems = _scaledImageItems.value
+                _savingState.value = emptyList<ImageItem>()
                 currentSelectedItems.forEach {
-                    delay(40)
-                    val media = it
+                    launch {
+                        delay(4)
+                        val media = it
+                        it.scaledUri?.let { scaledUri ->
+                            mutex.withLock {
+                                val currentBitmap = loadBitmapFromUri(scaledUri, context)
+                                currentBitmap?.let { bitmap ->
 
-                    it.scaledUri?.let { scaledUri ->
-                        val currentBitmap = loadBitmapFromUri(scaledUri, context)
-                        currentBitmap?.let { bitmap ->
+                                    val displayName =
+                                        media.imageName ?: "imageResizer_${
+                                           it.key
+                                        }.jpg"
 
-                            val displayName =
-                                media.imageName ?: "imageResizer_${
-                                    SimpleDateFormat(
-                                        "MM_dd_HH_mm_ss",
-                                        Locale.getDefault()
-                                    ).format(Date())
-                                }.jpg"
-                            if (mediaHandler.saveImage(
-                                    bitmap = bitmap,
-                                    format = saveFormat.format,
-                                    relativePath = Environment.DIRECTORY_PICTURES + "/" + CUSTOM_FOLDER_NAME,
-                                    displayName = media.imageName ?: displayName,
-                                    mimeType = saveFormat.mimeType
-                                ) == null
-                            ) {
-                                throw Exception("Unable to save")
+                                    if (mediaHandler.saveImage(
+                                            bitmap = bitmap,
+                                            format = saveFormat.format,
+                                            relativePath = Environment.DIRECTORY_PICTURES + "/" + CUSTOM_FOLDER_NAME,
+                                            displayName = media.imageName ?: displayName,
+                                            mimeType = saveFormat.mimeType
+                                        ) == null
+                                    ) {
+                                        _isSaving.value = false
+                                        onFail().also { _isSaving.value = false }
+                                        throw Exception("Unable to save")
+                                    }
+//                                _savingState.update { _savingState.value+it }
+//                                    println(_savingState.value.size.toString() + " size here")
+
+                                    _savingState.value = _savingState.value + it
+                                    if(_savingState.value.size >=currentSelectedItems.size){
+                                        _isSaving.value = false
+                                        onSuccess()
+                                    }
+                                }
                             }
-                            _savingState.value = _savingState.value + it
                         }
                     }
                 }
-            } catch (_: Exception) {
+            }catch (_: Exception) {
                 _isSaving.value = false
                 onFail().also { _isSaving.value = false }
                 return@launch
 
             }
-            _isSaving.value = false
-            onSuccess()
+         //   _isSaving.value = false
+
         }
     }
 
@@ -307,7 +318,7 @@ class HomeScreenViewModel(
             } catch (e: Exception) {
                 onFail().also { _isSaving.value = false }
             }
-            onSuccess().also { _isSaving.value = false }
+//            onSuccess().also { _isSaving.value = false }
         }
     }
 

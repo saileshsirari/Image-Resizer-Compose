@@ -14,3 +14,6 @@
 .cxx
 local.properties
 /.kotlin
+app/demo/release/baselineProfiles/0/app-demo-release.dm
+/app/demo/release
+app/demo/release/baselineProfiles/0/app-demo-release.dm

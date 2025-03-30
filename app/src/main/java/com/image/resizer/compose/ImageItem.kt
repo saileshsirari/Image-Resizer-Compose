@@ -2,7 +2,9 @@ package com.image.resizer.compose
 
 import android.content.Context
 import android.net.Uri
+import com.image.resizer.compose.mediaApi.model.Media.UriMedia
 import java.util.UUID
+import kotlin.coroutines.EmptyCoroutineContext.get
 
 
 data class ImageItem(
@@ -13,6 +15,7 @@ data class ImageItem(
     var scaledImageDimension: Pair<Int, Int>? = null,
     var scaledFileSize: Long? = null,
     var computedUri: Uri? = null,
+    var size: Long? = null
 
 ) {
 
@@ -31,6 +34,7 @@ data class ImageItem(
     }
 
     val fileSize: Long by lazy {
+        if(size!=null) return@lazy size!!
         with(context.contentResolver.openFileDescriptor(uri, "r")) {
             val size = this?.statSize ?: 0
             this?.close()
@@ -64,5 +68,13 @@ data class ImageItem(
 
     }
 
+}
+fun UriMedia.toImageItem(context: Context): ImageItem{
+    return ImageItem(
+        context = context,
+        key = key,
+        uri = uri,
+        imageName = label,
+        size = size)
 }
 

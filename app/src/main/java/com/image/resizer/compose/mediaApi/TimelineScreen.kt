@@ -19,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.res.stringResource
 import apps.sai.com.imageresizer.R
+import com.image.resizer.compose.ImageItem
 import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.model.MediaState
@@ -47,7 +48,7 @@ inline fun <reified T: Media> TimelineScreen(
     animatedContentScope: AnimatedContentScope,
     activity: Activity,
     noinline onMediaClick: @DisallowComposableCalls (media: T) -> Unit = {},
-    noinline onCompressClick:(List<Uri>)-> Unit
+    noinline onOpenClick:(List<ImageItem>)-> Unit
 ) {
     MediaScreen(
         paddingValues = paddingValues,
@@ -64,7 +65,7 @@ inline fun <reified T: Media> TimelineScreen(
         showMonthlyHeader = true,
         enableStickyHeaders = enableStickyHeaders,
         allowNavBar = allowNavBar,
-        onCompressClick = onCompressClick,
+        onOpenClick = onOpenClick,
         activity = activity,
         navActionsContent = { expandedDropDown: MutableState<Boolean>, _ ->
             TimelineNavActions(

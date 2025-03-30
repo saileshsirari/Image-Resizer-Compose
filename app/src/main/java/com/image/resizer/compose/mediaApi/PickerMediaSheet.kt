@@ -1,7 +1,6 @@
 package com.image.resizer.compose.mediaApi
 
 import android.app.Activity
-import android.net.http.SslCertificate.restoreState
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.layout.PaddingValues
@@ -22,7 +21,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.SecureFlagPolicy
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -34,6 +32,7 @@ import com.image.resizer.compose.Screen
 import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.model.MediaState
+import com.image.resizer.compose.toImageItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -167,7 +166,7 @@ fun <T : Media> PickerMediaSheet(
                             isScrolling = mutableStateOf(false),
                             sharedTransitionScope = this@SharedTransitionLayout,
                             animatedContentScope = this,
-                            onCompressClick = {
+                            onOpenClick = {
                                 homeScreenViewModel.handlePickedImages(it, context) {
                                     scope.launch (Dispatchers.Main){
                                         sheetState.hide()
@@ -176,7 +175,7 @@ fun <T : Media> PickerMediaSheet(
                                 }
                             },
                             onMediaClick = {
-                                homeScreenViewModel.handlePickedImages(listOf(it.uri), context) {
+                                homeScreenViewModel.handlePickedImages(listOf(it.toImageItem(context)), context) {
                                         scope.launch (Dispatchers.Main){
                                             sheetState.hide()
                                             navController.popBackStack(Screen.AlbumsScreen.route,false)
