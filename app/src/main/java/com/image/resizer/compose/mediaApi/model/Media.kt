@@ -9,8 +9,10 @@ import android.net.Uri
 import android.os.Parcelable
 import com.image.resizer.compose.mediaApi.util.UriSerializer
 import com.image.resizer.compose.mediaApi.util.getUri
+import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.Serializable
+import java.util.UUID
 
 
 @Serializable
@@ -41,8 +43,12 @@ sealed class Media : Parcelable, java.io.Serializable {
         return "$id, $path, $fullDate, $mimeType, $definedTimestamp"
     }
 
-    val key: String
-        get() = "{$id, ${try { getUri() } catch (_: Exception) { path} }, $definedTimestamp}"
+    @IgnoredOnParcel
+    val key: String by lazy {
+      "{$id, ${try {
+          UUID.randomUUID().toString()
+      } catch (_: Exception) { path} }, $definedTimestamp}"
+    }
 
     val idLessKey: String
         get() = "{${try { getUri() } catch (_: Exception) { path} }, $definedTimestamp}"

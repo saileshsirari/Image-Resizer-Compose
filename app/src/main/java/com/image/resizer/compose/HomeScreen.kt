@@ -465,13 +465,13 @@ fun <T : Media> HomeScreen(
 
                 }
             }
-            if (isSaving.value && savingState.value.isNotEmpty()) {
-                val animatedProgress by animateFloatAsState(
-                    targetValue = savingState.value.size.toFloat(),
-                    animationSpec = tween(durationMillis = 10), // Animation duration
-                    label = "slider animation"
-                )
-                AnimatedVisibility(isSaving.value) {
+
+                AnimatedVisibility(isSaving.value && savingState.value.isNotEmpty()) {
+                    val animatedProgress by animateFloatAsState(
+                        targetValue = savingState.value.size.toFloat(),
+                        animationSpec = tween(durationMillis = 10), // Animation duration
+                        label = "slider animation"
+                    )
                     Column(modifier = Modifier.padding(horizontal = 6.dp).align(Alignment.BottomCenter)
                         .background( MaterialTheme.colorScheme.background)) {
                         Slider(
@@ -486,7 +486,6 @@ fun <T : Media> HomeScreen(
                             "Saving: ${(animatedProgress/selectedImageItems.value.size.toFloat())*100}%"
                         )
 
-                    }
                 }
             }
         }

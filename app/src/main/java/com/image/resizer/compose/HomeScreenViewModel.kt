@@ -1,26 +1,37 @@
 package com.image.resizer.compose
 
+import android.R.attr.bitmap
 import android.content.Context
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Environment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.image.resizer.compose.mediaApi.EditorDestination
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.SaveFormat
 import com.image.resizer.compose.mediaApi.loadBitmapFromUri
 import com.image.resizer.compose.mediaApi.util.Constants.CUSTOM_FOLDER_NAME
 import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.yield
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
 
 class HomeScreenViewModel(
     private val mediaHandler: MediaHandleUseCase
@@ -56,19 +67,29 @@ class HomeScreenViewModel(
     ) {
         _scaledImageItems.value = imageItems
         ImageItem.percentScale = percentOriginal
+        processSomeImages(imageItems)
         /* compress(context, imageItems, percentOriginal)
              .collect {
                  _scaledImageItems.value = _scaledImageItems.value + it
              }*/
     }
 
+    private fun processSomeImages(imageItems: List<ImageItem>, operation: String = "compress",size:Int = 200) {
+        imageItems.take(size).forEachIndexed { index, it ->
+            viewModelScope.launch(Dispatchers.Default) {
+                println("$operation $index " + it.scaledUri.toString().take(10))
+            }
+        }
+    }
+
     fun scaleImages(
         imageItems: List<ImageItem>,
         scaleParams: ScaleParams?,
     ) {
-        _scaledImageItems.value = emptyList<ImageItem>()
-        ImageItem.scaleParams = scaleParams
-        _scaledImageItems.value = imageItems
+           _scaledImageItems.value = emptyList<ImageItem>()
+           ImageItem.scaleParams = scaleParams
+           _scaledImageItems.value = imageItems
+            processSomeImages(imageItems,"scaleImages")
     }
 
     fun onCropSuccess(context: Context, croppedUri: Uri?) {
@@ -228,62 +249,73 @@ class HomeScreenViewModel(
         onSuccess: () -> Unit = {},
         onFail: () -> Unit = {}
     ) {
-        val exceptionHandler = CoroutineExceptionHandler { _,e-> println("[ERROR] ${e.message}") }
+        val exceptionHandler = CoroutineExceptionHandler { _, e ->
+            println("[ERROR] ${e.message}")
+        }
 
-        viewModelScope.launch(Dispatchers.IO + exceptionHandler) {
+        viewModelScope.launch(Dispatchers.Default + exceptionHandler) {
 
             try {
-
                 _isSaving.value = true
                 val mutex = Mutex()
                 val currentSelectedItems = _scaledImageItems.value
                 _savingState.value = emptyList<ImageItem>()
-                currentSelectedItems.forEach {
-                    launch {
-                        delay(4)
-                        val media = it
-                        it.scaledUri?.let { scaledUri ->
-                            mutex.withLock {
-                                val currentBitmap = loadBitmapFromUri(scaledUri, context)
-                                currentBitmap?.let { bitmap ->
+                val processed = mutableListOf<ImageItem>()
+                currentSelectedItems.onEachIndexed{ index,it ->
+                    val media = it
+                    it.scaledUri?.let { scaledUri ->
+                        //   mutex.withLock {
+                        launch(exceptionHandler + Dispatchers.Default) {
+                            println("Executing ${media.imageName?.take(20)}")
+                            yield()
+                            val bitmap = loadBitmapFromUri(scaledUri, context)
+                            if (bitmap == null) {
+                                _isSaving.value = false
+                                onFail().also {
+                                    _isSaving.value = false
+                                }
+                                throw Exception("Unable to save")
+                            }
+                            launch {
+                                yield()
+                                if (mediaHandler.saveImage(
+                                        bitmap = bitmap,
+                                        format = saveFormat.format,
+                                        relativePath = Environment.DIRECTORY_PICTURES + "/" + CUSTOM_FOLDER_NAME,
+                                        displayName = media.imageName ?: "imageResizer_${
+                                            media.key
+                                        }.jpg",
+                                        mimeType = saveFormat.mimeType
+                                    ) == null
+                                ) {
+                                    _isSaving.value = false
+                                    onFail().also { _isSaving.value = false }
+                                    throw Exception("Unable to save")
+                                }else{
+                                    processed.add(media)
+                                    println(_savingState.value.size.toString() + " size here")
 
-                                    val displayName =
-                                        media.imageName ?: "imageResizer_${
-                                           it.key
-                                        }.jpg"
-
-                                    if (mediaHandler.saveImage(
-                                            bitmap = bitmap,
-                                            format = saveFormat.format,
-                                            relativePath = Environment.DIRECTORY_PICTURES + "/" + CUSTOM_FOLDER_NAME,
-                                            displayName = media.imageName ?: displayName,
-                                            mimeType = saveFormat.mimeType
-                                        ) == null
-                                    ) {
-                                        _isSaving.value = false
-                                        onFail().also { _isSaving.value = false }
-                                        throw Exception("Unable to save")
+                                    if(index %10 ==0 ) {
+                                        _savingState.value = processed.toList()
                                     }
-//                                _savingState.update { _savingState.value+it }
-//                                    println(_savingState.value.size.toString() + " size here")
-
-                                    _savingState.value = _savingState.value + it
-                                    if(_savingState.value.size >=currentSelectedItems.size){
+                                    if (index >= currentSelectedItems.size-1) {
                                         _isSaving.value = false
                                         onSuccess()
                                     }
                                 }
                             }
+//                                _savingState.update { _savingState.value+it }
+
                         }
                     }
                 }
-            }catch (_: Exception) {
+            } catch (_: Exception) {
                 _isSaving.value = false
                 onFail().also { _isSaving.value = false }
                 return@launch
 
             }
-         //   _isSaving.value = false
+            //   _isSaving.value = false
 
         }
     }

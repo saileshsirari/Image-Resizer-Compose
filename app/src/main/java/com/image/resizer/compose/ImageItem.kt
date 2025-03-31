@@ -19,7 +19,7 @@ data class ImageItem(
 
 ) {
 
-    val scaledUri: Uri? by lazy {
+    val scaledUri: Uri? by lazy(LazyThreadSafetyMode.NONE) {
         val imageItem = if (percentScale != null) {
             computeScaledUriBySize()
         } else if (scaleParams != null) {
@@ -33,7 +33,7 @@ data class ImageItem(
         imageItem.computedUri
     }
 
-    val fileSize: Long by lazy {
+    val fileSize: Long by lazy(LazyThreadSafetyMode.NONE) {
         if(size!=null) return@lazy size!!
         with(context.contentResolver.openFileDescriptor(uri, "r")) {
             val size = this?.statSize ?: 0
@@ -42,7 +42,7 @@ data class ImageItem(
         }
     }
 
-    val imageDimension: Pair<Int, Int> by lazy {
+    val imageDimension: Pair<Int, Int> by lazy(LazyThreadSafetyMode.NONE) {
         imageDimensionsFromUri(context, uri)
     }
 

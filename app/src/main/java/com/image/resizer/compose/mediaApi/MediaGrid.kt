@@ -341,7 +341,7 @@ private fun <T: Media> PinchZoomGridScope.MediaGridContent(
 
         itemsIndexed(
             items = mediaState.value.media,
-            key = { _, item -> item.toString() },
+            key = { _, item -> item.key },
             contentType = { _, item -> item.isImage }
         ) { index, media ->
             with(sharedTransitionScope) {
@@ -354,16 +354,14 @@ private fun <T: Media> PinchZoomGridScope.MediaGridContent(
                         .animateItem(
                             fadeInSpec = null
                         )
-                        .pinchItem(key = media.toString()),
+                        .pinchItem(key = media.key),
                     media = media,
                     selectionState = selectionState,
                     selectedMedia = selectedMedia,
                     canClick = canScroll,
                     onItemClick = {
-                        if (selectionState.value && allowSelection) {
-                            feedbackManager.vibrate()
-                            toggleSelection(index)
-                        } else onMediaClick(it)
+                        feedbackManager.vibrate()
+                        toggleSelection(index)
                     },
                     onItemLongClick = {
                         if (allowSelection) {

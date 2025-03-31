@@ -67,6 +67,7 @@ import com.image.resizer.compose.mediaApi.util.Constants.Animation.exitAnimation
 import com.image.resizer.compose.mediaApi.util.getUri
 import com.image.resizer.compose.mediaApi.util.rememberFeedbackManager
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -236,7 +237,7 @@ fun <T: Media> TrashDialog(
                     }
                     items(
                         items = dataCopy,
-                        key = { it.toString() },
+                        key = { UUID.randomUUID().toString() },
                         contentType = { it.mimeType }
                     ) {
                         val context = LocalContext.current
