@@ -99,6 +99,7 @@ import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.NavigationButton
 import com.image.resizer.compose.mediaApi.PickerMediaSheet
 import com.image.resizer.compose.mediaApi.TAG
+import com.image.resizer.compose.mediaApi.clearCache
 import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.model.MediaState
@@ -248,7 +249,8 @@ fun <T : Media> HomeScreen(
                                     }
 
                                     Undo -> {
-                                        homeScreenViewModel.onUndo()
+
+                                        homeScreenViewModel.onUndo(context)
                                     }
 
                                     Editor -> {
@@ -259,10 +261,10 @@ fun <T : Media> HomeScreen(
                                         homeScreenViewModel.saveCopy(
                                             context = context,
                                             onSuccess = {
-                                                homeScreenViewModel.showToast()
+                                                homeScreenViewModel.showToast(it)
                                             },
                                             onFail = {
-                                                homeScreenViewModel.showToast("Failed")
+                                                homeScreenViewModel.showToast(it)
                                             })
 
                                     }

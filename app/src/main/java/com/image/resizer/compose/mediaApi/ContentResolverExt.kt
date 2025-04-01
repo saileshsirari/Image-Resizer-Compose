@@ -233,6 +233,7 @@ fun ContentResolver.saveImage(
                         throw IOException("Failed to save bitmap.")
                 } ?: throw IOException("Failed to open output stream.")
 
+
             } ?: throw IOException("Failed to create new MediaStore record.")
         }.getOrElse {
             uri?.let { orphanUri ->

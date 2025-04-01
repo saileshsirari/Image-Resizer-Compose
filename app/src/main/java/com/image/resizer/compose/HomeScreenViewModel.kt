@@ -1,36 +1,30 @@
 package com.image.resizer.compose
 
-import android.R.attr.bitmap
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Environment
+import android.os.StatFs
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.image.resizer.compose.mediaApi.EditorDestination
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.SaveFormat
+import com.image.resizer.compose.mediaApi.clearCache
 import com.image.resizer.compose.mediaApi.loadBitmapFromUri
 import com.image.resizer.compose.mediaApi.util.Constants.CUSTOM_FOLDER_NAME
 import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.chunked
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.yield
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 
 class HomeScreenViewModel(
@@ -67,14 +61,18 @@ class HomeScreenViewModel(
     ) {
         _scaledImageItems.value = imageItems
         ImageItem.percentScale = percentOriginal
-        processSomeImages(imageItems)
+        //processSomeImages(imageItems)
         /* compress(context, imageItems, percentOriginal)
              .collect {
                  _scaledImageItems.value = _scaledImageItems.value + it
              }*/
     }
 
-    private fun processSomeImages(imageItems: List<ImageItem>, operation: String = "compress",size:Int = 200) {
+    private fun processSomeImages(
+        imageItems: List<ImageItem>,
+        operation: String = "compress",
+        size: Int = 200
+    ) {
         imageItems.take(size).forEachIndexed { index, it ->
             viewModelScope.launch(Dispatchers.Default) {
                 println("$operation $index " + it.scaledUri.toString().take(10))
@@ -86,10 +84,10 @@ class HomeScreenViewModel(
         imageItems: List<ImageItem>,
         scaleParams: ScaleParams?,
     ) {
-           _scaledImageItems.value = emptyList<ImageItem>()
-           ImageItem.scaleParams = scaleParams
-           _scaledImageItems.value = imageItems
-            processSomeImages(imageItems,"scaleImages")
+        _scaledImageItems.value = emptyList<ImageItem>()
+        ImageItem.scaleParams = scaleParams
+        _scaledImageItems.value = imageItems
+        // processSomeImages(imageItems, "scaleImages")
     }
 
     fun onCropSuccess(context: Context, croppedUri: Uri?) {
@@ -151,13 +149,13 @@ class HomeScreenViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             if (imageItems.isNotEmpty()) {
                 callBack()
-
-                onGalleryImagesSelected(context, imageItems)
+                clearCache(context)
+                onGalleryImagesSelected(imageItems)
             }
         }
     }
 
-    fun onGalleryImagesSelected(context: Context, imageItems: List<ImageItem>) {
+    fun onGalleryImagesSelected(imageItems: List<ImageItem>) {
         _cropState.value = CropState.Idle
         _compressState.value = CompressState.Idle
         _scaleState.value = ScaleState.Idle
@@ -170,11 +168,12 @@ class HomeScreenViewModel(
         _selectedImageItems.value = imageItems
     }
 
-    fun onUndo() {
+    fun onUndo(context: Context) {
         _cropState.value = CropState.Idle
         _compressState.value = CompressState.Idle
         _scaleState.value = ScaleState.Idle
         _galleryState.value = GalleryState.Success(GalleryStateData(_selectedImageItems.value))
+        clearCache(context)
     }
 
     fun showSelectedImages() {
@@ -243,80 +242,120 @@ class HomeScreenViewModel(
         _isSaving.value = true
     }
 
+    private fun isEnoughSpaceAvailable(numberOfImages: Int): Boolean {
+        val stat = StatFs(Environment.getExternalStorageDirectory().absolutePath)
+        val bytesAvailable = stat.blockSizeLong * stat.availableBlocksLong
+        val megabytesAvailable = bytesAvailable / (1024 * 1024)
+
+        //Estimation of memory required.
+        val bytesRequired = numberOfImages * 1 * 1024 * 1024 //1Mb by Image.
+
+        if (bytesAvailable < bytesRequired) {
+            println("Not enough storage space: $megabytesAvailable mb available")
+            return false
+        }
+        println("Enough storage space : $megabytesAvailable mb available")
+        return true
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun saveCopy(
         context: Context,
         saveFormat: SaveFormat = SaveFormat.JPEG,
-        onSuccess: () -> Unit = {},
-        onFail: () -> Unit = {}
+        onSuccess: (String) -> Unit = {},
+        onFail: (String) -> Unit = {}
     ) {
         val exceptionHandler = CoroutineExceptionHandler { _, e ->
             println("[ERROR] ${e.message}")
         }
 
-        viewModelScope.launch(Dispatchers.Default + exceptionHandler) {
+        viewModelScope.launch(Dispatchers.Main + exceptionHandler) {
 
             try {
-                _isSaving.value = true
                 val mutex = Mutex()
+                _isSaving.value = true
                 val currentSelectedItems = _scaledImageItems.value
                 _savingState.value = emptyList<ImageItem>()
                 val processed = mutableListOf<ImageItem>()
-                currentSelectedItems.onEachIndexed{ index,it ->
-                    val media = it
-                    it.scaledUri?.let { scaledUri ->
-                        //   mutex.withLock {
-                        launch(exceptionHandler + Dispatchers.Default) {
-                            println("Executing ${media.imageName?.take(20)}")
-                            yield()
-                            val bitmap = loadBitmapFromUri(scaledUri, context)
-                            if (bitmap == null) {
-                                _isSaving.value = false
-                                onFail().also {
-                                    _isSaving.value = false
+                var count = 0
+                //Check if the space is enough
+                if (!isEnoughSpaceAvailable(currentSelectedItems.size)) {
+                    _isSaving.value = false
+                    onFail("Not enough space available").also { _isSaving.value = false }
+                    println("Not enough space available")
+                    return@launch
+                }
+                currentSelectedItems.asFlow().chunked(10).map { list ->
+                    delay(100)
+                    launch(exceptionHandler + Dispatchers.IO) {
+                        list.mapIndexed { index, it ->
+                            //   val saveJobs =   currentSelectedItems.mapIndexed { index, it ->
+                            val media = it
+                            it.scaledUri?.let { scaledUri ->
+                                var bitmap: Bitmap? = null
+                                mutex.withLock {
+                                    bitmap = loadBitmapFromUri(scaledUri, context)
                                 }
-                                throw Exception("Unable to save")
-                            }
-                            launch {
-                                yield()
-                                if (mediaHandler.saveImage(
-                                        bitmap = bitmap,
-                                        format = saveFormat.format,
-                                        relativePath = Environment.DIRECTORY_PICTURES + "/" + CUSTOM_FOLDER_NAME,
-                                        displayName = media.imageName ?: "imageResizer_${
-                                            media.key
-                                        }.jpg",
-                                        mimeType = saveFormat.mimeType
-                                    ) == null
-                                ) {
-                                    _isSaving.value = false
-                                    onFail().also { _isSaving.value = false }
-                                    throw Exception("Unable to save")
-                                }else{
-                                    processed.add(media)
-                                    println(_savingState.value.size.toString() + " size here")
+                                count++
 
-                                    if(index %10 ==0 ) {
-                                        _savingState.value = processed.toList()
+
+                                if (bitmap != null) {
+
+                                    launch(exceptionHandler + Dispatchers.IO) {
+                                        delay(100)
+                                        if (mediaHandler.saveImage(
+                                                bitmap = bitmap,
+                                                format = saveFormat.format,
+                                                relativePath = Environment.DIRECTORY_PICTURES + "/" + CUSTOM_FOLDER_NAME,
+                                                displayName = media.imageName
+                                                    ?: "imageResizer_${
+                                                        media.key
+                                                    }.jpg",
+                                                mimeType = saveFormat.mimeType
+                                            ) == null
+                                        ) {
+//                                _isSaving.value = false
+//                                onFail().also { _isSaving.value = false }
+//                                throw Exception("Unable to save")
+                                            println("mediaHandler.saveImage failed for $scaledUri")
+                                        } else {
+                                            //   bitmap.recycle()
+                                            mutex.withLock {
+                                                processed.add(media)
+                                                if (index % 10 == 0) {
+                                                    println(_savingState.value.size.toString() + " size here")
+                                                    _savingState.value = processed.toList()
+                                                }
+                                                if (count >= currentSelectedItems.size - 1) {
+                                                    _isSaving.value = false
+                                                    onSuccess("Images saved")
+                                                }
+                                            }
+                                        }
                                     }
-                                    if (index >= currentSelectedItems.size-1) {
-                                        _isSaving.value = false
-                                        onSuccess()
-                                    }
+
+                                } else {
+                                    println("null bitmap for $scaledUri")
                                 }
+
                             }
-//                                _savingState.update { _savingState.value+it }
 
                         }
                     }
+
+//                                _savingState.update { _savingState.value+it }
+
+                    // }
+                }.collect {
+
                 }
-            } catch (_: Exception) {
+                //joinAll(*saveJobs.toTypedArray()) //Wait for each task to be finished.
+            } catch (e: Exception) {
                 _isSaving.value = false
-                onFail().also { _isSaving.value = false }
+                onFail(e.message ?: "Unable to save some images").also { _isSaving.value = false }
                 return@launch
 
             }
-            //   _isSaving.value = false
-
         }
     }
 

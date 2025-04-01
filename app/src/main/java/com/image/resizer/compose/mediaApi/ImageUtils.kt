@@ -46,7 +46,18 @@ import java.io.InputStream
 
 val sdcardRegex = "^/storage/[A-Z0-9]+-[A-Z0-9]+/.*$".toRegex()
 const val TAG = "ScaledImageScreen"
-
+fun clearCache(context: Context) {
+    try {
+        val cacheDir = context.cacheDir
+        if (cacheDir.isDirectory) {
+            cacheDir.listFiles()?.forEach {
+                println( " deleting "+it.deleteRecursively())
+            }
+        }
+    } catch (e: Exception) {
+        println("Error clearing cache: ${e.message}")
+    }
+}
 
 @Composable
 fun rememberBitmapPainter(bitmap: Bitmap): State<Painter> {
@@ -213,14 +224,14 @@ fun loadBitmapFromUri( uri:Uri,context: Context): Bitmap? {
    var originalBitmap = context.contentResolver.openInputStream(uri)?.use {
         BitmapFactory.decodeStream(it)
     }
-    var imageDimension : Pair<Int, Int> ? = null
-    originalBitmap?.let {
+   // var imageDimension : Pair<Int, Int> ? = null
+  /*  originalBitmap?.let {
         val exifOrientation = getExifOrientation(context,uri)
         if (exifOrientation != ORIENTATION_NORMAL) {
             originalBitmap = rotateBitmap(it, exifOrientation)
         }
-        imageDimension = Pair(it.width,it.height)
-    }
+        //imageDimension = Pair(it.width,it.height)
+    }*/
     return originalBitmap
 }
 

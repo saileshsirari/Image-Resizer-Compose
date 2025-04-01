@@ -44,7 +44,6 @@ fun compressImageToTargetSize(
             if (newWidth <= 10 && newHeight <= 10) {
                 break
             }
-            try {
                 val scaledBitmap = it.scale(newWidth, newHeight)
 
                 // Update file size after scaling
@@ -57,10 +56,6 @@ fun compressImageToTargetSize(
                 bitmap = scaledBitmap // Update bitmap for next iteration
                 imageItem.scaledFileSize = currentFileSizeBytes
 
-            } catch (e: Exception) {
-                Log.e(TAG, "Error scaling image: $imageUri", e)
-                break
-            }
         }
         //   bitmap = rotateBitmap(bitmap, exifOrientation)
         // Save the scaled bitmap and add its Uri to the list
@@ -68,7 +63,7 @@ fun compressImageToTargetSize(
         //     bitmap = rotateBitmap(bitmap, exifOrientation)
         //  }
         // saveBitmapToTempAndGetUri(context, imageItem)
-        bitmap?.let {
+        bitmap.let {
             val compressedImageItem = imageItem.saveBitmapToTempAndGetUri(context, bitmap)
             bitmap.recycle()
             //  val savedUri = saveImageToGallery(bitmap)

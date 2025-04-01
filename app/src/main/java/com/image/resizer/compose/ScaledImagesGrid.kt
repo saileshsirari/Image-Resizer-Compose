@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Log
+import android.util.Log.e
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -66,36 +67,31 @@ fun ImageItemCard(imageItem: ImageItem, onClick: () -> Unit) {
 
 fun ImageItem.saveBitmapToTempAndGetUri(context: Context, bitmap: Bitmap): ImageItem {
 
-    val file = File(context.cacheDir, "scaled_image_${System.currentTimeMillis()}.jpg")
-    try {
-        file.createNewFile()
-        val bos = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bos)
-        val bitmapData = bos.toByteArray()
+    val file = File(context.cacheDir, "$imageName")
+    file.createNewFile()
+    val bos = ByteArrayOutputStream()
+    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bos)
+    val bitmapData = bos.toByteArray()
 
-        val fos = FileOutputStream(file)
-        fos.write(bitmapData)
-        fos.flush()
-        fos.close()
+    val fos = FileOutputStream(file)
+    fos.write(bitmapData)
+    fos.flush()
+    fos.close()
 
-        // Create URI
-        val tempUri = Uri.fromFile(file)
+    // Create URI
+    val tempUri = Uri.fromFile(file)
 
-        // Update scaledUri in ImageItem
-        val updatedImageItem = this.copy(
-            computedUri = tempUri,
-        )
+    // Update scaledUri in ImageItem
+    val updatedImageItem = this.copy(
+        computedUri = tempUri,
+    )
 
-        val fileSize = file.length()
-        val imageDimension = imageDimensionsFromUri(context, tempUri)
-        return updatedImageItem.copy(
-            computedUri = tempUri,
-            scaledFileSize = fileSize,
-            scaledImageDimension = imageDimension
-        )
-    } catch (e: IOException) {
-        Log.e("saveBitmapToTempAndGetUri", "Error saving bitmap to temp file: ${e.message}")
-        e.printStackTrace()
-    }
+    val fileSize = file.length()
+    val imageDimension = imageDimensionsFromUri(context, tempUri)
+    return updatedImageItem.copy(
+        computedUri = tempUri,
+        scaledFileSize = fileSize,
+        scaledImageDimension = imageDimension
+    )
     return this
 }
