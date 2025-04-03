@@ -434,4 +434,10 @@ class HomeScreenViewModel(
         navigate(Screen.ImageDetailScreen.route)
     }
 
+
+    fun onImageItemClicked(item: ImageItem, navigate: (String) -> Unit) {
+        selectedItem = item
+        navigate(Screen.ZoomableScreen.route)
+    }
+
 }

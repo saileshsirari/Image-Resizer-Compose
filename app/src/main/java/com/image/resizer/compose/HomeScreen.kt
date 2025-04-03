@@ -4,6 +4,7 @@ package com.image.resizer.compose
 
 import android.app.Activity
 import android.app.RecoverableSecurityException
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -110,6 +111,7 @@ import com.image.resizer.compose.mediaApi.util.Constants.Animation.enterAnimatio
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.exitAnimation
 import com.image.resizer.compose.mediaApi.util.rememberActivityResult
 import com.image.resizer.compose.mediaApi.util.writeRequests
+import io.ktor.http.content.TextContent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -375,9 +377,13 @@ fun <T : Media> HomeScreen(
                 ) {
 
                     HandleGalleryState(
+                        context,
+                        navController,
                         galleryState,
                         showImages,
-                        homeScreenViewModel.selectedImageItems
+                        homeScreenViewModel.selectedImageItems,
+                        homeScreenViewModel
+
                     )
 
 
@@ -664,9 +670,12 @@ private fun HandleCompressState(
 
 @Composable
 private fun HandleGalleryState(
+    context: Context,
+    navController: NavHostController,
     galleryState: GalleryState,
     showImages: Boolean,
-    selectedImageItems: StateFlow<List<ImageItem>>
+    selectedImageItems: StateFlow<List<ImageItem>>,
+    homeScreenViewModel: HomeScreenViewModel
 ) {
     val currentGalleryState = galleryState
     when (currentGalleryState) {
@@ -676,7 +685,14 @@ private fun HandleGalleryState(
                 enter = fadeIn(animationSpec = tween(durationMillis = 3000)),
                 exit = fadeOut(animationSpec = tween(durationMillis = 3000))
             ) {
-                GalleryImagesComponent(selectedImageItems)//can get data from gallery state
+                GalleryImagesComponent(context, navController, selectedImageItems) {
+                    homeScreenViewModel.onImageItemClicked(it) {
+                        navController.navigate(it) {
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                }
             }
         }
 

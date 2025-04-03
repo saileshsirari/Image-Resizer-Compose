@@ -45,10 +45,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
@@ -70,6 +72,8 @@ import kotlinx.coroutines.Dispatchers
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
+import androidx.core.net.toUri
+import com.image.resizer.compose.Screen.ZoomableScreen
 
 // Data class to hold original and compressed image URIs
 data class ImagePair(val originalImageItem: ImageItem, val transFormedImageItem: ImageItem)
@@ -185,9 +189,11 @@ fun BottomNavigationBar(navController: NavHostController) {
         }
     }
 }
+
 val exceptionHandler = CoroutineExceptionHandler { _, e ->
     println("[ERROR] ${e.message}")
 }
+
 @SuppressLint("UnrememberedMutableState")
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -200,7 +206,7 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
     }
 
     val albumsState =
-        albumsViewModel.albumsFlow.collectAsStateWithLifecycle(context = Dispatchers.IO+exceptionHandler)
+        albumsViewModel.albumsFlow.collectAsStateWithLifecycle(context = Dispatchers.IO + exceptionHandler)
     val homeScreenViewModel = HomeScreenViewModel(mediaHandleUseCase)
     val activity = LocalActivity.current as Activity
 
@@ -222,7 +228,7 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
             composable(Screen.Home.route) {
 
                 val mediaState =
-                    albumsViewModel.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO+exceptionHandler)
+                    albumsViewModel.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO + exceptionHandler)
                 HomeScreen(
                     homeScreenViewModel = homeScreenViewModel,
                     albumsViewModel = albumsViewModel,
@@ -267,7 +273,7 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
                         println("[ERROR] ${e.message}")
                     }
                     val myImagesMediaState =
-                        myImagesVm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO+exceptionHandler)
+                        myImagesVm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO + exceptionHandler)
 
 
                     TimelineScreen(
@@ -303,7 +309,10 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
                             }
                         },
                         onMediaClick = {
-                            homeScreenViewModel.handlePickedImages(listOf(it.toImageItem(context)), context) {
+                            homeScreenViewModel.handlePickedImages(
+                                listOf(it.toImageItem(context)),
+                                context
+                            ) {
 
 
                             }
@@ -317,6 +326,22 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
             composable(ImageDetailScreen.route) {
                 homeScreenViewModel.selectedItem?.let {
                     ImageDetailsScreen(it)
+                }
+            }
+            composable(ZoomableScreen.route) {
+                homeScreenViewModel.selectedItem?.let {
+                    ZoomableImage(it.computedUri!!)
+                }
+            }
+            composable(
+                "zoomableImage/{imageUri}",
+                arguments = listOf(navArgument("imageUri") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val imageUriString = backStackEntry.arguments?.getString("imageUri")
+                imageUriString?.let { imageUri ->
+                    ZoomableImage(imageUri = imageUri.toUri())
+                } ?: run {
+                    Text("Error : no image found")
                 }
             }
         }

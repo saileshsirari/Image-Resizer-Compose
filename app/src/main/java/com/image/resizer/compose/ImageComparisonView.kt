@@ -117,16 +117,7 @@ fun ComparisonImageView(
                     translationY = offset.y
                 }
         ) {
-            if (bitmap != null) {
-                Image(
-                    bitmap = bitmap.asImageBitmap(),
-                    contentDescription = label,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .fillMaxSize()
-
-                )
-            } else if (uri != Uri.EMPTY) {
+          if (uri != Uri.EMPTY) {
                 AsyncImage(
                     model = uri,
                     contentDescription = label,

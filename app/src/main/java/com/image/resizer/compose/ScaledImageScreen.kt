@@ -57,6 +57,7 @@ import java.io.File
 import java.io.FileOutputStream
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import apps.sai.com.imageresizer.R
 import coil.request.ImageRequest
 import coil.size.Size
@@ -64,6 +65,7 @@ import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.MediaRepositoryImpl
 import com.image.resizer.compose.mediaApi.loadBitmapFromUri
 import kotlinx.coroutines.flow.StateFlow
+import kotlin.io.path.createTempFile
 
 
 @Preview
@@ -88,12 +90,13 @@ fun GalleryImagesComponentPreview1() {
             uri = uri,
         ),
     )
-    GalleryImagesComponent(homeScreenViewModel.selectedImageItems)
+   // GalleryImagesComponent(homeScreenViewModel.selectedImageItems)
 }
 
 
 @Composable
-fun GalleryImagesComponent(selectedImageItems: StateFlow<List<ImageItem>>) {
+fun GalleryImagesComponent(context: Context,navController: NavHostController,
+                           selectedImageItems: StateFlow<List<ImageItem>>,  onImageItemClicked: (ImageItem) -> Unit = {}) {
     val imageItems by selectedImageItems.collectAsStateWithLifecycle()
     val columns = if (imageItems.size > 1) {
         GridCells.Fixed(2)
@@ -142,6 +145,14 @@ fun GalleryImagesComponent(selectedImageItems: StateFlow<List<ImageItem>>) {
                         .align(Alignment.CenterHorizontally)
                         .padding(4.dp)
                         .height(200.dp)
+                        .clickable{
+                            loadBitmapFromUri(imageItem.uri,context)?.also {
+                                val item = imageItem.saveBitmapToTempAndGetUri(context, it)
+                                onImageItemClicked(item)
+                            }
+                        // val uri =   compressImageToTargetSize(context ,imageItem,100).computedUri.toString()
+
+                        }
                 )
             }
         }
@@ -181,13 +192,13 @@ internal fun ScaledImagesGrid(
             items(scaledImages, key = { item -> item.key.toString() }) { imageItem ->
                 Row(
                     modifier = Modifier
-                        /*.clickable(onClick = {
+                        .clickable(onClick = {
                             loadBitmapFromUri(imageItem.uri,context)?.also {
                                 val item = imageItem.saveBitmapToTempAndGetUri(context, it)
                                 onSelectedItemClicked(item)
                             }
 
-                        })*/
+                        })
                         .fillMaxSize()
                         .border(1.dp, Color.Gray),
                     horizontalArrangement = Arrangement.SpaceBetween, // Center columns

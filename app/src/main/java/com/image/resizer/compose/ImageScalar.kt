@@ -1,5 +1,6 @@
 package com.image.resizer.compose
 
+import android.R.attr.orientation
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -12,6 +13,7 @@ import java.util.Date
 import java.util.Locale
 import androidx.core.graphics.scale
 import com.image.resizer.compose.mediaApi.TAG
+import com.image.resizer.compose.mediaApi.getExifOrientation
 import com.image.resizer.compose.mediaApi.loadBitmapFromUri
 
 const val TARGET_FILE_SIZE_KB = 100
@@ -88,6 +90,10 @@ fun ImageItem.scaleImage(
         scaleParams.newHeight
     val width = imageDimension.first
     val height = imageDimension.second
+    val exif = getExifOrientation(context, imageItem.uri)
+    // Create a new file for the scaled image (or use an existing one)
+
+
     if (scaleParams.scaleFactor != null) {
         val newWidth = (width * scaleParams.scaleFactor).toInt()
         val newHeight = (height * scaleParams.scaleFactor).toInt()
@@ -113,6 +119,15 @@ fun ImageItem.scaleImage(
         }
         scaledBitmap?.let {
             val scaledImageItem = imageItem.saveBitmapToTempAndGetUri(context, it)
+            val outputFile =  File(context.cacheDir, "${imageItem.imageName}")
+            // Set the EXIF data after scaling
+            ExifHandler.setExifDataAfterScaling(
+                context = context,
+                originalImageUri = scaledImageItem.uri!!,
+                scaledBitmap = it,
+                outputFile = outputFile,
+                orientation = exif
+            )
             scaledBitmap.recycle()
             return scaledImageItem
         }
