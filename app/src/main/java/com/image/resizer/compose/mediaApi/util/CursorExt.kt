@@ -34,10 +34,13 @@ fun <T> Cursor?.mapEachRow(
         } while (cursor.moveToNext())
 
         data.toList()
-    } catch (e: Throwable){
+    }catch (e: Throwable){
         e.printStackTrace()
-        return@use emptyList()
+        emptyList<T>()
+    }finally {
+        close()
     }
+
 } ?: emptyList<T>()
 
 fun Cursor?.tryGetString(columnIndex: Int, fallback: String? = null): String? {

@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.error
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
@@ -180,13 +181,13 @@ internal fun ScaledImagesGrid(
             items(scaledImages, key = { item -> item.key.toString() }) { imageItem ->
                 Row(
                     modifier = Modifier
-                        .clickable(onClick = {
+                        /*.clickable(onClick = {
                             loadBitmapFromUri(imageItem.uri,context)?.also {
                                 val item = imageItem.saveBitmapToTempAndGetUri(context, it)
                                 onSelectedItemClicked(item)
                             }
 
-                        })
+                        })*/
                         .fillMaxSize()
                         .border(1.dp, Color.Gray),
                     horizontalArrangement = Arrangement.SpaceBetween, // Center columns
@@ -212,16 +213,24 @@ internal fun ScaledImagesGrid(
                             } else "$fileSizeInKb kb"
                             Text(fileSizeText, maxLines = 1)
                         }
+
                         AsyncImage(
-                            model = imageItem.uri,
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(imageItem.uri)
+                                .scale(coil.size.Scale.FIT)
+                                .size(Size(300,300))
+                                .crossfade(true)
+                                .build(),
                             contentDescription = "Original Image",
-                            contentScale = ContentScale.Fit,
+                            contentScale = ContentScale.Crop,
                             modifier = Modifier.Companion
                                 .align(Alignment.CenterHorizontally)
-                                .fillMaxSize()
                                 .padding(4.dp)
                                 .height(300.dp)
-                                .clip(RoundedCornerShape(1.dp))
+                                .clip(RoundedCornerShape(1.dp)),
+                            placeholder = painterResource(id = R.drawable.ic_crop_24dp),
+                            error = painterResource(id = R.drawable.ic_crop_24dp)
+
                         )
 
 
@@ -239,7 +248,6 @@ internal fun ScaledImagesGrid(
                         verticalArrangement = Arrangement.SpaceBetween
                     ) {
 
-                        imageItem.scaledUri?.toString()
                         imageItem.scaledUri?.let {
                             if (imageItem.scaledImageDimension != null) {
                                 Text("Scaled : ${imageItem.scaledImageDimension?.first ?: 0}x${imageItem.scaledImageDimension?.second ?: 0}")
@@ -252,24 +260,25 @@ internal fun ScaledImagesGrid(
                                 }
                             }
                         }
-                        if (imageItem.scaledUri != null) {
+
                             AsyncImage(
-                                model = imageItem.scaledUri,
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(imageItem.scaledUri)
+                                    .size(Size(300,300))
+                                    .scale(coil.size.Scale.FIT)
+                                    .crossfade(true)
+                                    .build(),
                                 contentDescription = "Scaled Image",
-                                contentScale = ContentScale.Fit,
+                                contentScale = ContentScale.Crop,
                                 modifier = Modifier.Companion
                                     .align(Alignment.CenterHorizontally)
-                                    .fillMaxSize()
                                     .padding(4.dp)
                                     .height(300.dp)
-                                    .clip(RoundedCornerShape(1.dp))
+                                    .clip(RoundedCornerShape(1.dp)),
+                                placeholder = painterResource(id = R.drawable.ic_crop_24dp),
+                                error = painterResource(id = R.drawable.ic_crop_24dp)
                             )
-                        } else {
-                            Text(
-                                text = "loading ...",
-                                textAlign = TextAlign.Center
-                            )
-                        }
+
                     }
                 }
             }

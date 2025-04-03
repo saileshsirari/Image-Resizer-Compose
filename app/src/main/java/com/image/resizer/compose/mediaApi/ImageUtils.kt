@@ -46,6 +46,18 @@ import java.io.InputStream
 
 val sdcardRegex = "^/storage/[A-Z0-9]+-[A-Z0-9]+/.*$".toRegex()
 const val TAG = "ScaledImageScreen"
+
+fun pruneInternalStorage(context: Context) {
+    val filesDir = context.filesDir
+    try {
+        filesDir.listFiles()?.forEach { file ->
+            // Example: delete files older than one week
+                file.delete()
+        }
+    } catch (e: IOException) {
+        println("Error pruning internal storage: ${e.message}")
+    }
+}
 fun clearCache(context: Context) {
     try {
         val cacheDir = context.cacheDir
@@ -224,14 +236,6 @@ fun loadBitmapFromUri( uri:Uri,context: Context): Bitmap? {
    var originalBitmap = context.contentResolver.openInputStream(uri)?.use {
         BitmapFactory.decodeStream(it)
     }
-   // var imageDimension : Pair<Int, Int> ? = null
-  /*  originalBitmap?.let {
-        val exifOrientation = getExifOrientation(context,uri)
-        if (exifOrientation != ORIENTATION_NORMAL) {
-            originalBitmap = rotateBitmap(it, exifOrientation)
-        }
-        //imageDimension = Pair(it.width,it.height)
-    }*/
     return originalBitmap
 }
 

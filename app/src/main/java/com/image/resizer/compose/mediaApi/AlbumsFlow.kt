@@ -1,6 +1,7 @@
 package com.dot.gallery.feature_node.data.data_source.mediastore.queries
 
 import android.content.ContentResolver
+import android.content.ContentResolver.QUERY_ARG_SQL_SORT_ORDER
 import android.content.ContentUris
 import android.content.Context
 import android.database.Cursor
@@ -59,7 +60,7 @@ class AlbumsFlow(
             rawMimeType,
         ).toTypedArray()
 
-        val sortOrder = MediaStore.Files.FileColumns.DATE_MODIFIED + " DESC"
+        val sortOrder = "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC"
 
         val queryArgs = Bundle().apply {
             putAll(
@@ -81,58 +82,63 @@ class AlbumsFlow(
     override fun flowData() = flowCursor().map {
         mutableMapOf<Int, Album>().apply {
             it?.use {
-                val idIndex = it.getColumnIndex(MediaStore.Files.FileColumns._ID)
-                val albumIdIndex = it.getColumnIndex(MediaStore.Files.FileColumns.BUCKET_ID)
-                val labelIndex = it.getColumnIndex(MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME)
-                val thumbnailPathIndex = it.getColumnIndex(MediaStore.Files.FileColumns.DATA)
-                val thumbnailRelativePathIndex =
-                    it.getColumnIndex(MediaStore.Files.FileColumns.RELATIVE_PATH)
-                val thumbnailDateTakenIndex =
-                    it.getColumnIndex(MediaStore.Files.FileColumns.DATE_TAKEN)
-                val thumbnailDateIndex =
-                    it.getColumnIndex(MediaStore.Files.FileColumns.DATE_MODIFIED)
-                val sizeIndex = it.getColumnIndex(MediaStore.Files.FileColumns.SIZE)
-                val mimeTypeIndex = it.getColumnIndex(MediaStore.Files.FileColumns.MIME_TYPE)
+                try {
+                    val idIndex = it.getColumnIndex(MediaStore.Files.FileColumns._ID)
+                    val albumIdIndex = it.getColumnIndex(MediaStore.Files.FileColumns.BUCKET_ID)
+                    val labelIndex =
+                        it.getColumnIndex(MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME)
+                    val thumbnailPathIndex = it.getColumnIndex(MediaStore.Files.FileColumns.DATA)
+                    val thumbnailRelativePathIndex =
+                        it.getColumnIndex(MediaStore.Files.FileColumns.RELATIVE_PATH)
+                    val thumbnailDateTakenIndex =
+                        it.getColumnIndex(MediaStore.Files.FileColumns.DATE_TAKEN)
+                    val thumbnailDateIndex =
+                        it.getColumnIndex(MediaStore.Files.FileColumns.DATE_MODIFIED)
+                    val sizeIndex = it.getColumnIndex(MediaStore.Files.FileColumns.SIZE)
+                    val mimeTypeIndex = it.getColumnIndex(MediaStore.Files.FileColumns.MIME_TYPE)
 
-                if (!it.moveToFirst()) {
-                    return@use
-                }
-
-                while (!it.isAfterLast) {
-                    val bucketId = it.getInt(albumIdIndex)
-
-                    this[bucketId]?.also { album ->
-                        album.count += 1
-                        album.size += it.getLong(sizeIndex)
-                    } ?: run {
-                        val albumId = it.getLong(albumIdIndex)
-                        val id = it.getLong(idIndex)
-                        val label = it.tryGetString(labelIndex, Build.MODEL)
-                        val thumbnailPath = it.getString(thumbnailPathIndex)
-                        val thumbnailRelativePath = it.getString(thumbnailRelativePathIndex)
-                        val thumbnailDateTaken = it.getLongOrNull(thumbnailDateTakenIndex)
-                        val thumbnailDate = it.getLong(thumbnailDateIndex)
-                        val size = it.getLong(sizeIndex)
-                        val mimeType = it.getString(mimeTypeIndex)
-                        val contentUri = if (mimeType.contains("image"))
-                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-                        else
-                            MediaStore.Video.Media.EXTERNAL_CONTENT_URI
-
-                        this[bucketId] = Album(
-                            id = albumId,
-                            label = label ?: Build.MODEL,
-                            uri = ContentUris.withAppendedId(contentUri, id),
-                            pathToThumbnail = thumbnailPath,
-                            relativePath = thumbnailRelativePath,
-                            timestamp = thumbnailDateTaken?.div(1000) ?: thumbnailDate
-                        ).apply {
-                            this.count += 1
-                            this.size += size
-                        }
+                    if (!it.moveToFirst()) {
+                        return@use
                     }
 
-                    it.moveToNext()
+                    while (!it.isAfterLast) {
+                        val bucketId = it.getInt(albumIdIndex)
+
+                        this[bucketId]?.also { album ->
+                            album.count += 1
+                            album.size += it.getLong(sizeIndex)
+                        } ?: run {
+                            val albumId = it.getLong(albumIdIndex)
+                            val id = it.getLong(idIndex)
+                            val label = it.tryGetString(labelIndex, Build.MODEL)
+                            val thumbnailPath = it.getString(thumbnailPathIndex)
+                            val thumbnailRelativePath = it.getString(thumbnailRelativePathIndex)
+                            val thumbnailDateTaken = it.getLongOrNull(thumbnailDateTakenIndex)
+                            val thumbnailDate = it.getLong(thumbnailDateIndex)
+                            val size = it.getLong(sizeIndex)
+                            val mimeType = it.getString(mimeTypeIndex)
+                            val contentUri = if (mimeType.contains("image"))
+                                MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                            else
+                                MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+
+                            this[bucketId] = Album(
+                                id = albumId,
+                                label = label ?: Build.MODEL,
+                                uri = ContentUris.withAppendedId(contentUri, id),
+                                pathToThumbnail = thumbnailPath,
+                                relativePath = thumbnailRelativePath,
+                                timestamp = thumbnailDateTaken?.div(1000) ?: thumbnailDate
+                            ).apply {
+                                this.count += 1
+                                this.size += size
+                            }
+                        }
+
+                        it.moveToNext()
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
             }
         }.values.toList()

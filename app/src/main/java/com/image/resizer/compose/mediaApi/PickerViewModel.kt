@@ -8,7 +8,6 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.image.resizer.compose.mediaApi.model.Album
-import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.model.MediaState
 import com.image.resizer.compose.mediaApi.util.Constants
@@ -68,23 +67,6 @@ open class PickerViewModel (
             extendedDateFormat = Constants.EXTENDED_DATE_FORMAT,
             weeklyDateFormat = Constants.WEEKLY_DATE_FORMAT
         ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(), MediaState())
-    }
-
-    val albumsState by lazy {
-        repository.getAlbumsWithType(allowedMedia).map {  albumsResult ->
-            val data = (albumsResult.data ?: emptyList()).toMutableList().apply {
-            }
-            val error = if (albumsResult is Resource.Error) albumsResult.message
-                ?: "An error occurred" else ""
-            if (data.isEmpty()) {
-                return@map AlbumState(albums = listOf(emptyAlbum), error = error)
-            }
-            val albums = mutableListOf<Album>().apply {
-                add(emptyAlbum)
-                addAll(data)
-            }
-            AlbumState(albums = albums, error = error)
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), AlbumState())
     }
 
 

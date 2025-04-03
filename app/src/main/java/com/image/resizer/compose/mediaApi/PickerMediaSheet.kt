@@ -33,6 +33,7 @@ import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.model.MediaState
 import com.image.resizer.compose.toImageItem
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -55,8 +56,11 @@ fun <T : Media> PickerMediaSheet(
     val mediaHandleUseCase =
         MediaHandleUseCase(repository = mediaRepository)
     val albumsViewModel = AlbumsViewModel(mediaRepository, mediaHandleUseCase)
+    val exceptionHandler = CoroutineExceptionHandler { _, e ->
+        println("[ERROR] ${e.message}")
+    }
 
-    if (sheetState.isVisible) {
+        if (sheetState.isVisible) {
         if (hideSheet) {
             LaunchedEffect(Unit) {
                 sheetState.hide()
@@ -137,7 +141,7 @@ fun <T : Media> PickerMediaSheet(
                         val context = LocalContext.current
 
                         val hideTimeline by remember { mutableStateOf(true) }
-                        val mediaState = vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+                        val mediaState = vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO+exceptionHandler)
 
                         TimelineScreen(
                             paddingValues = paddingValues,

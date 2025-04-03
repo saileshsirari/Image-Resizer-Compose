@@ -65,6 +65,7 @@ import com.image.resizer.compose.mediaApi.util.Constants.Animation.navigateInAni
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.navigateUpAnimation
 import com.image.resizer.compose.mediaApi.util.Constants.CUSTOM_FOLDER_NAME
 import com.image.resizer.compose.theme.AppTheme
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import java.io.File
 import java.io.FileOutputStream
@@ -184,7 +185,9 @@ fun BottomNavigationBar(navController: NavHostController) {
         }
     }
 }
-
+val exceptionHandler = CoroutineExceptionHandler { _, e ->
+    println("[ERROR] ${e.message}")
+}
 @SuppressLint("UnrememberedMutableState")
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -195,8 +198,9 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
     val albumsViewModel = AlbumsViewModel(mediaRepository, mediaHandleUseCase).apply {
         albumId = -1
     }
+
     val albumsState =
-        albumsViewModel.albumsFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+        albumsViewModel.albumsFlow.collectAsStateWithLifecycle(context = Dispatchers.IO+exceptionHandler)
     val homeScreenViewModel = HomeScreenViewModel(mediaHandleUseCase)
     val activity = LocalActivity.current as Activity
 
@@ -218,7 +222,7 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
             composable(Screen.Home.route) {
 
                 val mediaState =
-                    albumsViewModel.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+                    albumsViewModel.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO+exceptionHandler)
                 HomeScreen(
                     homeScreenViewModel = homeScreenViewModel,
                     albumsViewModel = albumsViewModel,
@@ -259,8 +263,11 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
                     ).apply {
                         albumId = myImages.id
                     }
+                    val exceptionHandler = CoroutineExceptionHandler { _, e ->
+                        println("[ERROR] ${e.message}")
+                    }
                     val myImagesMediaState =
-                        myImagesVm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+                        myImagesVm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO+exceptionHandler)
 
 
                     TimelineScreen(

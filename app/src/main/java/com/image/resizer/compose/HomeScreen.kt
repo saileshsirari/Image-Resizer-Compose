@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -43,6 +44,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -179,7 +181,7 @@ fun <T : Media> HomeScreen(
             } else {
                 data?.getParcelableExtra<Uri>(CropScreen.CROPPED_IMAGE_BITMAP_URI)
             }
-            homeScreenViewModel.onCropSuccess(context,croppedBitmapUri!!)
+            homeScreenViewModel.onCropSuccess(context, croppedBitmapUri!!)
         }
 
     }
@@ -197,7 +199,10 @@ fun <T : Media> HomeScreen(
 
     )
     LaunchedEffect(scaleState, galleryState, cropState, compressState) {
-        Log.d(TAG, "HomeScreen: scale =$scaleState, cropState = $cropState, compress =$compressState, gallery=$galleryState ")
+        Log.d(
+            TAG,
+            "HomeScreen: scale =$scaleState, cropState = $cropState, compress =$compressState, gallery=$galleryState "
+        )
 
     }
     Scaffold(
@@ -352,7 +357,8 @@ fun <T : Media> HomeScreen(
         showRationale = !galleryPermissionState.status.isGranted
         Box(
             modifier = Modifier.Companion
-                .fillMaxSize()) {
+                .fillMaxSize()
+        ) {
             Box(
                 modifier = Modifier.Companion
                     .fillMaxSize()
@@ -413,17 +419,17 @@ fun <T : Media> HomeScreen(
                         }
 
                         is ScaleState.ShowPopup -> {
-                            Log.d(TAG,"ScaleState.ShowPopup here")
+                            Log.d(TAG, "ScaleState.ShowPopup here")
                             // Implement image scaling logic here
-                                ScaleImagePopup(onDismiss = {
-                                    homeScreenViewModel.dismissScalePopup()
-                                }, viewModel = viewModel, onScale = {
-                                    //  it.forEachIndexed { index, it ->
-                                    //  Log.d(TAG, " $it here  ${originalDimensions[index]} ")
-                                    //  }
-                                    // showScaledImages = true
-                                    homeScreenViewModel.onImagesScaled(context,it)
-                                })
+                            ScaleImagePopup(onDismiss = {
+                                homeScreenViewModel.dismissScalePopup()
+                            }, viewModel = viewModel, onScale = {
+                                //  it.forEachIndexed { index, it ->
+                                //  Log.d(TAG, " $it here  ${originalDimensions[index]} ")
+                                //  }
+                                // showScaledImages = true
+                                homeScreenViewModel.onImagesScaled(context, it)
+                            })
                         }
 
                         is ScaleState.Success -> {
@@ -467,15 +473,60 @@ fun <T : Media> HomeScreen(
 
                 }
             }
+            if (isSaving.value && savingState.value > 0) {
 
-                AnimatedVisibility(isSaving.value && savingState.value.isNotEmpty()) {
+                AlertDialog(
+                    onDismissRequest = {
+
+                    }, // Dismiss on outside click
+                    title = { Text("Scale Image") },
+                    text = {
+                        Column(modifier = Modifier.padding(horizontal = 6.dp)) {
+                            val animatedProgress by animateFloatAsState(
+                                targetValue = savingState.value.toFloat(),
+                            )
+                            Slider(
+                                value = animatedProgress,
+                                onValueChange = { },
+                                enabled = false,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 8.dp),
+                                valueRange = 0f..selectedImageItems.value.size.toFloat()
+                            )
+                            Text(
+                                text = "Saving: ${"%.2f".format((animatedProgress / selectedImageItems.value.size.toFloat()) * 100)}%",
+                            )
+                        }
+                    },
+                    confirmButton = {
+
+                    },
+                    dismissButton = {
+                        Button(onClick = {
+                            homeScreenViewModel.cancelSave()
+
+                        }) {
+                            Text("Cancel")
+                        }
+                    }
+
+                )
+
+
+            } else {
+                AnimatedVisibility(isSaving.value && savingState.value > 0) {
                     val animatedProgress by animateFloatAsState(
-                        targetValue = savingState.value.size.toFloat(),
+                        targetValue = savingState.value.toFloat(),
                         animationSpec = tween(durationMillis = 10), // Animation duration
                         label = "slider animation"
                     )
-                    Column(modifier = Modifier.padding(horizontal = 6.dp).align(Alignment.BottomCenter)
-                        .background( MaterialTheme.colorScheme.background)) {
+                    Column(
+                        modifier = Modifier
+                            .padding(horizontal = 6.dp)
+                            .align(Alignment.BottomCenter)
+                            .background(MaterialTheme.colorScheme.background)
+                    ) {
                         Slider(
                             value = animatedProgress,
                             onValueChange = { },
@@ -485,9 +536,10 @@ fun <T : Media> HomeScreen(
                             valueRange = 0f..selectedImageItems.value.size.toFloat()
                         )
                         Text(
-                            "Saving: ${(animatedProgress/selectedImageItems.value.size.toFloat())*100}%"
+                            "Saving: ${(animatedProgress / selectedImageItems.value.size.toFloat()) * 100}%"
                         )
 
+                    }
                 }
             }
         }
@@ -502,13 +554,11 @@ fun <T : Media> HomeScreen(
     }
 
 
-    if(showRationale) {
-        showRationale =  StoragePermissionDialog( galleryPermissionState)
+    if (showRationale) {
+        showRationale = StoragePermissionDialog(galleryPermissionState)
     }
 
 }
-
-
 
 
 @Composable
