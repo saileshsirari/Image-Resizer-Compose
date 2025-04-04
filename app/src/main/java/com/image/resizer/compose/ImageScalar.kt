@@ -29,13 +29,9 @@ fun compressImageToTargetSize(
     imageItem: ImageItem,
     percentOriginal: Int = TARGET_FILE_SIZE_KB
 ): ImageItem {
-    val compressedImageItems = mutableListOf<ImageItem>()
-
     val imageUri = imageItem.uri
     val bitmap = loadBitmapFromUri(imageUri, context)
     bitmap?.let {
-        // Get EXIF orientation
-        // bitmap = rotateBitmap(bitmap, exifOrientation)
         val exif = getExifOrientation(context, imageItem.uri)
         var currentFileSizeBytes = imageItem.fileSize
         var scaleFactor = 1f
@@ -47,43 +43,26 @@ fun compressImageToTargetSize(
             if (newWidth <= 10 && newHeight <= 10) {
                 break
             }
-            val scaledBitmap =bitmap.scale(newWidth, newHeight)
-            // Update file size after scaling
+            val scaledBitmap = bitmap.scale(newWidth, newHeight)
             val scaledImageItem = imageItem.saveBitmapToTempAndGetUri(context, scaledBitmap)
             val outputFile = File(context.cacheDir, "${imageItem.imageName}")
-            // Set the EXIF data after scaling
-
-            scaledBitmap.recycle()
-            /*   return scaledImageItem
-               val tempFile = createTempFile(context)
-
-               FileOutputStream(tempFile).use { outputStream ->
-                   scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-               }*/
-            currentFileSizeBytes = scaledImageItem.scaledFileSize?:0
-            if(currentFileSizeBytes<=desiredSize){
-             /*   ExifHandler.setExifDataAfterScaling(
+            currentFileSizeBytes = scaledImageItem.scaledFileSize ?: 0
+            if (currentFileSizeBytes <= desiredSize) {
+                ExifHandler.setExifDataAfterScaling(
                     context = context,
                     originalImageUri = imageItem.uri,
-                    scaledBitmap = it,
+                    scaledBitmap = scaledBitmap,
                     outputFile = outputFile,
                     orientation = exif
-                )*/
-                println("Scale done  $currentFileSizeBytes")
-                return  scaledImageItem
+                )
+                scaledBitmap.recycle()
+                return scaledImageItem
             }
 
         }
-        //   bitmap = rotateBitmap(bitmap, exifOrientation)
-        // Save the scaled bitmap and add its Uri to the list
-        //   if (exifOrientation != ORIENTATION_NORMAL) {
-        //     bitmap = rotateBitmap(bitmap, exifOrientation)
-        //  }
-        // saveBitmapToTempAndGetUri(context, imageItem)
 
     }
     return imageItem
-    // return@withContext compressedImageItems
 }
 
 fun ImageItem.scaleImage(
@@ -98,9 +77,6 @@ fun ImageItem.scaleImage(
     val width = imageDimension.first
     val height = imageDimension.second
     val exif = getExifOrientation(context, imageItem.uri)
-    // Create a new file for the scaled image (or use an existing one)
-
-
     if (scaleParams.scaleFactor != null) {
         val newWidth = (width * scaleParams.scaleFactor).toInt()
         val newHeight = (height * scaleParams.scaleFactor).toInt()
@@ -127,7 +103,6 @@ fun ImageItem.scaleImage(
         scaledBitmap?.let {
             val scaledImageItem = imageItem.saveBitmapToTempAndGetUri(context, scaledBitmap)
             val outputFile = File(context.cacheDir, "${imageItem.imageName}")
-            // Set the EXIF data after scaling
             ExifHandler.setExifDataAfterScaling(
                 context = context,
                 originalImageUri = imageItem.uri,

@@ -340,10 +340,7 @@ class HomeScreenViewModel(
 
                                     bitmap = loadBitmapFromUri(scaledUri, context)
                                     count++
-
-
                                     if (bitmap != null) {
-
                                         //  launch(exceptionHandler + Dispatchers.IO) {
                                         if (mediaHandler.saveImage(
                                                 it.uri,
