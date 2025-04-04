@@ -189,13 +189,10 @@ fun <T : Media> HomeScreen(
     }
     val overrideRequest = rememberActivityResult(
         onResultOk = {
-            var replaced = false
             homeScreenViewModel.saveOverride(context = context, onSuccess = {
                 homeScreenViewModel.showToast(it)
-
             }, onFail = {
                 homeScreenViewModel.showToast(it)
-
             })
         }
 

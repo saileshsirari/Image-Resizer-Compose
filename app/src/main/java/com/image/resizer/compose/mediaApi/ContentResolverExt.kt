@@ -25,6 +25,7 @@ import android.os.Looper
 import android.provider.MediaStore
 import android.util.Log
 import com.image.resizer.compose.ExifHandler
+import com.image.resizer.compose.FileSizeHelper
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.util.Constants
 import com.image.resizer.compose.mediaApi.util.Constants.CUSTOM_FOLDER_NAME
@@ -42,6 +43,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import androidx.core.graphics.createBitmap
 
 fun ContentResolver.queryFlow(
     uri: Uri,
@@ -194,20 +196,26 @@ fun ContentResolver.overrideImage(
             openOutputStream(uri)?.use { stream ->
                 if (!bitmap.compress(format, 100, stream)) {
                     throw IOException("Failed to save bitmap.")
-                }else{
+                } else {
                     ExifHandler.setExifDataAfterScalingWithUri(
                         context = context,
                         originalImageUri = originalUri,
                         scaledBitmap = bitmap,
                         outputUri = uri,
                     )
+
                 }
             } ?: throw IOException("Failed to open output stream.")
+
+            values.clear()
+            values.put(MediaStore.MediaColumns.IS_PENDING, 0)
             update(
                 uri,
-                ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) },
+                values,
                 null
             ) > 0
+
+
         }.getOrElse {
             throw it
         }
@@ -249,7 +257,7 @@ fun ContentResolver.saveImage(
                 openOutputStream(it)?.use { stream ->
                     if (!bitmap.compress(format, 100, stream)) {
                         throw IOException("Failed to save bitmap.")
-                    }else{
+                    } else {
                         ExifHandler.setExifDataAfterScalingWithUri(
                             context = context,
                             originalImageUri = originalUri,
