@@ -88,7 +88,11 @@ fun ImageItem.saveBitmapToTempAndGetUri(context: Context, bitmap: Bitmap): Image
         computedUri = tempUri,
     )
 
-    val fileSize = file.length()
+   val fileSize =  with(context.contentResolver.openFileDescriptor(tempUri, "r")) {
+        val size = this?.statSize ?: 0
+        this?.close()
+        size
+    }
     val imageDimension = imageDimensionsFromUri(context, tempUri)
     return updatedImageItem.copy(
         computedUri = tempUri,

@@ -191,10 +191,10 @@ fun <T : Media> HomeScreen(
         onResultOk = {
             var replaced = false
             homeScreenViewModel.saveOverride(context = context, onSuccess = {
-                homeScreenViewModel.showToast("Images replaced")
+                homeScreenViewModel.showToast(it)
 
             }, onFail = {
-                homeScreenViewModel.showToast("Error in replacing images  ")
+                homeScreenViewModel.showToast(it)
 
             })
         }
@@ -288,12 +288,12 @@ fun <T : Media> HomeScreen(
                                             homeScreenViewModel.saveOverride(
                                                 context = context,
                                                 onSuccess = {
-                                                    homeScreenViewModel.showToast()
+                                                    homeScreenViewModel.showToast(it)
                                                     homeScreenViewModel.showSelectedImages()
                                                     saveRequested = false
                                                 },
                                                 onFail = {
-                                                    homeScreenViewModel.showToast("Failed")
+                                                    homeScreenViewModel.showToast(it)
                                                     saveRequested = false
                                                 })
 

@@ -153,9 +153,10 @@ class MediaRepositoryImpl(
     ) = contentResolver.saveImage(originalUri, context, bitmap, format, mimeType, relativePath, displayName)
 
     override fun overrideImage(
+        originalUri: Uri,
         uri: Uri,
         bitmap: Bitmap,
         format: Bitmap.CompressFormat,
-    ) = contentResolver.overrideImage(context, uri, bitmap, format)
+    ) = contentResolver.overrideImage(originalUri,context, uri, bitmap, format)
 
 }

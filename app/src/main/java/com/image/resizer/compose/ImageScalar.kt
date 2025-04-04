@@ -1,22 +1,17 @@
 package com.image.resizer.compose
 
-import android.R.attr.orientation
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Environment
-import android.util.Log
 import java.io.File
-import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import androidx.core.graphics.scale
-import com.image.resizer.compose.mediaApi.TAG
 import com.image.resizer.compose.mediaApi.getExifOrientation
 import com.image.resizer.compose.mediaApi.loadBitmapFromUri
 
-const val TARGET_FILE_SIZE_KB = 100
+const val TARGET_PERCENTAGE = 100
 private fun createTempFile(context: Context): File {
     val timeStamp: String =
         SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
@@ -27,7 +22,7 @@ private fun createTempFile(context: Context): File {
 fun compressImageToTargetSize(
     context: Context,
     imageItem: ImageItem,
-    percentOriginal: Int = TARGET_FILE_SIZE_KB
+    percentOriginal: Int = TARGET_PERCENTAGE
 ): ImageItem {
     val imageUri = imageItem.uri
     val bitmap = loadBitmapFromUri(imageUri, context)

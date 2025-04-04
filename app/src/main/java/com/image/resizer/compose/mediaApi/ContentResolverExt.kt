@@ -5,6 +5,7 @@
 
 package com.image.resizer.compose.mediaApi
 
+import android.R.attr.bitmap
 import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Context
@@ -156,6 +157,12 @@ private fun replaceImageBelowQ(context: Context, originalUri: Uri, newBitmap: Bi
                 FileOutputStream(file).use { outputStream ->
                     newBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
                     outputStream.flush()
+                    ExifHandler.setExifDataAfterScalingWithUri(
+                        context = context,
+                        originalImageUri = originalUri,
+                        scaledBitmap = newBitmap,
+                        outputUri = originalUri,
+                    )
                 }
             }
         }
@@ -171,6 +178,7 @@ private fun replaceImageBelowQ(context: Context, originalUri: Uri, newBitmap: Bi
 }
 
 fun ContentResolver.overrideImage(
+    originalUri: Uri,
     context: Context,
     uri: Uri,
     bitmap: Bitmap,
@@ -184,8 +192,16 @@ fun ContentResolver.overrideImage(
         return runCatching {
             update(uri, values, null)
             openOutputStream(uri)?.use { stream ->
-                if (!bitmap.compress(format, 100, stream))
+                if (!bitmap.compress(format, 100, stream)) {
                     throw IOException("Failed to save bitmap.")
+                }else{
+                    ExifHandler.setExifDataAfterScalingWithUri(
+                        context = context,
+                        originalImageUri = originalUri,
+                        scaledBitmap = bitmap,
+                        outputUri = uri,
+                    )
+                }
             } ?: throw IOException("Failed to open output stream.")
             update(
                 uri,
@@ -268,7 +284,14 @@ fun ContentResolver.saveImage(
                 } else {
                     bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
                 }
+                ExifHandler.setExifDataAfterScalingWithUri(
+                    context = context,
+                    originalImageUri = originalUri,
+                    scaledBitmap = bitmap,
+                    outputUri = Uri.fromFile(file),
+                )
             }
+
             // Make sure the file is visible in the gallery immediately
             MediaScannerConnection.scanFile(
                 context,

@@ -26,8 +26,8 @@ object ExifHandler {
         try {
             val originalExif = getExif(context, originalImageUri)
             var rotatedBitmap = scaledBitmap
-            val orientation =
-                getExifOrientation(context, originalImageUri)
+          //  val orientation =
+            //    getExifOrientation(context, originalImageUri)
            // rotatedBitmap =
              //   rotateBitmap(rotatedBitmap, orientation)
             val contentResolver = context.contentResolver
@@ -35,7 +35,7 @@ object ExifHandler {
             // Open an OutputStream for the outputUri
             contentResolver.openOutputStream(outputUri)?.use { outputStream ->
                 // Write the scaled image to the outputUri using the OutputStream
-                rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+               // rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
 
                 val descriptor = contentResolver.openFileDescriptor(outputUri, "w")
                 val newExif = if (descriptor != null) {
@@ -69,10 +69,10 @@ object ExifHandler {
         try {
             val originalExif = getExif(context, originalImageUri)
             // Write the scaled image to the output file
-            FileOutputStream(outputFile,false).use { outputStream ->
+          /*  FileOutputStream(outputFile,false).use { outputStream ->
                 scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
             }
-
+*/
             // Create ExifInterface for the output file
             val newExif = ExifInterface(outputFile.absolutePath)
 

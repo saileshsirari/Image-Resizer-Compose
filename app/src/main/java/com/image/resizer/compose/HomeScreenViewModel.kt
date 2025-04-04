@@ -1,16 +1,12 @@
 package com.image.resizer.compose
 
-import android.R.attr.bitmap
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Environment
 import android.os.StatFs
-import android.util.Log.d
-import android.util.Log.e
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.components.Dependency.deferred
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.SaveFormat
 import com.image.resizer.compose.mediaApi.clearCache
@@ -34,7 +30,6 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.yield
 
 
@@ -68,7 +63,7 @@ class HomeScreenViewModel(
     fun compressImagesToTargetSize(
         context: Context,
         imageItems: List<ImageItem>,
-        percentOriginal: Int = TARGET_FILE_SIZE_KB
+        percentOriginal: Int = TARGET_PERCENTAGE
     ) {
         _scaledImageItems.value = imageItems
         ImageItem.percentScale = percentOriginal
@@ -318,19 +313,13 @@ class HomeScreenViewModel(
 
         job = viewModelScope.launch(Dispatchers.IO + exceptionHandler) {
             try {
-                _savingState.value = 1
+                _savingState.value = 2
                 currentSelectedItems.asFlow().flowOn(Dispatchers.IO).chunked(30).map { list ->
-                    //  val d = if(count<100) 100L else count.toLong()
-                    //   delay(d)
                     println("wait for this list $count")
-                    //   val deferred =   launch   (exceptionHandler + Dispatchers.IO) {
-                    //   println("delay $d")
                     val defList = mutableListOf<Deferred<Any?>>()
                     list.mapIndexed { index, it ->
                         val def = async(exceptionHandler + Dispatchers.IO) {
-                            //    delay(d/10)
                             yield()
-
                             //   mutex.withLock {
                             try {
                                 //   val saveJobs =   currentSelectedItems.mapIndexed { index, it ->
@@ -354,16 +343,9 @@ class HomeScreenViewModel(
                                                 mimeType = saveFormat.mimeType
                                             ) == null
                                         ) {
-//                                _isSaving.value = false
-//                                onFail().also { _isSaving.value = false }
-//                                throw Exception("Unable to save")
                                             println("mediaHandler.saveImage failed for $scaledUri")
                                         } else {
-
-                                            //   bitmap.recycle()
-                                            //mutex.withLock {
                                             processed.add(media)
-                                            //}
                                         }
                                         //   }
 
@@ -378,16 +360,12 @@ class HomeScreenViewModel(
                         }
                         defList.add(def)
                     }
-                    //   if (processed.size % 5 == 0) {
                     println(" ${savingState.value} size here")
                     _savingState.value = processed.size
-                    //  }
-
                     println("waiting for  ${defList.size} to finish")
                     defList.awaitAll()
                     delay(1000)
                     println("waited for  list $count")
-
                 }.collect {
 
                 }
@@ -403,38 +381,95 @@ class HomeScreenViewModel(
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun saveOverride(
         context: Context,
         saveFormat: SaveFormat = SaveFormat.JPEG,
-        onSuccess: () -> Unit = {},
-        onFail: () -> Unit = {}
+        onSuccess: (String) -> Unit = {},
+        onFail: (String) -> Unit = {}
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
 
-            _isSaving.value = true
+        val exceptionHandler = CoroutineExceptionHandler { _, e ->
+            println("[ERROR] ${e.message}")
+        }
+        val mutex = Mutex()
+        _isSaving.value = true
+        val currentSelectedItems = _scaledImageItems.value
+        _savingState.value = 0
+        val processed = mutableListOf<ImageItem>()
+        var count = 0
+        //Check if the space is enough
+        if (!isEnoughSpaceAvailable(currentSelectedItems.size)) {
+            _isSaving.value = false
+            onFail("Not enough space available").also { _isSaving.value = false }
+            println("Not enough space available")
+            return
+        }
+
+        job = viewModelScope.launch(Dispatchers.IO + exceptionHandler) {
             try {
-                val currentSelectedItems = _scaledImageItems.value
-                currentSelectedItems.forEach {
-                    val media = it
-                    it.scaledUri?.let { scaledUri ->
-                        val currentBitmap = loadBitmapFromUri(scaledUri, context)
-                        currentBitmap?.let { bitmap ->
-                            if (!mediaHandler.overrideImage(
-                                    uri = media.uri,
-                                    bitmap = bitmap,
-                                    format = saveFormat.format
-                                )
-                            ) {
-                                throw Exception("Unable to save")
+                _savingState.value = 2
+                currentSelectedItems.asFlow().flowOn(Dispatchers.IO).chunked(30).map { list ->
+                    println("wait for this list $count")
+                    val defList = mutableListOf<Deferred<Any?>>()
+                    list.mapIndexed { index, it ->
+                        val def = async(exceptionHandler + Dispatchers.IO) {
+                            yield()
+
+                            //   mutex.withLock {
+                            try {
+                                //   val saveJobs =   currentSelectedItems.mapIndexed { index, it ->
+                                val media = it
+                                it.scaledUri?.let { scaledUri ->
+                                    var bitmap: Bitmap? = null
+                                    bitmap = loadBitmapFromUri(scaledUri, context)
+                                    count++
+                                    if (bitmap != null) {
+                                        //  launch(exceptionHandler + Dispatchers.IO) {
+                                        if (!mediaHandler.overrideImage(
+                                                originalUri = scaledUri,
+                                                uri = media.uri,
+                                                bitmap = bitmap,
+                                                format = saveFormat.format
+                                            )
+                                        ) {
+                                            println("mediaHandler.overrideImage failed for $scaledUri")
+                                        } else {
+                                            processed.add(media)
+                                        }
+                                        //   }
+
+                                    } else {
+                                        println("null bitmap for $scaledUri")
+                                    }
+                                }
+
+                            } catch (e: Exception) {
+                                e.printStackTrace()
                             }
                         }
+                        defList.add(def)
                     }
+                    println(" ${savingState.value} size here")
+                    _savingState.value = processed.size
+                    println("waiting for  ${defList.size} to finish")
+                    defList.awaitAll()
+                    delay(1000)
+                    println("waited for  list $count")
+                }.collect {
+
                 }
+                //joinAll(*saveJobs.toTypedArray()) //Wait for each task to be finished.
             } catch (e: Exception) {
-                onFail().also { _isSaving.value = false }
+                _isSaving.value = false
+                onFail(e.message ?: "Unable to save some images").also { _isSaving.value = false }
+                return@launch
+
             }
-//            onSuccess().also { _isSaving.value = false }
+            _isSaving.value = false
+            onSuccess("Images saved")
         }
+
     }
 
 
