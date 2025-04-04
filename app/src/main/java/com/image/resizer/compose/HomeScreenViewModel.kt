@@ -195,6 +195,17 @@ class HomeScreenViewModel(
         _cropState.value = CropState.Idle
         _compressState.value = CompressState.Idle
         _scaleState.value = ScaleState.Idle
+        _scaledImageItems.value = emptyList<ImageItem>()
+        val selectedImageItems = _selectedImageItems.value.map { it ->
+            //    val (imageName, fileSize) = getFileNameAndSize(context, uri)
+            ImageItem(
+                context = context,
+                uri = it.uri,
+                imageName = it.imageName,
+                size = it.size
+            )
+        }
+        _selectedImageItems.value = selectedImageItems
         _galleryState.value = GalleryState.Success(GalleryStateData(_selectedImageItems.value))
         clearCache(context)
     }
@@ -335,6 +346,7 @@ class HomeScreenViewModel(
 
                                         //  launch(exceptionHandler + Dispatchers.IO) {
                                         if (mediaHandler.saveImage(
+                                                it.uri,
                                                 bitmap = bitmap,
                                                 format = saveFormat.format,
                                                 relativePath = Environment.DIRECTORY_PICTURES + "/" + CUSTOM_FOLDER_NAME,
@@ -431,7 +443,7 @@ class HomeScreenViewModel(
 
     fun onSelectedItemClicked(item: ImageItem, navigate: (String) -> Unit) {
         selectedItem = item
-        navigate(Screen.ImageDetailScreen.route)
+        navigate(Screen.ZoomableScreen.route)
     }
 
 

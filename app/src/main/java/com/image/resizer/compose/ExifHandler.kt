@@ -7,12 +7,57 @@ import android.graphics.Matrix
 import android.media.ExifInterface
 import android.net.Uri
 import android.util.Log
+import com.image.resizer.compose.mediaApi.getExifOrientation
+import com.image.resizer.compose.mediaApi.rotateBitmap
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 
 object ExifHandler {
     private const val TAG = "ExifHandler"
+
+
+    fun setExifDataAfterScalingWithUri(
+        context: Context,
+        originalImageUri: Uri,
+        scaledBitmap: Bitmap,
+        outputUri: Uri
+    ) {
+        try {
+            val originalExif = getExif(context, originalImageUri)
+            var rotatedBitmap = scaledBitmap
+            val orientation =
+                getExifOrientation(context, originalImageUri)
+           // rotatedBitmap =
+             //   rotateBitmap(rotatedBitmap, orientation)
+            val contentResolver = context.contentResolver
+
+            // Open an OutputStream for the outputUri
+            contentResolver.openOutputStream(outputUri)?.use { outputStream ->
+                // Write the scaled image to the outputUri using the OutputStream
+                rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+
+                val descriptor = contentResolver.openFileDescriptor(outputUri, "w")
+                val newExif = if (descriptor != null) {
+                    ExifInterface(descriptor.fileDescriptor)
+                } else {
+                    ExifInterface(outputUri.path.toString())
+                }
+
+                // Copy the original Exif attributes
+                copyExifAttributes(originalExif, newExif)
+
+                // Set the new width and height
+                newExif.setAttribute(ExifInterface.TAG_IMAGE_WIDTH, rotatedBitmap.width.toString())
+                newExif.setAttribute(ExifInterface.TAG_IMAGE_LENGTH, rotatedBitmap.height.toString())
+                // Save the new EXIF data
+                newExif.saveAttributes()
+            }
+        } catch (e: IOException) {
+
+
+        }
+    }
 
     fun setExifDataAfterScaling(
         context: Context,
@@ -24,7 +69,7 @@ object ExifHandler {
         try {
             val originalExif = getExif(context, originalImageUri)
             // Write the scaled image to the output file
-            FileOutputStream(outputFile).use { outputStream ->
+            FileOutputStream(outputFile,false).use { outputStream ->
                 scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
             }
 
@@ -41,9 +86,8 @@ object ExifHandler {
 
             // Save the new EXIF data
             newExif.saveAttributes()
-            Log.d(TAG, "Exif data saved successfully to: ${outputFile.absolutePath}")
         } catch (e: IOException) {
-            e.printStackTrace()
+            Log.d(TAG, "Exif data save failed : ${e.toString()}")
         }
     }
 
@@ -69,7 +113,8 @@ object ExifHandler {
             ExifInterface.TAG_MAKE,
             ExifInterface.TAG_MODEL,
             ExifInterface.TAG_WHITE_BALANCE,
-            ExifInterface.TAG_FOCAL_LENGTH
+            ExifInterface.TAG_FOCAL_LENGTH,
+            ExifInterface.TAG_ORIENTATION
         )
 
         attributes.forEach { attribute ->

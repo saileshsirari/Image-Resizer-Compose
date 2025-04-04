@@ -23,6 +23,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.util.Log
+import com.image.resizer.compose.ExifHandler
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.util.Constants
 import com.image.resizer.compose.mediaApi.util.Constants.CUSTOM_FOLDER_NAME
@@ -205,6 +206,7 @@ fun ContentResolver.overrideImage(
 
 
 fun ContentResolver.saveImage(
+    originalUri: Uri,
     context: Context,
     bitmap: Bitmap,
     format: Bitmap.CompressFormat = Bitmap.CompressFormat.JPEG,
@@ -229,8 +231,16 @@ fun ContentResolver.saveImage(
                 uri = it // Keep uri reference so it can be removed on failure
 
                 openOutputStream(it)?.use { stream ->
-                    if (!bitmap.compress(format, 100, stream))
+                    if (!bitmap.compress(format, 100, stream)) {
                         throw IOException("Failed to save bitmap.")
+                    }else{
+                        ExifHandler.setExifDataAfterScalingWithUri(
+                            context = context,
+                            originalImageUri = originalUri,
+                            scaledBitmap = bitmap,
+                            outputUri = uri,
+                        )
+                    }
                 } ?: throw IOException("Failed to open output stream.")
 
 

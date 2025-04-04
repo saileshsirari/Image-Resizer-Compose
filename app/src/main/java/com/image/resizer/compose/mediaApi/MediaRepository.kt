@@ -44,6 +44,7 @@ interface MediaRepository {
 
 
     fun saveImage(
+        originalUri: Uri,
         bitmap: Bitmap,
         format: Bitmap.CompressFormat,
         mimeType: String,

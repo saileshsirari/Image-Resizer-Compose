@@ -146,10 +146,7 @@ fun GalleryImagesComponent(context: Context,navController: NavHostController,
                         .padding(4.dp)
                         .height(200.dp)
                         .clickable{
-                            loadBitmapFromUri(imageItem.uri,context)?.also {
-                                val item = imageItem.saveBitmapToTempAndGetUri(context, it)
-                                onImageItemClicked(item)
-                            }
+                            onImageItemClicked(imageItem)
                         // val uri =   compressImageToTargetSize(context ,imageItem,100).computedUri.toString()
 
                         }
@@ -192,13 +189,6 @@ internal fun ScaledImagesGrid(
             items(scaledImages, key = { item -> item.key.toString() }) { imageItem ->
                 Row(
                     modifier = Modifier
-                        .clickable(onClick = {
-                            loadBitmapFromUri(imageItem.uri,context)?.also {
-                                val item = imageItem.saveBitmapToTempAndGetUri(context, it)
-                                onSelectedItemClicked(item)
-                            }
-
-                        })
                         .fillMaxSize()
                         .border(1.dp, Color.Gray),
                     horizontalArrangement = Arrangement.SpaceBetween, // Center columns
@@ -238,7 +228,10 @@ internal fun ScaledImagesGrid(
                                 .align(Alignment.CenterHorizontally)
                                 .padding(4.dp)
                                 .height(300.dp)
-                                .clip(RoundedCornerShape(1.dp)),
+                                .clip(RoundedCornerShape(1.dp))
+                                .clickable(onClick = {
+                                    onSelectedItemClicked(imageItem)
+                                }),
                             placeholder = painterResource(id = R.drawable.ic_crop_24dp),
                             error = painterResource(id = R.drawable.ic_crop_24dp)
 
@@ -285,7 +278,10 @@ internal fun ScaledImagesGrid(
                                     .align(Alignment.CenterHorizontally)
                                     .padding(4.dp)
                                     .height(300.dp)
-                                    .clip(RoundedCornerShape(1.dp)),
+                                    .clip(RoundedCornerShape(1.dp))
+                                    .clickable(onClick = {
+                                        onSelectedItemClicked(imageItem)
+                                    }),
                                 placeholder = painterResource(id = R.drawable.ic_crop_24dp),
                                 error = painterResource(id = R.drawable.ic_crop_24dp)
                             )

@@ -15,7 +15,8 @@ data class ImageItem(
     var scaledImageDimension: Pair<Int, Int>? = null,
     var scaledFileSize: Long? = null,
     var computedUri: Uri? = null,
-    var size: Long? = null
+    var size: Long? = null,
+    //var isScaled: Boolean = false
 
 ) {
 

@@ -330,18 +330,7 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
             }
             composable(ZoomableScreen.route) {
                 homeScreenViewModel.selectedItem?.let {
-                    ZoomableImage(it.computedUri!!)
-                }
-            }
-            composable(
-                "zoomableImage/{imageUri}",
-                arguments = listOf(navArgument("imageUri") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val imageUriString = backStackEntry.arguments?.getString("imageUri")
-                imageUriString?.let { imageUri ->
-                    ZoomableImage(imageUri = imageUri.toUri())
-                } ?: run {
-                    Text("Error : no image found")
+                    ZoomableImage(it.computedUri?:it.uri)
                 }
             }
         }
