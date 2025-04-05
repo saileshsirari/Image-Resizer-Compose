@@ -405,7 +405,7 @@ class HomeScreenViewModel(
                     val defList = mutableListOf<Deferred<Any?>>()
                     list.mapIndexed { index, it ->
                         val def = async(exceptionHandler + Dispatchers.IO) {
-                          //  yield()
+                            yield()
                             //   mutex.withLock {
                             try {
                                 //   val saveJobs =   currentSelectedItems.mapIndexed { index, it ->
@@ -456,7 +456,6 @@ class HomeScreenViewModel(
                     }
                     println(" ${savingState.value} size here")
                     defList.awaitAll()
-                    delay(1000)
                    // mutex.withLock {
                         _savingState.value = processed.size
                   //  }

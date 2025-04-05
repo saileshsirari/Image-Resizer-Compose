@@ -522,7 +522,7 @@ fun <T : Media> HomeScreen(
                                 trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                             )
                             Text(
-                                text = "Saving: ${savingState.value/selectedImageItems.value.size}%",
+                                text = "Saving: ${savingState.value}/${selectedImageItems.value.size}",
                             )
                         }
                     },
