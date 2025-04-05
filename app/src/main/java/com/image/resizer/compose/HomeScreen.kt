@@ -23,7 +23,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,7 +36,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -51,10 +49,8 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
@@ -86,11 +82,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavHostController
 import apps.sai.com.imageresizer.R
 import coil.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.image.resizer.compose.ImageReplacer.deleteSelectedImages
@@ -102,7 +100,6 @@ import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.NavigationButton
 import com.image.resizer.compose.mediaApi.PickerMediaSheet
 import com.image.resizer.compose.mediaApi.TAG
-import com.image.resizer.compose.mediaApi.clearCache
 import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.model.MediaState
@@ -111,9 +108,7 @@ import com.image.resizer.compose.mediaApi.util.Constants.Animation.enterAnimatio
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.exitAnimation
 import com.image.resizer.compose.mediaApi.util.rememberActivityResult
 import com.image.resizer.compose.mediaApi.util.writeRequests
-import io.ktor.http.content.TextContent
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 
@@ -138,7 +133,7 @@ fun <T : Media> HomeScreen(
     navigate: (route: String) -> Unit,
     onItemClick: () -> Unit,
     albumsState: State<AlbumState>,
-    handler: MediaHandleUseCase,
+    handler: MediaHandleUseCase, // Assuming MediaHandleUseCase is still needed
     navController: NavHostController,
     navigateUp: @DisallowComposableCalls () -> Unit,
 ) {
@@ -198,13 +193,13 @@ fun <T : Media> HomeScreen(
 
     )
     LaunchedEffect(scaleState, galleryState, cropState, compressState) {
-        Log.d(
-            TAG,
+        log(
             "HomeScreen: scale =$scaleState, cropState = $cropState, compress =$compressState, gallery=$galleryState "
         )
 
     }
-    Scaffold(
+    log("HomeScreen compose")
+    androidx.compose.material3.Scaffold(
         bottomBar = {
             AnimatedVisibility(
                 visible =
@@ -378,7 +373,7 @@ fun <T : Media> HomeScreen(
                         navController,
                         galleryState,
                         showImages,
-                        homeScreenViewModel.selectedImageItems,
+                        selectedImageItems.value,
                         homeScreenViewModel
 
                     )
@@ -476,75 +471,65 @@ fun <T : Media> HomeScreen(
 
                 }
             }
-            if (isSaving.value && savingState.value > 0) {
+            // Lifecycle observation for pause/resume
+            var isPaused by remember { mutableStateOf(false) }
+            val lifecycleOwner = LocalLifecycleOwner.current
 
+            LaunchedEffect(lifecycleOwner) {
+                val observer = LifecycleEventObserver { _, event ->
+                    when (event) {
+                        Lifecycle.Event.ON_PAUSE -> isPaused = true
+                        Lifecycle.Event.ON_RESUME -> isPaused = false
+                        else -> {}
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+
+            }
+
+            AnimatedVisibility(isSaving.value && savingState.value > 0) {
                 AlertDialog(
                     onDismissRequest = {
-
-                    }, // Dismiss on outside click
-                    title = { Text("Scale Image") },
+                        // Not dismissible by outside click
+                    },
+                    title = { Text("Saving Images..") },
                     text = {
                         Column(modifier = Modifier.padding(horizontal = 6.dp)) {
+                            val targetProgress =
+                                savingState.value.toFloat() / selectedImageItems.value.size.toFloat()
                             val animatedProgress by animateFloatAsState(
-                                targetValue = savingState.value.toFloat(),
+                                targetValue = if (isPaused) targetProgress else targetProgress,
+                                animationSpec = if (isPaused) tween(durationMillis = 0) else tween(
+                                    durationMillis = 10
+                                ),
+                                label = "Progress Animation",
                             )
-                            Slider(
-                                value = animatedProgress,
-                                onValueChange = { },
-                                enabled = false,
+
+                            LinearProgressIndicator(
+                                progress = animatedProgress,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(bottom = 8.dp),
-                                valueRange = 0f..selectedImageItems.value.size.toFloat()
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                             )
                             Text(
-                                text = "Saving: ${"%.2f".format((animatedProgress / selectedImageItems.value.size.toFloat()) * 100)}%",
+                                text = "Saving: ${"%.2f".format(animatedProgress * 100)}%",
                             )
                         }
                     },
                     confirmButton = {
-
+                        // No confirm button
                     },
                     dismissButton = {
                         Button(onClick = {
                             homeScreenViewModel.cancelSave()
-
                         }) {
                             Text("Cancel")
                         }
                     }
-
                 )
-
-
-            } else {
-                AnimatedVisibility(isSaving.value && savingState.value > 0) {
-                    val animatedProgress by animateFloatAsState(
-                        targetValue = savingState.value.toFloat(),
-                        animationSpec = tween(durationMillis = 10), // Animation duration
-                        label = "slider animation"
-                    )
-                    Column(
-                        modifier = Modifier
-                            .padding(horizontal = 6.dp)
-                            .align(Alignment.BottomCenter)
-                            .background(MaterialTheme.colorScheme.background)
-                    ) {
-                        Slider(
-                            value = animatedProgress,
-                            onValueChange = { },
-                            enabled = false,
-                            modifier = Modifier
-                                .padding(bottom = 8.dp),
-                            valueRange = 0f..selectedImageItems.value.size.toFloat()
-                        )
-                        Text(
-                            "Saving: ${(animatedProgress / selectedImageItems.value.size.toFloat()) * 100}%"
-                        )
-
-                    }
-                }
             }
+
         }
     }
 
@@ -671,7 +656,7 @@ private fun HandleGalleryState(
     navController: NavHostController,
     galleryState: GalleryState,
     showImages: Boolean,
-    selectedImageItems: StateFlow<List<ImageItem>>,
+    selectedImageItems: List<ImageItem>,
     homeScreenViewModel: HomeScreenViewModel
 ) {
     val currentGalleryState = galleryState
@@ -682,7 +667,7 @@ private fun HandleGalleryState(
                 enter = fadeIn(animationSpec = tween(durationMillis = 3000)),
                 exit = fadeOut(animationSpec = tween(durationMillis = 3000))
             ) {
-                GalleryImagesComponent(context, navController, selectedImageItems) {
+                GalleryImagesComponent(selectedImageItems) {
                     homeScreenViewModel.onImageItemClicked(it) {
                         navController.navigate(it) {
                             launchSingleTop = true
@@ -798,7 +783,7 @@ private fun GalleryImagesComponent(selectedImageUris: List<Uri>) {
 }
 
 
-@Preview
+@Preview(showBackground = true)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreenTopAppBarPreview() {

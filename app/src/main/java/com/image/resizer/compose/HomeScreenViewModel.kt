@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Environment
 import android.os.StatFs
+import android.util.Log.e
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
@@ -30,6 +31,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.yield
 
 
@@ -59,6 +61,10 @@ class HomeScreenViewModel(
     var selectedImageItems = _selectedImageItems.asStateFlow()
     private var _savingState = MutableStateFlow<Int>(0)
     var savingState = _savingState.asStateFlow()
+
+    init {
+        log("HomeScreenViewModel init")
+    }
 
     fun compressImagesToTargetSize(
         context: Context,
@@ -140,6 +146,7 @@ class HomeScreenViewModel(
     }
 
     fun onImagesScaled(context: Context, scaleParams: ScaleParams?) {
+        log("onImagesScaled")
         viewModelScope.launch(Dispatchers.IO) {
             onReset(context)
             scaleImages(selectedImageItems.value, scaleParams)
@@ -149,6 +156,7 @@ class HomeScreenViewModel(
     }
 
     fun onCompressShowImages(context: Context, size: Int) {
+        log("onCompressShowImages")
         viewModelScope.launch(Dispatchers.IO) {
             onReset(context)
             compressImagesToTargetSize(context, selectedImageItems.value, size)
@@ -162,6 +170,7 @@ class HomeScreenViewModel(
         context: Context,
         callBack: () -> Unit
     ) {
+        log("handlePickedImages")
         viewModelScope.launch(Dispatchers.IO) {
             if (imageItems.isNotEmpty()) {
                 callBack()
@@ -173,6 +182,7 @@ class HomeScreenViewModel(
     }
 
     fun onGalleryImagesSelected(imageItems: List<ImageItem>) {
+        log("onGalleryImagesSelected")
         _cropState.value = CropState.Idle
         _compressState.value = CompressState.Idle
         _scaleState.value = ScaleState.Idle
@@ -187,6 +197,7 @@ class HomeScreenViewModel(
     }
 
     fun onUndo(context: Context) {
+        log("onUndo")
         _cropState.value = CropState.Idle
         _compressState.value = CompressState.Idle
         _scaleState.value = ScaleState.Idle
@@ -219,6 +230,7 @@ class HomeScreenViewModel(
     }
 
     fun onReset(context: Context) {
+        log("onReset")
         _cropState.value = CropState.Idle
         _compressState.value = CompressState.Idle
         _scaleState.value = ScaleState.Idle
@@ -283,6 +295,7 @@ class HomeScreenViewModel(
     var job: Job? = null
 
     fun cancelSave() {
+        log("cancelSave")
         job?.cancel()
         _isSaving.value = false
     }
@@ -294,13 +307,13 @@ class HomeScreenViewModel(
         onSuccess: (String) -> Unit = {},
         onFail: (String) -> Unit = {}
     ) {
+        log("saveCopy")
         val exceptionHandler = CoroutineExceptionHandler { _, e ->
             println("[ERROR] ${e.message}")
         }
         val mutex = Mutex()
         _isSaving.value = true
         val currentSelectedItems = _scaledImageItems.value
-        _savingState.value = 0
         val processed = mutableListOf<ImageItem>()
         var count = 0
         //Check if the space is enough
@@ -310,11 +323,11 @@ class HomeScreenViewModel(
             println("Not enough space available")
             return
         }
-
+        _savingState.value = 2
         job = viewModelScope.launch(Dispatchers.IO + exceptionHandler) {
             try {
-                _savingState.value = 2
-                currentSelectedItems.asFlow().flowOn(Dispatchers.IO).chunked(30).map { list ->
+
+                currentSelectedItems.asFlow().flowOn(Dispatchers.IO).chunked(10).map { list ->
                     println("wait for this list $count")
                     val defList = mutableListOf<Deferred<Any?>>()
                     list.mapIndexed { index, it ->
@@ -343,14 +356,16 @@ class HomeScreenViewModel(
                                                 mimeType = saveFormat.mimeType
                                             ) == null
                                         ) {
-                                            println("mediaHandler.saveImage failed for $scaledUri")
+                                            log("mediaHandler.saveImage failed for $scaledUri")
                                         } else {
                                             processed.add(media)
+
+
                                         }
                                         //   }
 
                                     } else {
-                                        println("null bitmap for $scaledUri")
+                                        log("null bitmap for $scaledUri")
                                     }
                                 }
 
@@ -359,13 +374,20 @@ class HomeScreenViewModel(
                             }
                         }
                         defList.add(def)
+
                     }
                     println(" ${savingState.value} size here")
-                    _savingState.value = processed.size
-                    println("waiting for  ${defList.size} to finish")
+
+
+
                     defList.awaitAll()
+
+
                     delay(1000)
-                    println("waited for  list $count")
+                    mutex.withLock {
+                        _savingState.value = processed.size
+                    }
+                    log("waited for  list $count")
                 }.collect {
 
                 }
@@ -388,7 +410,7 @@ class HomeScreenViewModel(
         onSuccess: (String) -> Unit = {},
         onFail: (String) -> Unit = {}
     ) {
-
+        log("saveOverride")
         val exceptionHandler = CoroutineExceptionHandler { _, e ->
             println("[ERROR] ${e.message}")
         }

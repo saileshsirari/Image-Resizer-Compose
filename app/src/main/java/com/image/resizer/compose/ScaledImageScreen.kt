@@ -43,7 +43,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.error
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
@@ -57,15 +56,12 @@ import java.io.File
 import java.io.FileOutputStream
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavHostController
 import apps.sai.com.imageresizer.R
 import coil.request.ImageRequest
 import coil.size.Size
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.MediaRepositoryImpl
 import com.image.resizer.compose.mediaApi.loadBitmapFromUri
-import kotlinx.coroutines.flow.StateFlow
-import kotlin.io.path.createTempFile
 
 
 @Preview
@@ -95,9 +91,9 @@ fun GalleryImagesComponentPreview1() {
 
 
 @Composable
-fun GalleryImagesComponent(context: Context,navController: NavHostController,
-                           selectedImageItems: StateFlow<List<ImageItem>>,  onImageItemClicked: (ImageItem) -> Unit = {}) {
-    val imageItems by selectedImageItems.collectAsStateWithLifecycle()
+fun GalleryImagesComponent(
+    selectedImageItems: List<ImageItem>, onImageItemClicked: (ImageItem) -> Unit = {}) {
+    val imageItems  =  selectedImageItems
     val columns = if (imageItems.size > 1) {
         GridCells.Fixed(2)
     } else {

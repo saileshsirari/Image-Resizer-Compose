@@ -45,7 +45,7 @@ import java.io.IOException
 import java.io.InputStream
 
 val sdcardRegex = "^/storage/[A-Z0-9]+-[A-Z0-9]+/.*$".toRegex()
-const val TAG = "ScaledImageScreen"
+const val TAG = "HomeScreen"
 
 fun pruneInternalStorage(context: Context) {
     val filesDir = context.filesDir

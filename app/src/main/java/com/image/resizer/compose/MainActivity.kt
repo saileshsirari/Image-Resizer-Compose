@@ -73,7 +73,9 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
 import androidx.core.net.toUri
+import androidx.navigation.activity
 import com.image.resizer.compose.Screen.ZoomableScreen
+import com.image.resizer.compose.mediaApi.MediaRepository
 
 // Data class to hold original and compressed image URIs
 data class ImagePair(val originalImageItem: ImageItem, val transFormedImageItem: ImageItem)
@@ -138,13 +140,39 @@ fun MainApp() {
     var showRationale by remember { mutableStateOf(false) }
 
     showRationale = !galleryPermissionState.status.isGranted
+    log("MainApp")
+    val mediaRepository = MediaRepositoryImpl(LocalContext.current)
+    val mediaHandleUseCase =
+        MediaHandleUseCase(repository = mediaRepository)
+    val albumsViewModel = AlbumsViewModel(mediaRepository, mediaHandleUseCase).apply {
+        albumId = -1
+    }
+
+
+    val homeScreenViewModel = HomeScreenViewModel(mediaHandleUseCase)
+    val activity = LocalActivity.current as Activity
+
+    val context = LocalContext.current
+
+    val hideTimeline by remember { mutableStateOf(true) }
     if (showRationale) {
         StoragePermissionDialog(galleryPermissionState)
     } else {
         Scaffold(
             bottomBar = { BottomNavigationBar(navController) }
         ) { innerPadding ->
-            Navigation(navController, innerPadding)
+            Navigation(
+                context,
+                activity,
+                navController,
+                albumsViewModel,
+                homeScreenViewModel,
+                mediaRepository,
+                mediaHandleUseCase,
+                hideTimeline,
+                innerPadding
+            )
+
         }
     }
 }
@@ -197,22 +225,20 @@ val exceptionHandler = CoroutineExceptionHandler { _, e ->
 @SuppressLint("UnrememberedMutableState")
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
-    val mediaRepository = MediaRepositoryImpl(LocalContext.current)
-    val mediaHandleUseCase =
-        MediaHandleUseCase(repository = mediaRepository)
-    val albumsViewModel = AlbumsViewModel(mediaRepository, mediaHandleUseCase).apply {
-        albumId = -1
-    }
-
+fun Navigation(
+    context: Context,
+    activity: Activity,
+    navController: NavHostController,
+    albumsViewModel: AlbumsViewModel,
+    homeScreenViewModel: HomeScreenViewModel,
+    mediaRepository: MediaRepository,
+    mediaHandleUseCase: MediaHandleUseCase,
+    hideTimeline: Boolean,
+    innerPadding: PaddingValues
+) {
+    log("navigation")
     val albumsState =
         albumsViewModel.albumsFlow.collectAsStateWithLifecycle(context = Dispatchers.IO + exceptionHandler)
-    val homeScreenViewModel = HomeScreenViewModel(mediaHandleUseCase)
-    val activity = LocalActivity.current as Activity
-
-    val context = LocalContext.current
-
-    val hideTimeline by remember { mutableStateOf(true) }
 
     SharedTransitionLayout {
         NavHost(
@@ -226,6 +252,7 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
         ) {
 
             composable(Screen.Home.route) {
+                log("Screen.Home.route")
 
                 val mediaState =
                     albumsViewModel.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO + exceptionHandler)
@@ -330,7 +357,7 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
             }
             composable(ZoomableScreen.route) {
                 homeScreenViewModel.selectedItem?.let {
-                    ZoomableImage(it.computedUri?:it.uri)
+                    ZoomableImage(it.computedUri ?: it.uri)
                 }
             }
         }
