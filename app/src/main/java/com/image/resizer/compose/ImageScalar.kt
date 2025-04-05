@@ -19,7 +19,7 @@ private fun createTempFile(context: Context): File {
     return File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir)
 }
 
-fun compressImageToTargetSize(
+suspend fun compressImageToTargetSize(
     context: Context,
     imageItem: ImageItem,
     percentOriginal: Int = TARGET_PERCENTAGE

@@ -6,15 +6,25 @@ import android.net.Uri
 import android.os.Environment
 import android.os.StatFs
 import android.util.Log.e
+import androidx.compose.animation.core.isFinished
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.OneTimeWorkRequest
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
+import androidx.work.workDataOf
+import com.image.resizer.compose.ImageSaveWorker.Companion.KEY_IMAGE_URIS
+import com.image.resizer.compose.ImageSaveWorker.Companion.KEY_PROCESSED_COUNT
+import com.image.resizer.compose.ImageSaveWorker.Companion.KEY_SAVE_FORMAT
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.SaveFormat
 import com.image.resizer.compose.mediaApi.clearCache
 import com.image.resizer.compose.mediaApi.loadBitmapFromUri
 import com.image.resizer.compose.mediaApi.pruneInternalStorage
 import com.image.resizer.compose.mediaApi.util.Constants.CUSTOM_FOLDER_NAME
+import com.image.resizer.compose.mediaApi.util.update
 import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -22,14 +32,19 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.chunked
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.yield
@@ -83,12 +98,12 @@ class HomeScreenViewModel(
     private fun processSomeImages(
         imageItems: List<ImageItem>,
         operation: String = "compress",
-        size: Int = 50
+        size: Int = 20
     ) {
         imageItems.take(size).forEachIndexed { index, it ->
-            viewModelScope.launch(Dispatchers.Default) {
-                println("$operation $index " + it.scaledUri.toString().take(10))
-            }
+           // viewModelScope.launch(Dispatchers.Default) {
+               // println("$operation $index " + it.computeScaledUri())
+           // }
         }
     }
 
@@ -293,11 +308,68 @@ class HomeScreenViewModel(
     }
 
     var job: Job? = null
+    private val _event = MutableSharedFlow<Boolean>()
+    val event = _event.asSharedFlow()
+    private var isPaused = false
+
+
+    fun pause() {
+        viewModelScope.launch {
+            log("Paused Coroutine")
+            _event.emit(true)
+            isPaused = true
+
+        }
+
+
+    }
+
+    fun resume() {
+        viewModelScope.launch {
+            log("Resume Coroutine")
+            _event.emit(false)
+            isPaused = false
+
+        }
+    }
 
     fun cancelSave() {
         log("cancelSave")
         job?.cancel()
         _isSaving.value = false
+    }
+
+    fun saveImagesWithWorkManager(
+        context: Context,
+        imageItems: List<ImageItem>,
+        saveFormat: SaveFormat = SaveFormat.JPEG
+    ) {
+        val uris = imageItems.map { it.uri.toString() }.toTypedArray()
+        // Create the input data for the worker
+        val inputData = workDataOf(
+            KEY_IMAGE_URIS to uris,
+            KEY_SAVE_FORMAT to if (saveFormat == SaveFormat.JPEG) "JPEG" else "PNG"
+        )
+        // Create the WorkRequest
+        val saveRequest = OneTimeWorkRequest.Builder(ImageSaveWorker::class.java)
+            .setInputData(inputData)
+            .build()
+
+        // Enqueue the work
+        val workManager = WorkManager.getInstance(context)
+        workManager.enqueue(saveRequest)
+        _isSaving.update { true }
+        viewModelScope.launch {
+            workManager.getWorkInfoByIdFlow(saveRequest.id).filterNotNull().collect { workInfo ->
+                if (workInfo.state == WorkInfo.State.RUNNING) {
+                    val progress = workInfo.progress.getInt(KEY_PROCESSED_COUNT, 0)
+                    _savingState.update { progress }
+
+                } else if (workInfo.state.isFinished) {
+                    _isSaving.update { false }
+                }
+            }
+        }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -324,22 +396,26 @@ class HomeScreenViewModel(
             return
         }
         _savingState.value = 2
+
         job = viewModelScope.launch(Dispatchers.IO + exceptionHandler) {
             try {
-
-                currentSelectedItems.asFlow().flowOn(Dispatchers.IO).chunked(10).map { list ->
-                    println("wait for this list $count")
+                //   saveImagesWithWorkManager(context,currentSelectedItems)
+                currentSelectedItems.asFlow().flowOn(Dispatchers.Default).chunked(50).map { list ->
+                    println("running  $count")
                     val defList = mutableListOf<Deferred<Any?>>()
                     list.mapIndexed { index, it ->
                         val def = async(exceptionHandler + Dispatchers.IO) {
-                            yield()
+                          //  yield()
                             //   mutex.withLock {
                             try {
                                 //   val saveJobs =   currentSelectedItems.mapIndexed { index, it ->
                                 val media = it
+                                if(it.scaledUri==null){
+                                    it.computeScaledUri()
+                                    log("computeScaledUri called")
+                                }
                                 it.scaledUri?.let { scaledUri ->
                                     var bitmap: Bitmap? = null
-
                                     bitmap = loadBitmapFromUri(scaledUri, context)
                                     count++
                                     if (bitmap != null) {
@@ -359,8 +435,10 @@ class HomeScreenViewModel(
                                             log("mediaHandler.saveImage failed for $scaledUri")
                                         } else {
                                             processed.add(media)
-
-
+                                            log("processed " + processed.size)
+                                          //  mutex.withLock {
+                                                _savingState.value = processed.size
+                                           // }
                                         }
                                         //   }
 
@@ -377,17 +455,11 @@ class HomeScreenViewModel(
 
                     }
                     println(" ${savingState.value} size here")
-
-
-
                     defList.awaitAll()
-
-
                     delay(1000)
-                    mutex.withLock {
+                   // mutex.withLock {
                         _savingState.value = processed.size
-                    }
-                    log("waited for  list $count")
+                  //  }
                 }.collect {
 
                 }
@@ -477,7 +549,6 @@ class HomeScreenViewModel(
                     println("waiting for  ${defList.size} to finish")
                     defList.awaitAll()
                     delay(1000)
-                    println("waited for  list $count")
                 }.collect {
 
                 }

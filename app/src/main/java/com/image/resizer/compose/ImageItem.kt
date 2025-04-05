@@ -3,6 +3,8 @@ package com.image.resizer.compose
 import android.content.Context
 import android.net.Uri
 import com.image.resizer.compose.mediaApi.model.Media.UriMedia
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.UUID
 import kotlin.coroutines.EmptyCoroutineContext.get
 
@@ -20,19 +22,28 @@ data class ImageItem(
 
 ) {
 
-    val scaledUri: Uri? by lazy(LazyThreadSafetyMode.NONE) {
-        val imageItem = if (percentScale != null) {
-            computeScaledUriBySize()
-        } else if (scaleParams != null) {
-            computeScaledUriByScale()
-        } else {
-            this
+    suspend fun  computeScaledUri():Uri?{
+        mutex.withLock {
+            if(scaledUri==null) {
+
+                val imageItem = if (percentScale != null) {
+                    computeScaledUriBySize()
+                } else if (scaleParams != null) {
+                    computeScaledUriByScale()
+                } else {
+                    this
+                }
+
+                this.scaledImageDimension = imageItem.scaledImageDimension
+                this.scaledFileSize = imageItem.scaledFileSize
+                this.computedUri = imageItem.computedUri
+                scaledUri = imageItem.computedUri
+            }
         }
-        this.scaledImageDimension = imageItem.scaledImageDimension
-        this.scaledFileSize = imageItem.scaledFileSize
-        this.computedUri = imageItem.computedUri
-        imageItem.computedUri
+        return  scaledUri
     }
+
+    var scaledUri: Uri? = null
 
     val fileSize: Long by lazy(LazyThreadSafetyMode.NONE) {
         if(size!=null) return@lazy size!!
@@ -55,7 +66,7 @@ data class ImageItem(
         return this
     }
 
-    fun computeScaledUriBySize(): ImageItem {
+   suspend fun computeScaledUriBySize(): ImageItem {
         percentScale?.let {
             val imageItem = compressImageToTargetSize(context, this, it)
             return imageItem
@@ -66,6 +77,7 @@ data class ImageItem(
     companion object {
         var percentScale: Int? = null
         var scaleParams: ScaleParams? = null
+        val mutex = Mutex()
 
     }
 

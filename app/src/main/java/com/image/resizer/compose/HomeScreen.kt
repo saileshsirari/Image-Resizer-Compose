@@ -257,6 +257,7 @@ fun <T : Media> HomeScreen(
                                     }
 
                                     Save -> {
+
                                         homeScreenViewModel.saveCopy(
                                             context = context,
                                             onSuccess = {
@@ -474,12 +475,20 @@ fun <T : Media> HomeScreen(
             // Lifecycle observation for pause/resume
             var isPaused by remember { mutableStateOf(false) }
             val lifecycleOwner = LocalLifecycleOwner.current
+           val scope = rememberCoroutineScope()
 
             LaunchedEffect(lifecycleOwner) {
                 val observer = LifecycleEventObserver { _, event ->
                     when (event) {
-                        Lifecycle.Event.ON_PAUSE -> isPaused = true
-                        Lifecycle.Event.ON_RESUME -> isPaused = false
+                        Lifecycle.Event.ON_PAUSE ->{
+                            isPaused = true
+                                homeScreenViewModel.pause()
+                        }
+                        Lifecycle.Event.ON_RESUME -> {
+                            isPaused = false
+                            homeScreenViewModel.resume()
+
+                        }
                         else -> {}
                     }
                 }
@@ -497,23 +506,23 @@ fun <T : Media> HomeScreen(
                         Column(modifier = Modifier.padding(horizontal = 6.dp)) {
                             val targetProgress =
                                 savingState.value.toFloat() / selectedImageItems.value.size.toFloat()
-                            val animatedProgress by animateFloatAsState(
-                                targetValue = if (isPaused) targetProgress else targetProgress,
-                                animationSpec = if (isPaused) tween(durationMillis = 0) else tween(
-                                    durationMillis = 10
-                                ),
-                                label = "Progress Animation",
-                            )
+//                            val animatedProgress by animateFloatAsState(
+//                                targetValue = if (isPaused) targetProgress else targetProgress,
+//                                animationSpec = if (isPaused) tween(durationMillis = 0) else tween(
+//                                    durationMillis = 10
+//                                ),
+//                                label = "Progress Animation",
+//                            )*/
 
                             LinearProgressIndicator(
-                                progress = animatedProgress,
+                                progress = targetProgress,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(bottom = 8.dp),
                                 trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                             )
                             Text(
-                                text = "Saving: ${"%.2f".format(animatedProgress * 100)}%",
+                                text = "Saving: ${savingState.value/selectedImageItems.value.size}%",
                             )
                         }
                     },

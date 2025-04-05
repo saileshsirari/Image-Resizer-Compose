@@ -39,6 +39,8 @@ import coil.request.ImageRequest
 import coil.size.Size
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.util.getUri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -231,12 +233,17 @@ fun Uri.authorizedUri(context: Context): Uri = if (this.toString()
         return null
     }
 }
-
-fun loadBitmapFromUri( uri:Uri,context: Context): Bitmap? {
-   var originalBitmap = context.contentResolver.openInputStream(uri)?.use {
-        BitmapFactory.decodeStream(it)
+suspend fun loadBitmapFromUri(uri: Uri, context: Context): Bitmap? {
+    return withContext(Dispatchers.IO) { // Switch to IO thread for file operation
+        try {
+            context.contentResolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it)
+            }
+        } catch (e: java.lang.Exception) {
+            e.printStackTrace()
+            null
+        }
     }
-    return originalBitmap
 }
 
 fun rotateBitmap(bitmap: Bitmap, orientation: Int): Bitmap {

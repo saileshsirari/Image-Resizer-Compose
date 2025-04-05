@@ -1,15 +1,9 @@
 package com.image.resizer.compose
 
-import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.media.MediaScannerConnection
 import android.net.Uri
-import android.os.Build
-import android.os.Environment
-import android.provider.MediaStore
-import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -31,10 +25,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,13 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.IOException
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import coil.compose.AsyncImage
-import java.io.File
-import java.io.FileOutputStream
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import apps.sai.com.imageresizer.R
@@ -61,7 +52,9 @@ import coil.request.ImageRequest
 import coil.size.Size
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.MediaRepositoryImpl
-import com.image.resizer.compose.mediaApi.loadBitmapFromUri
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.launch
 
 
 @Preview
@@ -86,14 +79,15 @@ fun GalleryImagesComponentPreview1() {
             uri = uri,
         ),
     )
-   // GalleryImagesComponent(homeScreenViewModel.selectedImageItems)
+    // GalleryImagesComponent(homeScreenViewModel.selectedImageItems)
 }
 
 
 @Composable
 fun GalleryImagesComponent(
-    selectedImageItems: List<ImageItem>, onImageItemClicked: (ImageItem) -> Unit = {}) {
-    val imageItems  =  selectedImageItems
+    selectedImageItems: List<ImageItem>, onImageItemClicked: (ImageItem) -> Unit = {}
+) {
+    val imageItems = selectedImageItems
     val columns = if (imageItems.size > 1) {
         GridCells.Fixed(2)
     } else {
@@ -129,10 +123,10 @@ fun GalleryImagesComponent(
 
                 AsyncImage(
                     placeholder = painterResource(R.drawable.ic_undo_24dp),
-                    model  = ImageRequest.Builder(LocalContext.current)
+                    model = ImageRequest.Builder(LocalContext.current)
                         .data(imageItem.uri)
                         .scale(coil.size.Scale.FIT)
-                        .size(Size(300,300))
+                        .size(Size(300, 300))
                         .crossfade(true)
                         .build(),
                     contentDescription = null,
@@ -141,9 +135,9 @@ fun GalleryImagesComponent(
                         .align(Alignment.CenterHorizontally)
                         .padding(4.dp)
                         .height(200.dp)
-                        .clickable{
+                        .clickable {
                             onImageItemClicked(imageItem)
-                        // val uri =   compressImageToTargetSize(context ,imageItem,100).computedUri.toString()
+                            // val uri =   compressImageToTargetSize(context ,imageItem,100).computedUri.toString()
 
                         }
                 )
@@ -162,6 +156,30 @@ internal fun ScaledImagesGrid(
     val scaledImages by homeScreenViewModel.scaledImageItems.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lazyGridState = rememberLazyGridState()
+    val scope = rememberCoroutineScope()
+    //1
+    val visibleItems = remember {
+        derivedStateOf {
+            lazyGridState.layoutInfo.visibleItemsInfo.map { it.index }
+        }
+    }
+
+    LaunchedEffect(lazyGridState) {
+        //2
+        snapshotFlow { visibleItems.value }.filter { it.isNotEmpty() }.collectLatest { indices ->
+            //3
+            indices.forEach { index ->
+                if (index < scaledImages.size) {
+                    val imageItem = scaledImages[index]
+                    //4
+                    scope.launch(Dispatchers.IO) {
+                        //5
+                        imageItem.computeScaledUri()
+                    }
+                }
+            }
+        }
+    }
 
     if (imageItems.isEmpty()) {
         Text(
@@ -201,7 +219,7 @@ internal fun ScaledImagesGrid(
                         verticalArrangement = Arrangement.SpaceBetween
                     ) {
                         imageItem.imageDimension.let {
-                            Text("Original : ${it.first }x${it.second }")
+                            Text("Original : ${it.first}x${it.second}")
                         }
                         imageItem.fileSize.let {
                             val fileSizeInKb = it / 1024
@@ -215,7 +233,7 @@ internal fun ScaledImagesGrid(
                             model = ImageRequest.Builder(LocalContext.current)
                                 .data(imageItem.uri)
                                 .scale(coil.size.Scale.FIT)
-                                .size(Size(300,300))
+                                .size(Size(300, 300))
                                 .crossfade(true)
                                 .build(),
                             contentDescription = "Original Image",
@@ -247,7 +265,6 @@ internal fun ScaledImagesGrid(
                         horizontalAlignment = Alignment.CenterHorizontally, // Center image
                         verticalArrangement = Arrangement.SpaceBetween
                     ) {
-
                         imageItem.scaledUri?.let {
                             if (imageItem.scaledImageDimension != null) {
                                 Text("Scaled : ${imageItem.scaledImageDimension?.first ?: 0}x${imageItem.scaledImageDimension?.second ?: 0}")
@@ -261,26 +278,26 @@ internal fun ScaledImagesGrid(
                             }
                         }
 
-                            AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data(imageItem.scaledUri)
-                                    .size(Size(300,300))
-                                    .scale(coil.size.Scale.FIT)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = "Scaled Image",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.Companion
-                                    .align(Alignment.CenterHorizontally)
-                                    .padding(4.dp)
-                                    .height(300.dp)
-                                    .clip(RoundedCornerShape(1.dp))
-                                    .clickable(onClick = {
-                                        onSelectedItemClicked(imageItem)
-                                    }),
-                                placeholder = painterResource(id = R.drawable.ic_crop_24dp),
-                                error = painterResource(id = R.drawable.ic_crop_24dp)
-                            )
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(imageItem.scaledUri)
+                                .size(Size(300, 300))
+                                .scale(coil.size.Scale.FIT)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Scaled Image",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.Companion
+                                .align(Alignment.CenterHorizontally)
+                                .padding(4.dp)
+                                .height(300.dp)
+                                .clip(RoundedCornerShape(1.dp))
+                                .clickable(onClick = {
+                                    onSelectedItemClicked(imageItem)
+                                }),
+                            placeholder = painterResource(id = R.drawable.ic_crop_24dp),
+                            error = painterResource(id = R.drawable.ic_crop_24dp)
+                        )
 
                     }
                 }
@@ -288,8 +305,6 @@ internal fun ScaledImagesGrid(
         }
     }
 }
-
-
 
 
 internal fun imageDimensionsFromUri(
@@ -306,87 +321,6 @@ internal fun imageDimensionsFromUri(
     val originalWidth = options.outWidth
     val originalHeight = options.outHeight
     return Pair(originalWidth, originalHeight)
-}
-
-internal fun saveImagesToGallery(
-    context: Context, imageItems: List<ImageItem?>,
-    customDirectoryName: String = "ImageResizer"
-) {
-    val customDirectoryName = customDirectoryName
-    val resolver = context.contentResolver
-
-    return runCatching {
-
-        imageItems.filterNotNull().forEach { imageItem ->
-            imageItem.scaledUri?.let { it ->
-                loadBitmapFromUri(it,context)?.let { bitmap->
-                    val displayName =
-                        "imageResizer_${
-                            SimpleDateFormat(
-                                "MMdd_HHmmss",
-                                Locale.getDefault()
-                            ).format(Date())
-                        }.jpg"
-                    val mimeType = "image/jpeg"
-
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        // For Android 10 (Q) and above
-                        val values = ContentValues().apply {
-                            put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
-                            put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
-                            put(
-                                MediaStore.MediaColumns.RELATIVE_PATH,
-                                "${Environment.DIRECTORY_PICTURES}/$customDirectoryName"
-                            )
-                        }
-
-                        try {
-                            val uri =
-                                resolver.insert(
-                                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                                    values
-                                )
-                            uri?.let {
-                                resolver.openOutputStream(uri)?.use { outputStream ->
-                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                                }
-                            }
-                            Log.d("SaveImage", "Image saved to gallery (Q+): $uri")
-
-                        } catch (e: IOException) {
-                            Log.e("SaveImage", "Error saving image (Q+): ${e.message}")
-                        }
-                    } else {
-                        // For Android versions before 10 (Q)
-                        val picturesDir =
-                            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-                        val customDir = File(picturesDir, customDirectoryName)
-                        if (!customDir.exists()) {
-                            customDir.mkdirs()
-                        }
-                        val file = File(customDir, displayName)
-                        try {
-                            FileOutputStream(file).use { outputStream ->
-                                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                            }
-                            // Make sure the file is visible in the gallery immediately
-                            MediaScannerConnection.scanFile(
-                                context,
-                                arrayOf(file.toString()),
-                                arrayOf(mimeType),
-                                null
-                            )
-                            Log.d("SaveImage", "Image saved to gallery (pre-Q): $file")
-                        } catch (e: IOException) {
-                            Log.e("SaveImage", "Error saving image (pre-Q): ${e.message}")
-                        }
-                    }
-                }
-            }
-        }
-    }.getOrElse {
-        throw it
-    }
 }
 
 

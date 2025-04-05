@@ -184,7 +184,14 @@ dependencies {
     // Kotlin Extensions and Coroutines support for Room
 //    implementation(libs.room.ktx)
 //    ksp(libs.room.compiler)
+    // Kotlin + coroutines
+    implementation(libs.androidx.work.runtime.ktx)
 
+    // optional - Test helpers
+    androidTestImplementation(libs.androidx.work.testing)
+
+    //optional - Multiprocess support
+    implementation(libs.androidx.work.multiprocess)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
