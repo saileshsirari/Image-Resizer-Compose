@@ -6,6 +6,8 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.github.panpf.sketch.cache.internal.EmptyMemoryCache.withLock
+import com.image.resizer.compose.UriMutexManager
 import com.image.resizer.compose.mediaApi.model.Media.UriMedia
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -24,6 +26,7 @@ data class ImageItem(
     var originalFileSize: Long? = null,
     var originalImageDimension: Pair<Int, Int>? = null,
 ) {
+    val uriMutex: Mutex = UriMutexManager.getMutex(uri)
 
     var scaledUri by mutableStateOf<Uri?>(null)
         private set
@@ -35,7 +38,7 @@ data class ImageItem(
 
     suspend fun computeScaledUri(context: Context): Uri? {
         return withContext(Dispatchers.IO) {
-            mutex.withLock {
+            uriMutex .withLock {
                 if (scaledUri == null) {
                     if(originalFileSize ==null){
                         computeFileSize(context)
