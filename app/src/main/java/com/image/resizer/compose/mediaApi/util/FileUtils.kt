@@ -16,6 +16,8 @@ import android.provider.OpenableColumns
 import android.text.TextUtils
 import android.util.Log
 import apps.sai.com.imageresizer.R
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.math.RoundingMode
@@ -28,7 +30,13 @@ import kotlin.math.pow
 
 @Suppress("NOTHING_TO_INLINE")
 inline fun String.sentenceCase(): String = lowercase().replaceFirstChar { it.uppercase() }
-
+suspend fun getFileDetails(context: Context, uri: Uri): Pair<Long, String?> = withContext(Dispatchers.IO) {
+    val fileDescriptor = context.contentResolver.openFileDescriptor(uri, "r")?.fileDescriptor
+    val file = fileDescriptor?.let { File(it.toString()) }
+    val fileSize = file?.length() ?: 0L
+    val fileType = context.contentResolver.getType(uri)
+    return@withContext Pair(fileSize, fileType)
+}
 fun formatSize(size: Long): String {
     if (size <= 0) return "0 B"
 

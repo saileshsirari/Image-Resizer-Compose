@@ -257,15 +257,16 @@ fun <T : Media> HomeScreen(
                                     }
 
                                     Save -> {
-
-                                        homeScreenViewModel.saveCopy(
-                                            context = context,
-                                            onSuccess = {
-                                                homeScreenViewModel.showToast(it)
-                                            },
-                                            onFail = {
-                                                homeScreenViewModel.showToast(it)
-                                            })
+                                        scope.launch(Dispatchers.Default) {
+                                            homeScreenViewModel.saveCopy(
+                                                context = context,
+                                                onSuccess = {
+                                                    homeScreenViewModel.showToast(it)
+                                                },
+                                                onFail = {
+                                                    homeScreenViewModel.showToast(it)
+                                                })
+                                        }
 
                                     }
 
@@ -475,21 +476,35 @@ fun <T : Media> HomeScreen(
             // Lifecycle observation for pause/resume
             var isPaused by remember { mutableStateOf(false) }
             val lifecycleOwner = LocalLifecycleOwner.current
-           val scope = rememberCoroutineScope()
+            val scope = rememberCoroutineScope()
 
             LaunchedEffect(lifecycleOwner) {
                 val observer = LifecycleEventObserver { _, event ->
                     when (event) {
-                        Lifecycle.Event.ON_PAUSE ->{
+                        Lifecycle.Event.ON_STOP -> {
                             isPaused = true
-                                homeScreenViewModel.pause()
+
+                            homeScreenViewModel.cancelSave()
                         }
+
                         Lifecycle.Event.ON_RESUME -> {
+
                             isPaused = false
-                            homeScreenViewModel.resume()
+                            scope.launch(Dispatchers.Default) {
+                                homeScreenViewModel.saveCopy(
+                                    context = context,
+                                    onSuccess = {
+                                        homeScreenViewModel.showToast(it)
+                                    },
+                                    onFail = {
+                                        homeScreenViewModel.showToast(it)
+                                    })
+                            }
+                        }
+
+                        else -> {
 
                         }
-                        else -> {}
                     }
                 }
                 lifecycleOwner.lifecycle.addObserver(observer)
@@ -545,8 +560,8 @@ fun <T : Media> HomeScreen(
     // Conditionally display the toast
     if (showToast.isNotEmpty()) {
         LaunchedEffect(true) {
-            Toast.makeText(context, showToast, Toast.LENGTH_SHORT).show()
-            homeScreenViewModel.showToast("") // Reset the state after showing the toast
+           // Toast.makeText(context, showToast, Toast.LENGTH_SHORT).show()
+          //  homeScreenViewModel.showToast("") // Reset the state after showing the toast
         }
     }
 

@@ -64,7 +64,6 @@ object ImageHelper {
                 val id = cursor.getLong(idColumn)
                 val contentUri = ContentUris.withAppendedId(queryUri, id)
                 val imageItem = ImageItem(
-                    context,
                     uri = contentUri,
                     imageName = cursor.getString(nameColumn),
                 )

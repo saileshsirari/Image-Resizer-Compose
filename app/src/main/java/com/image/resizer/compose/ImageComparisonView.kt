@@ -1,7 +1,6 @@
 package com.image.resizer.compose
 
 import android.net.Uri
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Column
@@ -26,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
@@ -48,8 +46,8 @@ fun ImageComparisonView(imageItem: ImageItem) {
         ComparisonImageView(
             label = "Original Image",
             uri = imageItem.uri,
-            fileSize = imageItem.fileSize,
-            dimensions = imageItem.imageDimension
+            fileSize = imageItem.originalFileSize,
+            dimensions = imageItem.originalImageDimension
         )
         Spacer(modifier = Modifier.height(16.dp))
         ComparisonImageView(
@@ -138,7 +136,6 @@ fun MyScreen() {
     val context = LocalContext.current
     val uri = "content://media/external/file/25".toUri()
     val imageItem =  ImageItem(
-        context =context,
         uri = uri,
         scaledImageDimension = Pair(100,200),
         scaledFileSize = 512,

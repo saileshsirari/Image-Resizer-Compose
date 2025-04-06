@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,42 +44,13 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import coil.compose.AsyncImage
-import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import apps.sai.com.imageresizer.R
 import coil.request.ImageRequest
 import coil.size.Size
-import com.image.resizer.compose.mediaApi.MediaHandleUseCase
-import com.image.resizer.compose.mediaApi.MediaRepositoryImpl
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
-
-
-@Preview
-@Composable
-fun GalleryImagesComponentPreview1() {
-    val uri = "content://media/external/file/25".toUri()
-    val context = LocalContext.current
-    val mediaRepository = MediaRepositoryImpl(LocalContext.current)
-    val mediaHandleUseCase = MediaHandleUseCase(mediaRepository)
-    val homeScreenViewModel = HomeScreenViewModel(mediaHandleUseCase)
-    val imageItems = listOf(
-        ImageItem(
-            context,
-            uri = uri,
-        ),
-        ImageItem(
-            context,
-            uri = uri,
-        ),
-        ImageItem(
-            context = context,
-            uri = uri,
-        ),
-    )
-    // GalleryImagesComponent(homeScreenViewModel.selectedImageItems)
-}
 
 
 @Composable
@@ -93,8 +63,32 @@ fun GalleryImagesComponent(
     } else {
         GridCells.Fixed(1)
     }
+    val lazyGridState = rememberLazyGridState()
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    //1
+    val visibleItems = remember {
+        derivedStateOf {
+            lazyGridState.layoutInfo.visibleItemsInfo.map { it.index }
+        }
+    }
+    LaunchedEffect(lazyGridState) {
+        snapshotFlow { visibleItems.value }.filter { it.isNotEmpty() }.collectLatest { indices ->
+            indices.forEach { index ->
+                if (index < imageItems.size) {
+                    val imageItem = imageItems[index]
+                    scope.launch(Dispatchers.IO) {
+                        imageItem.computeFileSize( context)
+                        imageItem.computeImageDimension(context)
+                    }
+                }
+            }
+        }
+    }
+
     Spacer(modifier = Modifier.height(10.dp))
     LazyVerticalGrid(
+        state = lazyGridState,
         modifier = Modifier.fillMaxSize(),
         columns = columns,
         contentPadding = PaddingValues(1.dp),
@@ -111,10 +105,10 @@ fun GalleryImagesComponent(
                 verticalArrangement = Arrangement.SpaceAround
             ) {
 
-                imageItem.imageDimension.let {
+                imageItem.originalImageDimension?.let {
                     Text(" ${it.first}x${it.second}")
                 }
-                imageItem.fileSize.let {
+                imageItem.originalFileSize?.let {
                     Text("${it / 1024} kb", maxLines = 1)
                 }
 
@@ -154,9 +148,9 @@ internal fun ScaledImagesGrid(
     onSelectedItemClicked: (ImageItem) -> Unit = {}
 ) {
     val scaledImages by homeScreenViewModel.scaledImageItems.collectAsStateWithLifecycle()
-    val context = LocalContext.current
     val lazyGridState = rememberLazyGridState()
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     //1
     val visibleItems = remember {
         derivedStateOf {
@@ -165,16 +159,12 @@ internal fun ScaledImagesGrid(
     }
 
     LaunchedEffect(lazyGridState) {
-        //2
         snapshotFlow { visibleItems.value }.filter { it.isNotEmpty() }.collectLatest { indices ->
-            //3
             indices.forEach { index ->
                 if (index < scaledImages.size) {
                     val imageItem = scaledImages[index]
-                    //4
                     scope.launch(Dispatchers.IO) {
-                        //5
-                        imageItem.computeScaledUri()
+                        imageItem.computeScaledUri(context)
                     }
                 }
             }
@@ -218,10 +208,10 @@ internal fun ScaledImagesGrid(
                         horizontalAlignment = Alignment.CenterHorizontally, // Center image
                         verticalArrangement = Arrangement.SpaceBetween
                     ) {
-                        imageItem.imageDimension.let {
+                        imageItem.originalImageDimension?.let {
                             Text("Original : ${it.first}x${it.second}")
                         }
-                        imageItem.fileSize.let {
+                        imageItem.originalFileSize?.let {
                             val fileSizeInKb = it / 1024
                             val fileSizeText = if (fileSizeInKb > 1000) {
                                 "${fileSizeInKb / 1024} mb"

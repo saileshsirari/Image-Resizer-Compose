@@ -179,7 +179,7 @@ fun <T : Media> PickerMediaSheet(
                                 }
                             },
                             onMediaClick = {
-                                homeScreenViewModel.handlePickedImages(listOf(it.toImageItem(context)), context) {
+                                homeScreenViewModel.handlePickedImages(listOf(it.toImageItem()), context) {
                                         scope.launch (Dispatchers.Main){
                                             sheetState.hide()
                                             navController.popBackStack(Screen.AlbumsScreen.route,false)

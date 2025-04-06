@@ -172,7 +172,7 @@ fun PreviewAnimatedMultiColoredCircularProgress() {
             Text("Change Progress")
         }
     }
-   /* Box(modifier = Modifier.size(200.dp), contentAlignment = Alignment.Center) {
+   /* Box(modifier = Modifier.originalFileSize(200.dp), contentAlignment = Alignment.Center) {
         AnimatedMultiColoredCircularProgress(
             targetProgress = 0.7f,
             colors = listOf(Color.Red, Color.Green, Color.Blue),

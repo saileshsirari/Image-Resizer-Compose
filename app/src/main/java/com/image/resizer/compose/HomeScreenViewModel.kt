@@ -5,8 +5,6 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Environment
 import android.os.StatFs
-import android.util.Log.e
-import androidx.compose.animation.core.isFinished
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.OneTimeWorkRequest
@@ -22,9 +20,7 @@ import com.image.resizer.compose.mediaApi.clearCache
 import com.image.resizer.compose.mediaApi.loadBitmapFromUri
 import com.image.resizer.compose.mediaApi.pruneInternalStorage
 import com.image.resizer.compose.mediaApi.util.Constants.CUSTOM_FOLDER_NAME
-import com.image.resizer.compose.mediaApi.util.update
 import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -32,6 +28,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -44,10 +41,11 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.yield
+import kotlin.time.Duration
+import kotlin.time.measureTime
 
 
 class HomeScreenViewModel(
@@ -62,7 +60,7 @@ class HomeScreenViewModel(
     // val selectedUris: Flow<List<Uri>> = selectedMediaRepository.getSelectedMedia()
     private val _compressState = MutableStateFlow<CompressState>(CompressState.Idle)
     val compressState: StateFlow<CompressState> = _compressState
-    private val _isSaving = MutableStateFlow(true)
+    private val _isSaving = MutableStateFlow(false)
     val isSaving = _isSaving.asStateFlow()
     private val _scaleState = MutableStateFlow<ScaleState>(ScaleState.Idle)
     val scaleState: StateFlow<ScaleState> = _scaleState
@@ -101,9 +99,9 @@ class HomeScreenViewModel(
         size: Int = 20
     ) {
         imageItems.take(size).forEachIndexed { index, it ->
-           // viewModelScope.launch(Dispatchers.Default) {
-               // println("$operation $index " + it.computeScaledUri())
-           // }
+            // viewModelScope.launch(Dispatchers.Default) {
+            // println("$operation $index " + it.computeScaledUri())
+            // }
         }
     }
 
@@ -122,7 +120,7 @@ class HomeScreenViewModel(
             onReset(context)
             _scaledImageItems.value = listOf(
                 ImageItem(
-                    context = context, uri = _selectedImageItems.value.first().uri,
+                  uri = _selectedImageItems.value.first().uri,
                     computedUri = croppedUri
                 )
             )
@@ -220,10 +218,9 @@ class HomeScreenViewModel(
         val selectedImageItems = _selectedImageItems.value.map { it ->
             //    val (imageName, fileSize) = getFileNameAndSize(context, uri)
             ImageItem(
-                context = context,
                 uri = it.uri,
                 imageName = it.imageName,
-                size = it.size
+                originalFileSize = it.originalFileSize?:0L
             )
         }
         _selectedImageItems.value = selectedImageItems
@@ -254,10 +251,10 @@ class HomeScreenViewModel(
         val selectedImageItems = _selectedImageItems.value.map { it ->
             //    val (imageName, fileSize) = getFileNameAndSize(context, uri)
             ImageItem(
-                context = context,
                 uri = it.uri,
                 imageName = it.imageName,
-                size = it.size
+                originalFileSize = it.originalFileSize,
+                originalImageDimension = it.originalImageDimension
             )
         }
         _selectedImageItems.value = selectedImageItems
@@ -312,31 +309,14 @@ class HomeScreenViewModel(
     val event = _event.asSharedFlow()
     private var isPaused = false
 
-
-    fun pause() {
-        viewModelScope.launch {
-            log("Paused Coroutine")
-            _event.emit(true)
-            isPaused = true
-
-        }
-
-
-    }
-
-    fun resume() {
-        viewModelScope.launch {
-            log("Resume Coroutine")
-            _event.emit(false)
-            isPaused = false
-
-        }
-    }
-
     fun cancelSave() {
-        log("cancelSave")
-        job?.cancel()
-        _isSaving.value = false
+        viewModelScope.launch {
+            mutex.withLock {
+                log("cancelSave")
+                job?.cancel()
+                job = null
+            }
+        }
     }
 
     fun saveImagesWithWorkManager(
@@ -372,6 +352,12 @@ class HomeScreenViewModel(
         }
     }
 
+    val processed = mutableListOf<ImageItem>()
+    val mutex = Mutex()
+    val exceptionHandler = CoroutineExceptionHandler { _, e ->
+        println("[ERROR] ${e.message}")
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     fun saveCopy(
         context: Context,
@@ -380,38 +366,40 @@ class HomeScreenViewModel(
         onFail: (String) -> Unit = {}
     ) {
         log("saveCopy")
-        val exceptionHandler = CoroutineExceptionHandler { _, e ->
-            println("[ERROR] ${e.message}")
-        }
-        val mutex = Mutex()
-        _isSaving.value = true
-        val currentSelectedItems = _scaledImageItems.value
-        val processed = mutableListOf<ImageItem>()
-        var count = 0
-        //Check if the space is enough
-        if (!isEnoughSpaceAvailable(currentSelectedItems.size)) {
-            _isSaving.value = false
-            onFail("Not enough space available").also { _isSaving.value = false }
-            println("Not enough space available")
-            return
-        }
-        _savingState.value = 2
 
         job = viewModelScope.launch(Dispatchers.IO + exceptionHandler) {
+            // cancelSave()
+            _isSaving.value = true
+            val alreadyProcessedUris = processed.map { it.uri }
+            val currentSelectedItems =
+                _scaledImageItems.value.filter { alreadyProcessedUris.contains(it.uri).not() }
+            var count = 0
+            //Check if the space is enough
+            if (!isEnoughSpaceAvailable(currentSelectedItems.size)) {
+                _isSaving.value = false
+                onFail("Not enough space available").also { _isSaving.value = false }
+                println("Not enough space available")
+                return@launch
+            }
+            if (_savingState.value == 0) {
+                _savingState.value = 2
+            }
             try {
+                ensureActive()
                 //   saveImagesWithWorkManager(context,currentSelectedItems)
-                currentSelectedItems.asFlow().flowOn(Dispatchers.Default).chunked(50).map { list ->
+
+                currentSelectedItems.asFlow().flowOn(Dispatchers.IO).chunked(100).map { list ->
                     println("running  $count")
                     val defList = mutableListOf<Deferred<Any?>>()
                     list.mapIndexed { index, it ->
-                        val def = async(exceptionHandler + Dispatchers.IO) {
+                        val def = async(exceptionHandler + Dispatchers.Default) {
                             yield()
                             //   mutex.withLock {
                             try {
                                 //   val saveJobs =   currentSelectedItems.mapIndexed { index, it ->
                                 val media = it
-                                if(it.scaledUri==null){
-                                    it.computeScaledUri()
+                                if (it.scaledUri == null) {
+                                    it.computeScaledUri(context)
                                     log("computeScaledUri called")
                                 }
                                 it.scaledUri?.let { scaledUri ->
@@ -436,9 +424,9 @@ class HomeScreenViewModel(
                                         } else {
                                             processed.add(media)
                                             log("processed " + processed.size)
-                                          //  mutex.withLock {
-                                                _savingState.value = processed.size
-                                           // }
+                                            //  mutex.withLock {
+                                            _savingState.value = processed.size
+                                            // }
                                         }
                                         //   }
 
@@ -454,14 +442,18 @@ class HomeScreenViewModel(
                         defList.add(def)
 
                     }
-                    println(" ${savingState.value} size here")
-                    defList.awaitAll()
-                   // mutex.withLock {
-                        _savingState.value = processed.size
-                  //  }
+                    log(" ${savingState.value} originalFileSize here")
+                    val timeTaken: Duration = measureTime {
+                        defList.awaitAll()
+                    }
+                    log("Time taken for awaitAll(): ${timeTaken.inWholeSeconds} seconds")
+                    // mutex.withLock {
+                    _savingState.value = processed.size
+                    //  }
                 }.collect {
 
                 }
+
                 //joinAll(*saveJobs.toTypedArray()) //Wait for each task to be finished.
             } catch (e: Exception) {
                 _isSaving.value = false
@@ -543,7 +535,7 @@ class HomeScreenViewModel(
                         }
                         defList.add(def)
                     }
-                    println(" ${savingState.value} size here")
+                    println(" ${savingState.value} originalFileSize here")
                     _savingState.value = processed.size
                     println("waiting for  ${defList.size} to finish")
                     defList.awaitAll()

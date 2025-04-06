@@ -6,7 +6,6 @@
 package com.image.resizer.compose.mediaApi
 
 import android.app.Activity
-import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -67,7 +66,6 @@ import apps.sai.com.imageresizer.R
 import com.image.resizer.compose.ImageItem
 import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
-import com.image.resizer.compose.mediaApi.util.getUri
 import com.image.resizer.compose.toImageItem
 import kotlinx.coroutines.launch
 
@@ -183,7 +181,6 @@ fun <T: Media> SelectionSheet(
                     scope.launch {
                         onOpenClick(selectedMedia.mapNotNull {
                             (it as? Media.UriMedia)?.toImageItem(
-                                context
                             )
                         })
                     }

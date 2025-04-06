@@ -5,6 +5,7 @@
 
 package com.image.resizer.compose.mediaApi.model
 
+import android.R.attr.contentDescription
 import android.widget.CheckBox
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -12,6 +13,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
@@ -123,23 +125,14 @@ fun <T: Media> MediaImage(
                     color = strokeColor
                 )
         ) {
-            AsyncImage(
+            coil.compose.AsyncImage(
                 modifier = Modifier
                     .fillMaxSize(),
-                request = ComposableImageRequest(media.getUri().toString()) {
-                    scale(Scale.CENTER_CROP)
-                    setExtra(
-                        key = "mediaKey",
-                        value = media.toString(),
-                    )
-                    setExtra(
-                        key = "realMimeType",
-                        value = media.mimeType,
-                    )
-                },
+                model =(media.getUri().toString()),
                 contentDescription = media.label,
                 contentScale = ContentScale.Crop,
             )
+
         }
 
 

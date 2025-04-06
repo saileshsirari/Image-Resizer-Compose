@@ -11,6 +11,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.StrictMode
 import android.provider.MediaStore
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -45,12 +46,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
@@ -72,8 +71,6 @@ import kotlinx.coroutines.Dispatchers
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
-import androidx.core.net.toUri
-import androidx.navigation.activity
 import com.image.resizer.compose.Screen.ZoomableScreen
 import com.image.resizer.compose.mediaApi.MediaRepository
 
@@ -118,6 +115,16 @@ fun StoragePermissionDialog(
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        StrictMode.setThreadPolicy(
+            StrictMode.ThreadPolicy.Builder()
+                .detectAll()
+                .build()
+        )
+        StrictMode.setVmPolicy(
+            StrictMode.VmPolicy.Builder()
+                .detectAll()
+                .build()
+        )
         enableEdgeToEdge()
         setContent {
             AppTheme {
@@ -127,7 +134,18 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        log("onResume main")
+    }
+
+    override fun onStop() {
+        log("onStop main")
+        super.onStop()
+    }
 }
+
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -337,7 +355,7 @@ fun Navigation(
                         },
                         onMediaClick = {
                             homeScreenViewModel.handlePickedImages(
-                                listOf(it.toImageItem(context)),
+                                listOf(it.toImageItem()),
                                 context
                             ) {
 

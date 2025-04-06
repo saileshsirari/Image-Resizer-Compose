@@ -28,7 +28,7 @@ suspend fun compressImageToTargetSize(
     val bitmap = loadBitmapFromUri(imageUri, context)
     bitmap?.let {
         val exif = getExifOrientation(context, imageItem.uri)
-        var currentFileSizeBytes = imageItem.fileSize
+        var currentFileSizeBytes = imageItem.originalFileSize?:0L
         var scaleFactor = 1f
         val desiredSize = (currentFileSizeBytes * (percentOriginal * .01f)).toLong()
         while (currentFileSizeBytes > desiredSize) {
@@ -60,7 +60,7 @@ suspend fun compressImageToTargetSize(
     return imageItem
 }
 
-fun ImageItem.scaleImage(
+suspend fun ImageItem.scaleImage(
     scaleParams: ScaleParams,
     context: Context,
 ): ImageItem {
@@ -69,8 +69,14 @@ fun ImageItem.scaleImage(
         scaleParams.newWidth
     val scaledHeight =
         scaleParams.newHeight
-    val width = imageDimension.first
-    val height = imageDimension.second
+
+    val width = originalImageDimension?.first?:run {
+        log("not able to load dimen")
+        1
+    }
+    val height = originalImageDimension?.second?:1
+
+
     val exif = getExifOrientation(context, imageItem.uri)
     if (scaleParams.scaleFactor != null) {
         val newWidth = (width * scaleParams.scaleFactor).toInt()

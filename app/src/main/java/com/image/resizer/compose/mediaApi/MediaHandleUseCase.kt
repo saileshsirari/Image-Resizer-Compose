@@ -50,22 +50,14 @@ class MediaHandleUseCase(
     ) = repository.deleteMedia(result, mediaList)
 
 
-   suspend fun saveImage(
+    fun saveImage(
         originalUri: Uri,
         bitmap: Bitmap,
         format: Bitmap.CompressFormat,
         mimeType: String,
         relativePath: String,
         displayName: String
-    ) : Uri?{
-     return  withContext(Dispatchers.IO){
-         try {
-              repository.saveImage(originalUri, bitmap, format, mimeType, relativePath, displayName)
-         }catch (e: Exception){
-             null
-         }
-       }
-   }
+    ) = repository.saveImage(originalUri,bitmap, format, mimeType, relativePath, displayName)
 
     fun overrideImage(
         originalUri: Uri,

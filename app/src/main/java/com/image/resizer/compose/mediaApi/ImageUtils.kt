@@ -214,7 +214,7 @@ fun Uri.authorizedUri(context: Context): Uri = if (this.toString()
             .data(uri)
             .allowHardware(false)
         if(maxWidth!=null && maxHeight!=null){
-            request.size(Size(maxWidth, maxHeight)) // Specify the desired size
+            request.size(Size(maxWidth, maxHeight)) // Specify the desired originalFileSize
         }
 
 
@@ -234,7 +234,7 @@ fun Uri.authorizedUri(context: Context): Uri = if (this.toString()
     }
 }
 suspend fun loadBitmapFromUri(uri: Uri, context: Context): Bitmap? {
-    return withContext(Dispatchers.IO) { // Switch to IO thread for file operation
+    return withContext(Dispatchers.IO) {
         try {
             context.contentResolver.openInputStream(uri)?.use {
                 BitmapFactory.decodeStream(it)
@@ -295,12 +295,12 @@ fun Bitmap.saveBitmapToTempFile(context: Context): Long? {
         fos?.close()
     }
 
-    // Get the file size
+    // Get the file originalFileSize
     val fileSize = tempFile.length()
     // Clean up the temporary file
     tempFile.delete()
 
-    // Return the size of the file
+    // Return the originalFileSize of the file
     return fileSize
 }
 
