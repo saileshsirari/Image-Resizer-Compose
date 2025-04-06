@@ -38,7 +38,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.chunked
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.forEach
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -313,6 +315,7 @@ class HomeScreenViewModel(
         viewModelScope.launch {
             mutex.withLock {
                 log("cancelSave")
+                _isSaving.value = false
                 job?.cancel()
                 job = null
             }
@@ -355,7 +358,7 @@ class HomeScreenViewModel(
     val processed = mutableListOf<ImageItem>()
     val mutex = Mutex()
     val exceptionHandler = CoroutineExceptionHandler { _, e ->
-        println("[ERROR] ${e.message}")
+        log("[ERROR] ${e.message}")
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -367,7 +370,7 @@ class HomeScreenViewModel(
     ) {
         log("saveCopy")
 
-        job = viewModelScope.launch(Dispatchers.IO + exceptionHandler) {
+        job = viewModelScope.launch(Dispatchers.Default + exceptionHandler) {
             // cancelSave()
             _isSaving.value = true
             val alreadyProcessedUris = processed.map { it.uri }
@@ -388,11 +391,13 @@ class HomeScreenViewModel(
                 ensureActive()
                 //   saveImagesWithWorkManager(context,currentSelectedItems)
 
-                currentSelectedItems.asFlow().flowOn(Dispatchers.IO).chunked(100).map { list ->
-                    println("running  $count")
+             //   currentSelectedItems.chunked(20).forEach { list ->
+                    log("running  $count")
                     val defList = mutableListOf<Deferred<Any?>>()
-                    list.mapIndexed { index, it ->
-                        val def = async(exceptionHandler + Dispatchers.Default) {
+                    currentSelectedItems.forEachIndexed { index, it ->
+
+                        val def = async(exceptionHandler + Dispatchers.IO) {
+                            ensureActive()
                             yield()
                             //   mutex.withLock {
                             try {
@@ -400,7 +405,6 @@ class HomeScreenViewModel(
                                 val media = it
                                 if (it.scaledUri == null) {
                                     it.computeScaledUri(context)
-                                    log("computeScaledUri called")
                                 }
                                 it.scaledUri?.let { scaledUri ->
                                     var bitmap: Bitmap? = null
@@ -442,7 +446,7 @@ class HomeScreenViewModel(
                         defList.add(def)
 
                     }
-                    log(" ${savingState.value} originalFileSize here")
+                    log("processed " + processed.size)
                     val timeTaken: Duration = measureTime {
                         defList.awaitAll()
                     }
@@ -450,9 +454,7 @@ class HomeScreenViewModel(
                     // mutex.withLock {
                     _savingState.value = processed.size
                     //  }
-                }.collect {
-
-                }
+              //  }
 
                 //joinAll(*saveJobs.toTypedArray()) //Wait for each task to be finished.
             } catch (e: Exception) {
