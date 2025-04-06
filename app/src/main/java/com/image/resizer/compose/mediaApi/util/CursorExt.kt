@@ -38,7 +38,7 @@ fun <T> Cursor?.mapEachRow(
         e.printStackTrace()
         emptyList<T>()
     }finally {
-        close()
+        cursor.close()
     }
 
 } ?: emptyList<T>()
