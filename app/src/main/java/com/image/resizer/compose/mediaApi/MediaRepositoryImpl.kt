@@ -59,11 +59,6 @@ class MediaRepositoryImpl(
             }
         }.flowOn(Dispatchers.IO)
 
-    override fun getAlbumsWithType(allowedMedia: AllowedMedia): Flow<Resource<List<Album>>> =
-        AlbumsFlow(
-            context = context,
-            mimeType = allowedMedia.toStringAny()
-        ).flowData().mapAsResource()
 
     override fun getMediaByType(allowedMedia: AllowedMedia): Flow<Resource<List<UriMedia>>> =
         MediaFlow(
@@ -82,7 +77,7 @@ class MediaRepositoryImpl(
         MediaFlow(
             contentResolver = contentResolver,
             buckedId = albumId,
-        ).flowData().mapAsResource()
+        ). flowData().flowOn(Dispatchers.IO).mapAsResource()
 
     override suspend fun getCategoryForMediaId(mediaId: Long): String? {
         return null
@@ -106,7 +101,7 @@ class MediaRepositoryImpl(
             contentResolver = contentResolver,
             uris = listOfUris,
             reviewMode = reviewMode
-        ).flowData().mapAsResource(errorOnEmpty = true, errorMessage = "Media could not be opened")
+        ).flowData().flowOn(Dispatchers.IO).mapAsResource(errorOnEmpty = true, errorMessage = "Media could not be opened")
 
 
     override suspend fun <T : Media> trashMedia(

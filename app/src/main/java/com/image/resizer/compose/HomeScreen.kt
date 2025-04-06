@@ -473,43 +473,6 @@ fun <T : Media> HomeScreen(
 
                 }
             }
-            // Lifecycle observation for pause/resume
-            var isPaused by remember { mutableStateOf(false) }
-            val lifecycleOwner = LocalLifecycleOwner.current
-            val scope = rememberCoroutineScope()
-
-            LaunchedEffect(lifecycleOwner) {
-                val observer = LifecycleEventObserver { _, event ->
-                    when (event) {
-                        Lifecycle.Event.ON_STOP -> {
-                            isPaused = true
-
-                            homeScreenViewModel.cancelSave()
-                        }
-
-                        Lifecycle.Event.ON_RESUME -> {
-
-                            isPaused = false
-                            scope.launch(Dispatchers.Default) {
-                                homeScreenViewModel.saveCopy(
-                                    context = context,
-                                    onSuccess = {
-                                        homeScreenViewModel.showToast(it)
-                                    },
-                                    onFail = {
-                                        homeScreenViewModel.showToast(it)
-                                    })
-                            }
-                        }
-
-                        else -> {
-
-                        }
-                    }
-                }
-                lifecycleOwner.lifecycle.addObserver(observer)
-
-            }
 
             AnimatedVisibility(isSaving.value && savingState.value > 0) {
                 AlertDialog(
@@ -560,8 +523,8 @@ fun <T : Media> HomeScreen(
     // Conditionally display the toast
     if (showToast.isNotEmpty()) {
         LaunchedEffect(true) {
-           // Toast.makeText(context, showToast, Toast.LENGTH_SHORT).show()
-          //  homeScreenViewModel.showToast("") // Reset the state after showing the toast
+            Toast.makeText(context, showToast, Toast.LENGTH_SHORT).show()
+            homeScreenViewModel.showToast("") // Reset the state after showing the toast
         }
     }
 

@@ -62,7 +62,7 @@ fun MediaRepository.mediaFlow(albumId: Long, target: String?): Flow<Resource<Lis
            getMedia()
     } else {
         getMedia()
-    })
+    }).flowOn(Dispatchers.IO).conflate()
 
 fun <T : Media> Flow<Resource<List<T>>>.mapMedia(
     albumId: Long,

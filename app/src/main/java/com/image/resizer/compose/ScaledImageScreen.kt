@@ -78,8 +78,7 @@ fun GalleryImagesComponent(
                 if (index < imageItems.size) {
                     val imageItem = imageItems[index]
                     scope.launch(Dispatchers.IO) {
-                        imageItem.computeFileSize( context)
-                        imageItem.computeImageDimension(context)
+                       imageItem.computeOriginalImageDetails(context)
                     }
                 }
             }

@@ -2,6 +2,7 @@ package com.image.resizer.compose
 
 import android.content.Context
 import android.net.Uri
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -12,7 +13,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
-
+@Stable
 data class ImageItem(
     val key: String = UUID.randomUUID().toString(),
     val uri: Uri,
@@ -36,6 +37,12 @@ data class ImageItem(
         return withContext(Dispatchers.IO) {
             mutex.withLock {
                 if (scaledUri == null) {
+                    if(originalFileSize ==null){
+                        computeFileSize(context)
+                    }
+                    if(originalImageDimension ==null){
+                        computeImageDimension(context)
+                    }
                     val imageItem = if (percentScale != null) {
                         computeScaledUriBySize(context)
                     } else if (scaleParams != null) {
@@ -44,16 +51,17 @@ data class ImageItem(
                         this@ImageItem
                     }
 
-                    this@ImageItem.scaledImageDimension = imageItem.scaledImageDimension
-                    this@ImageItem.scaledFileSize = imageItem.scaledFileSize
-                    this@ImageItem.computedUri = imageItem.computedUri
+                    scaledImageDimension = imageItem.scaledImageDimension
+                    scaledFileSize = imageItem.scaledFileSize
+                    computedUri = imageItem.computedUri
                     scaledUri = imageItem.computedUri
                 }
             }
-            scaledUri
+            this@ImageItem.scaledUri
         }
     }
-    internal  suspend fun computeImageDimension(context: Context): Pair<Int, Int>? {
+
+    internal suspend fun computeImageDimension(context: Context): Pair<Int, Int>? {
         return withContext(Dispatchers.IO) {
             if (originalImageDimension != null) {
                 imageDimension = originalImageDimension
@@ -64,7 +72,29 @@ data class ImageItem(
             imageDimension
         }
     }
+    suspend fun computeOriginalImageDetails(context: Context) {
+        withContext(Dispatchers.IO) {
+            // Compute file size
+            if (originalFileSize != null) {
+                this@ImageItem.fileSize = originalFileSize
+            }else {
+                with(context.contentResolver.openFileDescriptor(uri, "r")) {
+                    val size = this?.statSize ?: 0
+                    this?.close()
+                    this@ImageItem.originalFileSize = size
+                    this@ImageItem.fileSize = size
+                }
+            }
 
+            // Compute image dimensions
+            if (originalImageDimension != null) {
+                imageDimension = originalImageDimension
+            }else {
+                imageDimension = imageDimensionsFromUri(context, uri)
+                originalImageDimension = imageDimension
+            }
+        }
+    }
     internal suspend fun computeFileSize(context: Context): Long? {
         return withContext(Dispatchers.IO) {
             if (originalFileSize != null) {
@@ -81,7 +111,7 @@ data class ImageItem(
         }
     }
 
-    internal suspend fun computeScaledUriByScale(context: Context): ImageItem {
+    internal fun computeScaledUriByScale(context: Context): ImageItem {
         scaleParams?.let {
             val imageItem = scaleImage(it, context)
             return imageItem

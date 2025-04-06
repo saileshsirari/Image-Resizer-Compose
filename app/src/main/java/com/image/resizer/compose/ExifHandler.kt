@@ -43,7 +43,6 @@ object ExifHandler {
                 } else {
                     ExifInterface(outputUri.path.toString())
                 }
-
                 // Copy the original Exif attributes
                 copyExifAttributes(originalExif, newExif)
 
@@ -52,6 +51,7 @@ object ExifHandler {
                 newExif.setAttribute(ExifInterface.TAG_IMAGE_LENGTH, rotatedBitmap.height.toString())
                 // Save the new EXIF data
                 newExif.saveAttributes()
+                descriptor?.close()
             }
         } catch (e: IOException) {
 
@@ -86,6 +86,7 @@ object ExifHandler {
 
             // Save the new EXIF data
             newExif.saveAttributes()
+
         } catch (e: IOException) {
             Log.d(TAG, "Exif data save failed : ${e.toString()}")
         }
