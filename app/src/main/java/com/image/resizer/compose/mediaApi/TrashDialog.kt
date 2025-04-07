@@ -61,6 +61,9 @@ import com.github.panpf.sketch.AsyncImage
 import com.github.panpf.sketch.request.ComposableImageRequest
 import com.github.panpf.sketch.resize.Scale
 import apps.sai.com.imageresizer.R
+import com.image.resizer.compose.mediaApi.DialogAction.DELETE
+import com.image.resizer.compose.mediaApi.DialogAction.REPLACE
+import com.image.resizer.compose.mediaApi.DialogAction.TRASH
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.enterAnimation
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.exitAnimation
@@ -69,12 +72,19 @@ import com.image.resizer.compose.mediaApi.util.rememberFeedbackManager
 import kotlinx.coroutines.launch
 import java.util.UUID
 
+sealed class DialogAction {
+    object TRASH : DialogAction()
+    object REPLACE : DialogAction()
+    object DELETE : DialogAction()
+}
+
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun <T : Media> TrashDialog(
+fun <T : Media.UriMedia> ModifyDialog(
     appBottomSheetState: AppBottomSheetState,
     data: List<T>,
-    action: TrashDialogAction,
+    action: DialogAction,
     onConfirm: suspend (List<T>) -> Unit
 ) {
     val dataCopy = data.toMutableStateList()
@@ -120,8 +130,9 @@ fun <T : Media> TrashDialog(
                     exit = exitAnimation
                 ) {
                     val text = when (action) {
-                        TrashDialogAction.TRASH -> stringResource(R.string.dialog_to_trash)
-                        TrashDialogAction.DELETE -> stringResource(R.string.dialog_delete)
+                        TRASH -> stringResource(R.string.dialog_to_trash)
+                        DELETE -> stringResource(R.string.dialog_delete)
+                        REPLACE -> stringResource(R.string.dialog_replace)
                     }
                     Column {
                         Text(
@@ -163,15 +174,21 @@ fun <T : Media> TrashDialog(
                 ) {
                     val text =
                         when (action) {
-                            TrashDialogAction.TRASH -> stringResource(
+                            TRASH -> stringResource(
                                 R.string.trashing_items,
                                 dataCopy.size
                             )
 
-                            TrashDialogAction.DELETE -> stringResource(
+                            DELETE -> stringResource(
                                 R.string.deleting_items,
                                 dataCopy.size
                             )
+
+                            REPLACE -> stringResource(
+                                R.string.replacing_items,
+                                dataCopy.size
+                            )
+
                         }
                     Text(
                         text = text,
@@ -281,7 +298,11 @@ fun <T : Media> TrashDialog(
                                     onClick = {
                                         feedbackManager.vibrateStrong()
                                         Toast
-                                            .makeText(context, longPressText, Toast.LENGTH_SHORT)
+                                            .makeText(
+                                                context,
+                                                longPressText,
+                                                Toast.LENGTH_SHORT
+                                            )
                                             .show()
                                     }
                                 )

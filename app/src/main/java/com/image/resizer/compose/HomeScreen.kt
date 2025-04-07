@@ -2,6 +2,7 @@
 
 package com.image.resizer.compose
 
+import android.R.attr.action
 import android.app.Activity
 import android.app.RecoverableSecurityException
 import android.content.Context
@@ -18,7 +19,6 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VisibilityThreshold
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -49,7 +49,6 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -83,26 +82,27 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavHostController
 import apps.sai.com.imageresizer.R
 import coil.compose.AsyncImage
+import coil.util.CoilUtils.result
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.image.resizer.compose.ImageReplacer.deleteSelectedImages
 import com.image.resizer.compose.mediaApi.AlbumsViewModel
+import com.image.resizer.compose.mediaApi.DialogAction
 import com.image.resizer.compose.mediaApi.EditorDestination.*
 import com.image.resizer.compose.mediaApi.EditorDestination.ExternalEditor
 import com.image.resizer.compose.mediaApi.EditorNavigator
 import com.image.resizer.compose.mediaApi.MediaHandleUseCase
+import com.image.resizer.compose.mediaApi.ModifyDialog
 import com.image.resizer.compose.mediaApi.NavigationButton
 import com.image.resizer.compose.mediaApi.PickerMediaSheet
 import com.image.resizer.compose.mediaApi.TAG
 import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
+import com.image.resizer.compose.mediaApi.model.Media.UriMedia
 import com.image.resizer.compose.mediaApi.model.MediaState
 import com.image.resizer.compose.mediaApi.rememberAppBottomSheetState
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.enterAnimation
@@ -159,16 +159,14 @@ fun <T : Media> HomeScreen(
     val galleryState by homeScreenViewModel.galleryState.collectAsState()
     val showToast by homeScreenViewModel.showToast.collectAsState()
     val scope = rememberCoroutineScope()
-
     val showImages by remember {
         derivedStateOf { galleryState is GalleryState.Success }
     }
 
-    var saveRequested by remember { mutableStateOf(false) }
     val selectedImageItems = homeScreenViewModel.selectedImageItems.collectAsState()
     var savingState = homeScreenViewModel.savingState.collectAsState()
     var isSaving = homeScreenViewModel.isSaving.collectAsState()
-
+    val replaceSheetState = rememberAppBottomSheetState()
     val cropImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -188,8 +186,16 @@ fun <T : Media> HomeScreen(
             scope.launch {
                 homeScreenViewModel.saveOverride(context = context, onSuccess = {
                     homeScreenViewModel.showToast(it)
+                    if (replaceSheetState.isVisible) {
+                        scope.launch {
+                            replaceSheetState.hide()
+                        }
+                    }
                 }, onFail = {
                     homeScreenViewModel.showToast(it)
+                    scope.launch {
+                        replaceSheetState.hide()
+                    }
                 })
             }
 
@@ -276,11 +282,8 @@ fun <T : Media> HomeScreen(
 
                                     Replace -> {
                                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                            selectedImageItems.value.let {
-                                                overrideRequest.launch(
-                                                    it.map { it.uri }
-                                                        .writeRequests((context as Activity).contentResolver)
-                                                )
+                                            scope.launch {
+                                                replaceSheetState.show()
                                             }
                                         } else {
                                             scope.launch {
@@ -289,11 +292,9 @@ fun <T : Media> HomeScreen(
                                                     onSuccess = {
                                                         homeScreenViewModel.showToast(it)
                                                         homeScreenViewModel.showSelectedImages()
-                                                        saveRequested = false
                                                     },
                                                     onFail = {
                                                         homeScreenViewModel.showToast(it)
-                                                        saveRequested = false
                                                     })
                                             }
 
@@ -539,6 +540,32 @@ fun <T : Media> HomeScreen(
 
     if (showRationale) {
         showRationale = StoragePermissionDialog(galleryPermissionState)
+    }
+
+    ModifyDialog(
+        appBottomSheetState = replaceSheetState,
+        data = selectedImageItems.value.map { UriMedia(uri = it.uri, label = it.imageName?:"",
+            timestamp = it.timestamp,
+            size = it.originalFileSize?:0,
+            mimeType = it.originalMimeType,
+            path = it.path,
+            relativePath = it.originalRelativePath,
+            albumID = 0,
+            albumLabel = "",
+            favorite = 0,
+            trashed = 0,
+            fullDate = "",
+            duration = "")},
+        action = DialogAction.REPLACE,
+    ) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            selectedImageItems.value.let {
+                overrideRequest.launch(
+                    it.map { it.uri }
+                        .writeRequests((context as Activity).contentResolver)
+                )
+            }
+        }
     }
 
 }

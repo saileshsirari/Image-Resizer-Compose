@@ -90,8 +90,6 @@ fun <T: Media> SelectionSheet(
     val scope = rememberCoroutineScope()
     var shouldMoveToTrash by rememberSaveable { mutableStateOf(true) }
     val trashSheetState = rememberAppBottomSheetState()
-    val moveSheetState = rememberAppBottomSheetState()
-    val copySheetState = rememberAppBottomSheetState()
     val result = rememberActivityResult(
         onResultOk = {
             clearSelection()
@@ -212,12 +210,11 @@ fun <T: Media> SelectionSheet(
         }
     }
 
-
-    TrashDialog(
+    ModifyDialog(
         appBottomSheetState = trashSheetState,
-        data = selectedMedia,
+        data = selectedMedia as List<Media.UriMedia>,
         action = remember(shouldMoveToTrash) {
-            if (shouldMoveToTrash) TrashDialogAction.TRASH else TrashDialogAction.DELETE
+            if (shouldMoveToTrash) DialogAction.TRASH else DialogAction.DELETE
         },
     ) {
         if (shouldMoveToTrash) {

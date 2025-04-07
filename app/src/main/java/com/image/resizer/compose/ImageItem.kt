@@ -6,8 +6,6 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.github.panpf.sketch.cache.internal.EmptyMemoryCache.withLock
-import com.image.resizer.compose.UriMutexManager
 import com.image.resizer.compose.mediaApi.model.Media.UriMedia
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -27,7 +25,8 @@ data class ImageItem(
     var originalImageDimension: Pair<Int, Int>? = null,
     val originalRelativePath: String,
     val originalMimeType: String,
-    val   timestamp: Long
+    val   timestamp: Long,
+    val path : String ="" ,
 ) {
     val uriMutex: Mutex = UriMutexManager.getMutex(uri)
 
@@ -150,8 +149,8 @@ fun UriMedia.toImageItem(): ImageItem {
         originalFileSize = size,
         originalRelativePath = relativePath,
         originalMimeType =  mimeType,
-        timestamp = timestamp
-
+        timestamp = timestamp,
+        path = path
     )
 }
 
