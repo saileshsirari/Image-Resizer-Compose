@@ -130,15 +130,4 @@ fun ComparisonImageView(
     }
 }
 
-@Composable
-@Preview
-fun MyScreen() {
-    val context = LocalContext.current
-    val uri = "content://media/external/file/25".toUri()
-    val imageItem =  ImageItem(
-        uri = uri,
-        scaledImageDimension = Pair(100,200),
-        scaledFileSize = 512,
-    )
-    ImageComparisonView(imageItem = imageItem)
-}
+

@@ -55,6 +55,9 @@ interface MediaRepository {
         originalUri: Uri,
         uri: Uri,
         bitmap: Bitmap,
+        displayName: String,
+        originalRelativePath:String,
+        mimeType: String,
         format: Bitmap.CompressFormat
     ): Boolean
 

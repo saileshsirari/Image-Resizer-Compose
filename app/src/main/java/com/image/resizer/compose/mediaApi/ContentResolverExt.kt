@@ -184,43 +184,29 @@ fun ContentResolver.overrideImage(
     context: Context,
     uri: Uri,
     bitmap: Bitmap,
+    displayName: String,
+    originalRelativePath: String,
+    mimeType: String,
     format: Bitmap.CompressFormat = Bitmap.CompressFormat.JPEG
 ): Boolean {
 
-    val values = ContentValues().apply {
-        put(MediaStore.MediaColumns.DATE_MODIFIED, System.currentTimeMillis())
-    }
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        return runCatching {
-            update(uri, values, null)
-            openOutputStream(uri)?.use { stream ->
-                if (!bitmap.compress(format, 100, stream)) {
-                    throw IOException("Failed to save bitmap.")
-                } else {
-                    ExifHandler.setExifDataAfterScalingWithUri(
-                        context = context,
-                        originalImageUri = originalUri,
-                        scaledBitmap = bitmap,
-                        outputUri = uri,
-                    )
-
-                }
-            } ?: throw IOException("Failed to open output stream.")
-
-            values.clear()
-            values.put(MediaStore.MediaColumns.IS_PENDING, 0)
-            update(
-                uri,
-                values,
-                null
-            ) > 0
-
-
-        }.getOrElse {
-            throw it
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        //delete original and copy new
+        if (delete(uri, null, null) > 0) {
+            saveImage(
+                originalUri = originalUri,
+                context = context,
+                bitmap = bitmap,
+                format = format,
+                mimeType = mimeType,
+                relativePath = originalRelativePath,
+                displayName = displayName
+            ) != null
+        } else {
+            false
         }
     } else {
-        return runCatching {
+        runCatching {
             replaceImageBelowQ(context, uri, bitmap)
         }.getOrElse {
             throw it

@@ -39,21 +39,17 @@ fun LinearProgressIndicatorWithPercentage(
     ) {
 
         LinearProgressIndicator(
-        progress = { progress },
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.background,
-        trackColor = trackColor,
+            progress = { progress },
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.background,
+            trackColor = trackColor,
         )
-        val color = Color.Transparent
-
         if (showPercentage) {
             Text(
                 text = "${(progress * 100).toInt()}%",
                 style = MyTypography.bodyLarge,
                 modifier = Modifier
-                    .align(Alignment.CenterEnd)
-
-                   ,
+                    .align(Alignment.CenterEnd),
                 textAlign = TextAlign.Center,
                 fontSize = 12.sp
             )

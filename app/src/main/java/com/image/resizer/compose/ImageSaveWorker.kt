@@ -72,7 +72,7 @@ class ImageSaveWorker(
                         ) {
                             log(TAG, "mediaHandler.saveImage failed for $uri")
                         } else {
-                            processed.add(ImageItem( uri = uri))
+                           // processed.add(ImageItem( uri = uri, originalRelativePath = ))
                         }
                     } ?: run {
                         log(TAG, "null bitmap for $uri")

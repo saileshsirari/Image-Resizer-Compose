@@ -71,7 +71,7 @@ import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun <T: Media> TrashDialog(
+fun <T : Media> TrashDialog(
     appBottomSheetState: AppBottomSheetState,
     data: List<T>,
     action: TrashDialogAction,
@@ -120,7 +120,7 @@ fun <T: Media> TrashDialog(
                     exit = exitAnimation
                 ) {
                     val text = when (action) {
-                        TrashDialogAction.TRASH  -> stringResource(R.string.dialog_to_trash)
+                        TrashDialogAction.TRASH -> stringResource(R.string.dialog_to_trash)
                         TrashDialogAction.DELETE -> stringResource(R.string.dialog_delete)
                     }
                     Column {
@@ -163,8 +163,15 @@ fun <T: Media> TrashDialog(
                 ) {
                     val text =
                         when (action) {
-                            TrashDialogAction.TRASH -> stringResource(R.string.trashing_items, dataCopy.size)
-                            TrashDialogAction.DELETE -> stringResource(R.string.deleting_items, dataCopy.size)
+                            TrashDialogAction.TRASH -> stringResource(
+                                R.string.trashing_items,
+                                dataCopy.size
+                            )
+
+                            TrashDialogAction.DELETE -> stringResource(
+                                R.string.deleting_items,
+                                dataCopy.size
+                            )
                         }
                     Text(
                         text = text,

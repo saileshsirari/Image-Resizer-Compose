@@ -25,6 +25,8 @@ data class ImageItem(
     var computedUri: Uri? = null,
     var originalFileSize: Long? = null,
     var originalImageDimension: Pair<Int, Int>? = null,
+    val originalRelativePath: String,
+    val originalMimeType: String
 ) {
     val uriMutex: Mutex = UriMutexManager.getMutex(uri)
 
@@ -144,7 +146,9 @@ fun UriMedia.toImageItem(): ImageItem {
         key = key,
         uri = uri,
         imageName = label,
-        originalFileSize = size
+        originalFileSize = size,
+        originalRelativePath = relativePath,
+        originalMimeType =  mimeType
     )
 }
 

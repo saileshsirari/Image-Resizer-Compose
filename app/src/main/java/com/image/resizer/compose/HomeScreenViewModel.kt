@@ -129,7 +129,10 @@ class HomeScreenViewModel(
             _scaledImageItems.value = listOf(
                 ImageItem(
                     uri = _selectedImageItems.value.first().uri,
-                    computedUri = croppedUri
+                    computedUri = croppedUri,
+                    imageName = requireNotNull(_selectedImageItems.value.first().imageName),
+                    originalRelativePath =requireNotNull( _selectedImageItems.value.first().originalRelativePath),
+                    originalMimeType = requireNotNull(_selectedImageItems.value.first().originalMimeType)
                 )
             )
             _cropState.value = CropState.Success(CropStateData(croppedUri))
@@ -228,7 +231,9 @@ class HomeScreenViewModel(
             ImageItem(
                 uri = it.uri,
                 imageName = it.imageName,
-                originalFileSize = it.originalFileSize ?: 0L
+                originalFileSize = it.originalFileSize ?: 0L,
+                originalMimeType = it.originalMimeType,
+                originalRelativePath = requireNotNull(it.imageName)
             )
         }
         _selectedImageItems.value = selectedImageItems
@@ -262,6 +267,8 @@ class HomeScreenViewModel(
                 uri = it.uri,
                 imageName = it.imageName,
                 originalFileSize = it.originalFileSize,
+                originalRelativePath = it.originalRelativePath,
+                originalMimeType = it.originalMimeType,
                 originalImageDimension = it.originalImageDimension
             )
         }
@@ -516,6 +523,9 @@ class HomeScreenViewModel(
                                                 originalUri = scaledUri,
                                                 uri = media.uri,
                                                 bitmap = bitmap,
+                                                displayName = requireNotNull(media.imageName),
+                                                originalRelativePath = media.originalRelativePath,
+                                                mimeType = media.originalMimeType,
                                                 format = saveFormat.format
                                             )
                                         ) {

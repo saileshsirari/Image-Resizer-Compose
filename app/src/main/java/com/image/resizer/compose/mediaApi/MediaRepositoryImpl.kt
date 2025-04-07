@@ -77,7 +77,7 @@ class MediaRepositoryImpl(
         MediaFlow(
             contentResolver = contentResolver,
             buckedId = albumId,
-        ). flowData().flowOn(Dispatchers.IO).mapAsResource()
+        ).flowData().flowOn(Dispatchers.IO).mapAsResource()
 
     override suspend fun getCategoryForMediaId(mediaId: Long): String? {
         return null
@@ -101,7 +101,8 @@ class MediaRepositoryImpl(
             contentResolver = contentResolver,
             uris = listOfUris,
             reviewMode = reviewMode
-        ).flowData().flowOn(Dispatchers.IO).mapAsResource(errorOnEmpty = true, errorMessage = "Media could not be opened")
+        ).flowData().flowOn(Dispatchers.IO)
+            .mapAsResource(errorOnEmpty = true, errorMessage = "Media could not be opened")
 
 
     override suspend fun <T : Media> trashMedia(
@@ -109,7 +110,7 @@ class MediaRepositoryImpl(
         mediaList: List<T>,
         trash: Boolean
     ) {
-        ImageReplacer.deleteSelectedImages(true,context, mediaList.map { it.getUri() }, result)
+        ImageReplacer.deleteSelectedImages(true, context, mediaList.map { it.getUri() }, result)
 
         /* val intentSender = MediaStore.createTrashRequest(
              contentResolver,
@@ -145,13 +146,33 @@ class MediaRepositoryImpl(
         mimeType: String,
         relativePath: String,
         displayName: String
-    ) = contentResolver.saveImage(originalUri, context, bitmap, format, mimeType, relativePath, displayName)
+    ) = contentResolver.saveImage(
+        originalUri = originalUri,
+        context = context,
+        bitmap  = bitmap,
+        format = format,
+        mimeType = mimeType,
+        relativePath = relativePath,
+        displayName = displayName
+    )
 
     override fun overrideImage(
         originalUri: Uri,
         uri: Uri,
         bitmap: Bitmap,
+        displayName: String,
+        originalRelativePath: String,
+        mimeType: String,
         format: Bitmap.CompressFormat,
-    ) = contentResolver.overrideImage(originalUri,context, uri, bitmap, format)
+    ) = contentResolver.overrideImage(
+        originalUri = originalUri,
+        context = context,
+        uri = uri,
+        bitmap = bitmap,
+        displayName = displayName,
+        originalRelativePath = originalRelativePath,
+        mimeType = mimeType,
+        format = format
+    )
 
 }
