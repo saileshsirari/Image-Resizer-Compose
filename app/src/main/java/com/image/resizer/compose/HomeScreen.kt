@@ -73,6 +73,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -184,11 +185,14 @@ fun <T : Media> HomeScreen(
     }
     val overrideRequest = rememberActivityResult(
         onResultOk = {
-            homeScreenViewModel.saveOverride(context = context, onSuccess = {
-                homeScreenViewModel.showToast(it)
-            }, onFail = {
-                homeScreenViewModel.showToast(it)
-            })
+            scope.launch {
+                homeScreenViewModel.saveOverride(context = context, onSuccess = {
+                    homeScreenViewModel.showToast(it)
+                }, onFail = {
+                    homeScreenViewModel.showToast(it)
+                })
+            }
+
         }
 
     )
@@ -279,17 +283,20 @@ fun <T : Media> HomeScreen(
                                                 )
                                             }
                                         } else {
-                                            homeScreenViewModel.saveOverride(
-                                                context = context,
-                                                onSuccess = {
-                                                    homeScreenViewModel.showToast(it)
-                                                    homeScreenViewModel.showSelectedImages()
-                                                    saveRequested = false
-                                                },
-                                                onFail = {
-                                                    homeScreenViewModel.showToast(it)
-                                                    saveRequested = false
-                                                })
+                                            scope.launch {
+                                                homeScreenViewModel.saveOverride(
+                                                    context = context,
+                                                    onSuccess = {
+                                                        homeScreenViewModel.showToast(it)
+                                                        homeScreenViewModel.showSelectedImages()
+                                                        saveRequested = false
+                                                    },
+                                                    onFail = {
+                                                        homeScreenViewModel.showToast(it)
+                                                        saveRequested = false
+                                                    })
+                                            }
+
 
                                         }
 
@@ -492,7 +499,7 @@ fun <T : Media> HomeScreen(
 //                                label = "Progress Animation",
 //                            )*/
 
-                            LinearProgressIndicator(
+                            LinearProgressIndicatorWithPercentage(
                                 progress = targetProgress,
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -509,8 +516,9 @@ fun <T : Media> HomeScreen(
                     },
                     dismissButton = {
                         Button(onClick = {
+                            log("Cancel button clicked! hasFocus: }")
                             homeScreenViewModel.cancelSave()
-                        }) {
+                        }, modifier = Modifier.focusProperties { canFocus = false }) {
                             Text("Cancel")
                         }
                     }

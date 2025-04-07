@@ -145,6 +145,7 @@ class MainActivity : ComponentActivity() {
         super.onStop()
     }
 }
+lateinit var homeScreenViewModel: HomeScreenViewModel
 
 
 @OptIn(ExperimentalPermissionsApi::class)
@@ -166,8 +167,11 @@ fun MainApp() {
         albumId = -1
     }
 
-
-    val homeScreenViewModel = HomeScreenViewModel(mediaHandleUseCase)
+    if (!::homeScreenViewModel.isInitialized) {
+        homeScreenViewModel = HomeScreenViewModel(mediaHandleUseCase)
+    }else{
+        log("homeScreenViewModel already initialized ${homeScreenViewModel.scaledImageItems.value.size} ${homeScreenViewModel.selectedImageItems.value.size}")
+    }
     val activity = LocalActivity.current as Activity
 
     val context = LocalContext.current

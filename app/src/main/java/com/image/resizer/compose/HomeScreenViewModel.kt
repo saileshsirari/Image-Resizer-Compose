@@ -80,6 +80,11 @@ class HomeScreenViewModel(
 
     init {
         log("HomeScreenViewModel init")
+        log(
+            "_isSaving ${_isSaving.value} selected items ${_selectedImageItems.value.size} scaled items ${_scaledImageItems.value.size} " +
+                    "saving state ${savingState.value}" +
+                    ""
+        )
     }
 
     fun compressImagesToTargetSize(
@@ -123,7 +128,7 @@ class HomeScreenViewModel(
             onReset(context)
             _scaledImageItems.value = listOf(
                 ImageItem(
-                  uri = _selectedImageItems.value.first().uri,
+                    uri = _selectedImageItems.value.first().uri,
                     computedUri = croppedUri
                 )
             )
@@ -223,7 +228,7 @@ class HomeScreenViewModel(
             ImageItem(
                 uri = it.uri,
                 imageName = it.imageName,
-                originalFileSize = it.originalFileSize?:0L
+                originalFileSize = it.originalFileSize ?: 0L
             )
         }
         _selectedImageItems.value = selectedImageItems
@@ -360,6 +365,7 @@ class HomeScreenViewModel(
     val exceptionHandler = CoroutineExceptionHandler { _, e ->
         log("[ERROR] ${e.message}")
     }
+
     fun <T> divideListManually(list: List<T>, chunkSize: Int): List<List<T>> {
         val result = mutableListOf<List<T>>()
         var index = 0
@@ -369,8 +375,9 @@ class HomeScreenViewModel(
         }
         return result
     }
+
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun saveCopy(
+    suspend fun saveCopy(
         context: Context,
         saveFormat: SaveFormat = SaveFormat.JPEG,
         onSuccess: (String) -> Unit = {},
@@ -379,9 +386,8 @@ class HomeScreenViewModel(
         log("saveCopy")
         val processed = mutableListOf<ImageItem>()
 
-        job = viewModelScope.async  (Dispatchers.Default + exceptionHandler) {
+        job = viewModelScope.async(Dispatchers.Default + exceptionHandler) {
             _isSaving.value = true
-            val alreadyProcessedUris = processed.map { it.uri }
             val currentSelectedItems =
                 _scaledImageItems.value
 
@@ -392,117 +398,120 @@ class HomeScreenViewModel(
                 println("Not enough space available")
                 return@async
             }
-
+            _savingState.value = 0
             try {
                 ensureActive()
-                val dividedList = divideListManually(currentSelectedItems, 25)
-                  dividedList.map { list ->
-                        ensureActive()
-                      log("list starting ${list.size}")
-                      _savingState.value = processed.size
-                        val saveJobs = list.map { media ->
-                            async(exceptionHandler + Dispatchers.IO) {
-                                ensureActive()
-                                // mutex.withLock {
-                                try {
-                                    if (media.scaledUri == null) {
-                                        media.computeScaledUri(context)
-                                    }
-                                    media.scaledUri?.let { scaledUri ->
-                                        var bitmap: Bitmap? = null
-                                        bitmap = loadBitmapFromUri(scaledUri, context)
-                                        if (bitmap != null) {
-                                            if (mediaHandler.saveImage(
-                                                    media.uri,
-                                                    bitmap = bitmap,
-                                                    format = saveFormat.format,
-                                                    relativePath = Environment.DIRECTORY_PICTURES + "/" + CUSTOM_FOLDER_NAME,
-                                                    displayName = media.imageName
-                                                        ?: "imageResizer_${
-                                                            media.key
-                                                        }.jpg",
-                                                    mimeType = saveFormat.mimeType
-                                                ) == null
-                                            ) {
-                                                log("mediaHandler.saveImage failed for $scaledUri")
-                                            } else {
-                                                processed.add(media)
-                                                log("processed " + processed.size)
-                                            }
-                                        } else {
-                                            log("null bitmap for $scaledUri")
-                                        }
-                                    }
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
+                val dividedList = divideListManually(currentSelectedItems, 20)
+                dividedList.map { list ->
+                    ensureActive()
+                    log("list starting ${list.size}")
+
+                    val saveJobs = list.map { media ->
+                        async(exceptionHandler + Dispatchers.IO) {
+                            ensureActive()
+                            // mutex.withLock {
+                            try {
+                                if (media.scaledUri == null) {
+                                    media.computeScaledUri(context)
                                 }
+                                media.scaledUri?.let { scaledUri ->
+                                    var bitmap: Bitmap? = null
+                                    bitmap = loadBitmapFromUri(scaledUri, context)
+                                    if (bitmap != null) {
+                                        if (mediaHandler.saveImage(
+                                                media.uri,
+                                                bitmap = bitmap,
+                                                format = saveFormat.format,
+                                                relativePath = Environment.DIRECTORY_PICTURES + "/" + CUSTOM_FOLDER_NAME,
+                                                displayName = media.imageName
+                                                    ?: "imageResizer_${
+                                                        media.key
+                                                    }.jpg",
+                                                mimeType = saveFormat.mimeType
+                                            ) == null
+                                        ) {
+                                            log("mediaHandler.saveImage failed for $scaledUri")
+                                        } else {
+
+                                            processed.add(media)
+                                            _savingState.value = processed.size
+//                                                log("processed " + processed.size)
+                                        }
+                                    } else {
+                                        log("null bitmap for $scaledUri")
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
                             }
                         }
-                        val timeTaken: Duration = measureTime {
-                            saveJobs.awaitAll()
-                        }
-                        log("Time taken for awaitAll(): ${timeTaken.inWholeSeconds} seconds")
+                    }
+                    val timeTaken: Duration = measureTime {
+                        saveJobs.awaitAll()
+                    }
+                    log("Time taken for awaitAll(): ${timeTaken.inWholeSeconds} seconds")
                 }
 
 
             } catch (e: Exception) {
-                _isSaving.value = false
-                _savingState.value = 0
+                //_isSaving.value = false
+                //  _savingState.value = 0
+                log("Exception here " + e.message)
                 onFail(e.message ?: "Unable to save some images").also { _isSaving.value = false }
                 return@async
             }
-             job?.await()
-            _isSaving.value = false
-            _savingState.value = 0
-            onSuccess("Images saved")
+
         }
+        println("All done")
+        job?.await()
+        _isSaving.value = false
+        log("Images saved last")
+        onSuccess("Images saved")
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun saveOverride(
+    suspend fun saveOverride(
         context: Context,
         saveFormat: SaveFormat = SaveFormat.JPEG,
         onSuccess: (String) -> Unit = {},
         onFail: (String) -> Unit = {}
     ) {
         log("saveOverride")
-        val exceptionHandler = CoroutineExceptionHandler { _, e ->
-            println("[ERROR] ${e.message}")
-        }
-        val mutex = Mutex()
-        _isSaving.value = true
-        val currentSelectedItems = _scaledImageItems.value
-        _savingState.value = 0
+        log("saveCopy")
         val processed = mutableListOf<ImageItem>()
-        var count = 0
-        //Check if the space is enough
-        if (!isEnoughSpaceAvailable(currentSelectedItems.size)) {
-            _isSaving.value = false
-            onFail("Not enough space available").also { _isSaving.value = false }
-            println("Not enough space available")
-            return
-        }
 
-        job = viewModelScope.async  (Dispatchers.IO + exceptionHandler) {
+        job = viewModelScope.async(Dispatchers.Default + exceptionHandler) {
+            _isSaving.value = true
+            val currentSelectedItems =
+                _scaledImageItems.value
+
+            // Check if the space is enough
+            if (!isEnoughSpaceAvailable(currentSelectedItems.size)) {
+                _isSaving.value = false
+                onFail("Not enough space available").also { _isSaving.value = false }
+                println("Not enough space available")
+                return@async
+            }
+            _savingState.value = 0
             try {
-                _savingState.value = 2
-                currentSelectedItems.asFlow().flowOn(Dispatchers.IO).chunked(30).map { list ->
-                    println("wait for this list $count")
-                    val defList = mutableListOf<Deferred<Any?>>()
-                    list.mapIndexed { index, it ->
-                        val def = async(exceptionHandler + Dispatchers.IO) {
-                            yield()
+                ensureActive()
+                val dividedList = divideListManually(currentSelectedItems, 20)
+                dividedList.map { list ->
+                    ensureActive()
+                    log("list starting ${list.size}")
 
-                            //   mutex.withLock {
+                    val saveJobs = list.map { media ->
+                        async(exceptionHandler + Dispatchers.IO) {
+                            ensureActive()
+                            // mutex.withLock {
                             try {
-                                //   val saveJobs =   currentSelectedItems.mapIndexed { index, it ->
-                                val media = it
-                                it.scaledUri?.let { scaledUri ->
+                                if (media.scaledUri == null) {
+                                    media.computeScaledUri(context)
+                                }
+                                media.scaledUri?.let { scaledUri ->
                                     var bitmap: Bitmap? = null
                                     bitmap = loadBitmapFromUri(scaledUri, context)
-                                    count++
                                     if (bitmap != null) {
-                                        //  launch(exceptionHandler + Dispatchers.IO) {
                                         if (!mediaHandler.overrideImage(
                                                 originalUri = scaledUri,
                                                 uri = media.uri,
@@ -512,41 +521,43 @@ class HomeScreenViewModel(
                                         ) {
                                             println("mediaHandler.overrideImage failed for $scaledUri")
                                         } else {
-                                            processed.add(media)
-                                        }
-                                        //   }
 
+                                            processed.add(media)
+                                            _savingState.value = processed.size
+//                                                log("processed " + processed.size)
+                                        }
                                     } else {
-                                        println("null bitmap for $scaledUri")
+                                        log("null bitmap for $scaledUri")
                                     }
                                 }
-
                             } catch (e: Exception) {
                                 e.printStackTrace()
                             }
                         }
-                        defList.add(def)
                     }
-                    println(" ${savingState.value} originalFileSize here")
-                    _savingState.value = processed.size
-                    println("waiting for  ${defList.size} to finish")
-                    defList.awaitAll()
-                    delay(1000)
-                }.collect {
-
+                    val timeTaken: Duration = measureTime {
+                        saveJobs.awaitAll()
+                    }
+                    log("Time taken for awaitAll(): ${timeTaken.inWholeSeconds} seconds")
                 }
-                //joinAll(*saveJobs.toTypedArray()) //Wait for each task to be finished.
+
+
             } catch (e: Exception) {
-                _isSaving.value = false
-                onFail(e.message ?: "Unable to save some images").also { _isSaving.value = false }
+                //_isSaving.value = false
+                //  _savingState.value = 0
+                log("Exception here " + e.message)
+                onFail(e.message ?: "Unable to replace some images").also {
+                    _isSaving.value = false
+                }
                 return@async
-
             }
-            job?.await()
-            _isSaving.value = false
-            onSuccess("Images saved")
-        }
 
+        }
+        println("All done")
+        job?.await()
+        _isSaving.value = false
+        log("Images saved last")
+        onSuccess("Images saved")
     }
 
 
