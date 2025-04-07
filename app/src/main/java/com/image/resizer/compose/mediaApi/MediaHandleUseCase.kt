@@ -67,7 +67,8 @@ class MediaHandleUseCase(
         displayName: String,
         originalRelativePath:String,
         mimeType: String,
-        format: Bitmap.CompressFormat
+        format: Bitmap.CompressFormat,
+        timestamp: Long
     ) = repository.overrideImage(
         originalUri = originalUri,
         uri = uri,
@@ -75,7 +76,8 @@ class MediaHandleUseCase(
         displayName = displayName,
         originalRelativePath = originalRelativePath,
         mimeType = mimeType,
-        format = format
+        format = format,
+        timestamp = timestamp
     )
 
 }

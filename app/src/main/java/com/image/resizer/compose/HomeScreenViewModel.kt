@@ -132,7 +132,8 @@ class HomeScreenViewModel(
                     computedUri = croppedUri,
                     imageName = requireNotNull(_selectedImageItems.value.first().imageName),
                     originalRelativePath =requireNotNull( _selectedImageItems.value.first().originalRelativePath),
-                    originalMimeType = requireNotNull(_selectedImageItems.value.first().originalMimeType)
+                    originalMimeType = requireNotNull(_selectedImageItems.value.first().originalMimeType),
+                    timestamp = _selectedImageItems.value.first().timestamp
                 )
             )
             _cropState.value = CropState.Success(CropStateData(croppedUri))
@@ -233,7 +234,8 @@ class HomeScreenViewModel(
                 imageName = it.imageName,
                 originalFileSize = it.originalFileSize ?: 0L,
                 originalMimeType = it.originalMimeType,
-                originalRelativePath = requireNotNull(it.imageName)
+                originalRelativePath = requireNotNull(it.imageName),
+                timestamp =  it.timestamp
             )
         }
         _selectedImageItems.value = selectedImageItems
@@ -269,7 +271,8 @@ class HomeScreenViewModel(
                 originalFileSize = it.originalFileSize,
                 originalRelativePath = it.originalRelativePath,
                 originalMimeType = it.originalMimeType,
-                originalImageDimension = it.originalImageDimension
+                originalImageDimension = it.originalImageDimension,
+                timestamp = it.timestamp
             )
         }
         _selectedImageItems.value = selectedImageItems
@@ -526,7 +529,8 @@ class HomeScreenViewModel(
                                                 displayName = requireNotNull(media.imageName),
                                                 originalRelativePath = media.originalRelativePath,
                                                 mimeType = media.originalMimeType,
-                                                format = saveFormat.format
+                                                format = saveFormat.format,
+                                            timestamp = media.timestamp
                                             )
                                         ) {
                                             println("mediaHandler.overrideImage failed for $scaledUri")

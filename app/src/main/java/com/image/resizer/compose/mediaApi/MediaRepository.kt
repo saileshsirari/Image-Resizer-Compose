@@ -58,7 +58,8 @@ interface MediaRepository {
         displayName: String,
         originalRelativePath:String,
         mimeType: String,
-        format: Bitmap.CompressFormat
+        format: Bitmap.CompressFormat,
+        timestamp: Long
     ): Boolean
 
 }

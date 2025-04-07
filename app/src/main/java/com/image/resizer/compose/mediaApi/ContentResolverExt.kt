@@ -5,14 +5,12 @@
 
 package com.image.resizer.compose.mediaApi
 
-import android.R.attr.bitmap
 import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.database.ContentObserver
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
@@ -24,11 +22,10 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.util.Log
+import apps.sai.com.imageresizer.BuildConfig
 import com.image.resizer.compose.ExifHandler
-import com.image.resizer.compose.FileSizeHelper
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.util.Constants
-import com.image.resizer.compose.mediaApi.util.Constants.CUSTOM_FOLDER_NAME
 import com.image.resizer.compose.mediaApi.util.getUri
 import com.image.resizer.compose.mediaApi.util.isVideo
 import kotlinx.coroutines.Dispatchers
@@ -43,7 +40,6 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import androidx.core.graphics.createBitmap
 
 fun ContentResolver.queryFlow(
     uri: Uri,
@@ -187,7 +183,8 @@ fun ContentResolver.overrideImage(
     displayName: String,
     originalRelativePath: String,
     mimeType: String,
-    format: Bitmap.CompressFormat = Bitmap.CompressFormat.JPEG
+    format: Bitmap.CompressFormat,
+    timestamp: Long,
 ): Boolean {
 
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -200,7 +197,8 @@ fun ContentResolver.overrideImage(
                 format = format,
                 mimeType = mimeType,
                 relativePath = originalRelativePath,
-                displayName = displayName
+                displayName = displayName,
+                timeStampModified = timestamp
             ) != null
         } else {
             false
@@ -222,9 +220,11 @@ fun ContentResolver.saveImage(
     format: Bitmap.CompressFormat = Bitmap.CompressFormat.JPEG,
     mimeType: String = "image/jpeg",
     relativePath: String = Environment.DIRECTORY_PICTURES,
-    displayName: String
+    displayName: String,
+    timeStampModified: Long? = null,
 ): Uri? {
     val values = ContentValues().apply {
+
         put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
         put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
         put(
@@ -250,6 +250,16 @@ fun ContentResolver.saveImage(
                             scaledBitmap = bitmap,
                             outputUri = uri,
                         )
+                        if (timeStampModified != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            values.clear()
+                            values.put(MediaStore.MediaColumns.DATE_MODIFIED, timeStampModified)
+                            update(
+                                uri,
+                                values,
+                                null
+                            )
+                        }
+
                     }
                 } ?: throw IOException("Failed to open output stream.")
 

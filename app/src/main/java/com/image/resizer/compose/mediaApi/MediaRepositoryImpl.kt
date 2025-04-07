@@ -164,6 +164,7 @@ class MediaRepositoryImpl(
         originalRelativePath: String,
         mimeType: String,
         format: Bitmap.CompressFormat,
+        timestamp: Long
     ) = contentResolver.overrideImage(
         originalUri = originalUri,
         context = context,
@@ -172,7 +173,8 @@ class MediaRepositoryImpl(
         displayName = displayName,
         originalRelativePath = originalRelativePath,
         mimeType = mimeType,
-        format = format
+        format = format,
+        timestamp = timestamp
     )
 
 }
