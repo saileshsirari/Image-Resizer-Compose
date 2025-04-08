@@ -131,7 +131,7 @@ class HomeScreenViewModel(
                     uri = _selectedImageItems.value.first().uri,
                     computedUri = croppedUri,
                     imageName = requireNotNull(_selectedImageItems.value.first().imageName),
-                    originalRelativePath =requireNotNull( _selectedImageItems.value.first().originalRelativePath),
+                    originalRelativePath = requireNotNull(_selectedImageItems.value.first().originalRelativePath),
                     originalMimeType = requireNotNull(_selectedImageItems.value.first().originalMimeType),
                     timestamp = _selectedImageItems.value.first().timestamp
                 )
@@ -235,7 +235,7 @@ class HomeScreenViewModel(
                 originalFileSize = it.originalFileSize ?: 0L,
                 originalMimeType = it.originalMimeType,
                 originalRelativePath = requireNotNull(it.imageName),
-                timestamp =  it.timestamp
+                timestamp = it.timestamp
             )
         }
         _selectedImageItems.value = selectedImageItems
@@ -530,7 +530,7 @@ class HomeScreenViewModel(
                                                 originalRelativePath = media.originalRelativePath,
                                                 mimeType = media.originalMimeType,
                                                 format = saveFormat.format,
-                                            timestamp = media.timestamp
+                                                timestamp = media.timestamp
                                             )
                                         ) {
                                             println("mediaHandler.overrideImage failed for $scaledUri")

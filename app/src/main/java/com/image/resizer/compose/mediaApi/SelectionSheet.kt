@@ -78,6 +78,7 @@ fun <T: Media> SelectionSheet(
     albumsState: State<AlbumState>,
     handler: MediaHandleUseCase,
     activity: Activity,
+    timelineScreenType: TimelineScreenType ,
     onOpenClick:(List<ImageItem>)-> Unit
 
 ) {
@@ -171,18 +172,20 @@ fun <T: Media> SelectionSheet(
                 ) {
                     context.shareMedia(selectedMedia)
                 }
-                SelectionBarColumn(
-                    imageVector = Icons.Outlined.FileOpen,
-                    tabletMode = tabletMode,
-                    title = stringResource(R.string.open)
-                ) {
-                    scope.launch {
-                        onOpenClick(selectedMedia.mapNotNull {
-                            (it as? Media.UriMedia)?.toImageItem(
-                            )
-                        })
-                    }
+                if(timelineScreenType!=TimelineScreenType.MyImages) {
+                    SelectionBarColumn(
+                        imageVector = Icons.Outlined.FileOpen,
+                        tabletMode = tabletMode,
+                        title = stringResource(R.string.open)
+                    ) {
+                        scope.launch {
+                            onOpenClick(selectedMedia.mapNotNull {
+                                (it as? Media.UriMedia)?.toImageItem(
+                                )
+                            })
+                        }
 
+                    }
                 }
                 // Trash Component
                 val trashEnabled by remember { mutableStateOf(true) }

@@ -81,6 +81,7 @@ fun <T: Media> MediaScreen(
     animatedContentScope: AnimatedContentScope,
     onOpenClick:(List<ImageItem>)-> Unit,
     activity: Activity,
+    timelineScreenType: TimelineScreenType ,
     onMediaClick: @DisallowComposableCalls (media: T) -> Unit = {},
     onActivityResult: (result: ActivityResult) -> Unit,
 
@@ -191,6 +192,7 @@ fun <T: Media> MediaScreen(
                 albumsState = albumsState,
                 handler = handler,
                 activity = activity,
+                timelineScreenType = timelineScreenType,
                 onOpenClick  = onOpenClick
 
             )

@@ -73,6 +73,7 @@ import java.io.FileOutputStream
 import java.io.OutputStream
 import com.image.resizer.compose.Screen.ZoomableScreen
 import com.image.resizer.compose.mediaApi.MediaRepository
+import com.image.resizer.compose.mediaApi.TimelineScreenType
 
 // Data class to hold original and compressed image URIs
 data class ImagePair(val originalImageItem: ImageItem, val transFormedImageItem: ImageItem)
@@ -339,6 +340,7 @@ fun Navigation(
                         enableStickyHeaders = !hideTimeline,
                         toggleSelection = myImagesVm::toggleSelection,
                         activity = activity,
+                        timelineScreenType = TimelineScreenType.MyImages,
                         navigate = {
                             navController.navigate(it) {
                             }

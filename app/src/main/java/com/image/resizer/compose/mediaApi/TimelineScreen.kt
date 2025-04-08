@@ -23,7 +23,10 @@ import com.image.resizer.compose.ImageItem
 import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.model.MediaState
-
+sealed class TimelineScreenType {
+    object All : TimelineScreenType()
+    object MyImages : TimelineScreenType()
+}
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 inline fun <reified T: Media> TimelineScreen(
@@ -47,8 +50,9 @@ inline fun <reified T: Media> TimelineScreen(
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedContentScope,
     activity: Activity,
+    timelineScreenType: TimelineScreenType = TimelineScreenType.All,
     noinline onMediaClick: @DisallowComposableCalls (media: T) -> Unit = {},
-    noinline onOpenClick:(List<ImageItem>)-> Unit
+    noinline onOpenClick:(List<ImageItem>)-> Unit,
 ) {
     MediaScreen(
         paddingValues = paddingValues,
@@ -67,6 +71,7 @@ inline fun <reified T: Media> TimelineScreen(
         allowNavBar = allowNavBar,
         onOpenClick = onOpenClick,
         activity = activity,
+        timelineScreenType = timelineScreenType,
         navActionsContent = { expandedDropDown: MutableState<Boolean>, _ ->
             TimelineNavActions(
                 albumId = albumId,
@@ -76,7 +81,7 @@ inline fun <reified T: Media> TimelineScreen(
                 selectedMedia = selectedMedia,
                 selectionState = selectionState,
                 navigate = navigate,
-                navigateUp = navigateUp
+                navigateUp = navigateUp,
             )
         },
         navigate = navigate,
