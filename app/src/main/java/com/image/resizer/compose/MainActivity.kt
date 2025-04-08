@@ -74,6 +74,7 @@ import java.io.OutputStream
 import com.image.resizer.compose.Screen.ZoomableScreen
 import com.image.resizer.compose.mediaApi.MediaRepository
 import com.image.resizer.compose.mediaApi.TimelineScreenType
+import com.image.resizer.compose.mediaApi.model.Album
 
 // Data class to hold original and compressed image URIs
 data class ImagePair(val originalImageItem: ImageItem, val transFormedImageItem: ImageItem)
@@ -116,16 +117,16 @@ fun StoragePermissionDialog(
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-      /*  StrictMode.setThreadPolicy(
-            StrictMode.ThreadPolicy.Builder()
-                .detectAll()
-                .build()
-        )
-        StrictMode.setVmPolicy(
-            StrictMode.VmPolicy.Builder()
-                .detectAll()
-                .build()
-        )*/
+        /*  StrictMode.setThreadPolicy(
+              StrictMode.ThreadPolicy.Builder()
+                  .detectAll()
+                  .build()
+          )
+          StrictMode.setVmPolicy(
+              StrictMode.VmPolicy.Builder()
+                  .detectAll()
+                  .build()
+          )*/
         enableEdgeToEdge()
         setContent {
             AppTheme {
@@ -146,6 +147,7 @@ class MainActivity : ComponentActivity() {
         super.onStop()
     }
 }
+
 lateinit var homeScreenViewModel: HomeScreenViewModel
 
 
@@ -170,7 +172,7 @@ fun MainApp() {
 
     if (!::homeScreenViewModel.isInitialized) {
         homeScreenViewModel = HomeScreenViewModel(mediaHandleUseCase)
-    }else{
+    } else {
         log("homeScreenViewModel already initialized ${homeScreenViewModel.scaledImageItems.value.size} ${homeScreenViewModel.selectedImageItems.value.size}")
     }
     val activity = LocalActivity.current as Activity
@@ -309,68 +311,74 @@ fun Navigation(
             composable(
                 route = Screen.MyImages.route
             ) { backStackEntry ->
-
+                val emptyAlbum = Album(
+                    id = -11,
+                    label = CUSTOM_FOLDER_NAME,
+                    uri = Uri.EMPTY,
+                    pathToThumbnail = "",
+                    relativePath = "",
+                    timestamp = 0
+                )
                 val myImages =
                     albumsState.value.albums.firstOrNull { it.label == CUSTOM_FOLDER_NAME }
-                if (myImages != null) {
-                    var myImagesVm = MediaViewModel(
-                        repository = mediaRepository,
-                        handler = mediaHandleUseCase
-                    ).apply {
-                        albumId = myImages.id
-                    }
-                    val exceptionHandler = CoroutineExceptionHandler { _, e ->
-                        println("[ERROR] ${e.message}")
-                    }
-                    val myImagesMediaState =
-                        myImagesVm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO + exceptionHandler)
-
-
-                    TimelineScreen(
-                        paddingValues = innerPadding,
-                        albumId = myImages.id,
-                        albumName = myImages.label,
-                        handler = myImagesVm.handler,
-                        mediaState = myImagesMediaState,
-                        albumsState = albumsState,
-                        selectionState = myImagesVm.multiSelectState,
-                        selectedMedia = myImagesVm.selectedPhotoState,
-                        allowNavBar = false,
-                        allowHeaders = !hideTimeline,
-                        enableStickyHeaders = !hideTimeline,
-                        toggleSelection = myImagesVm::toggleSelection,
-                        activity = activity,
-                        timelineScreenType = TimelineScreenType.MyImages,
-                        navigate = {
-                            navController.navigate(it) {
-                            }
-                        },
-                        navigateUp = {
-                            navController.navigateUp()
-                        },
-                        toggleNavbar = {
-
-                        },
-                        isScrolling = mutableStateOf(false),
-                        sharedTransitionScope = this@SharedTransitionLayout,
-                        animatedContentScope = this,
-                        onOpenClick = {
-                            homeScreenViewModel.handlePickedImages(it, context) {
-
-                            }
-                        },
-                        onMediaClick = {
-                            homeScreenViewModel.handlePickedImages(
-                                listOf(it.toImageItem()),
-                                context
-                            ) {
-
-
-                            }
-                        }
-                    )
-
+                        ?: emptyAlbum
+                var myImagesVm = MediaViewModel(
+                    repository = mediaRepository,
+                    handler = mediaHandleUseCase
+                ).apply {
+                    albumId = myImages.id
                 }
+                val exceptionHandler = CoroutineExceptionHandler { _, e ->
+                    println("[ERROR] ${e.message}")
+                }
+                val myImagesMediaState =
+                    myImagesVm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO + exceptionHandler)
+
+                TimelineScreen(
+                    paddingValues = innerPadding,
+                    albumId = myImages.id,
+                    albumName = myImages.label,
+                    handler = myImagesVm.handler,
+                    mediaState = myImagesMediaState,
+                    albumsState = albumsState,
+                    selectionState = myImagesVm.multiSelectState,
+                    selectedMedia = myImagesVm.selectedPhotoState,
+                    allowNavBar = false,
+                    allowHeaders = !hideTimeline,
+                    enableStickyHeaders = !hideTimeline,
+                    toggleSelection = myImagesVm::toggleSelection,
+                    activity = activity,
+                    timelineScreenType = TimelineScreenType.MyImages,
+                    navigate = {
+                        navController.navigate(it) {
+                        }
+                    },
+                    navigateUp = {
+                        navController.navigateUp()
+                    },
+                    toggleNavbar = {
+
+                    },
+                    isScrolling = mutableStateOf(false),
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    animatedContentScope = this,
+                    onOpenClick = {
+                        homeScreenViewModel.handlePickedImages(it, context) {
+
+                        }
+                    },
+                    onMediaClick = {
+                        homeScreenViewModel.handlePickedImages(
+                            listOf(it.toImageItem()),
+                            context
+                        ) {
+
+
+                        }
+                    }
+                )
+
+
             }
 
 
