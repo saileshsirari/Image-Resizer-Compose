@@ -44,9 +44,13 @@ data class ImageItem(
                 if (scaledUri == null) {
                     if(originalFileSize ==null){
                         computeFileSize(context)
+                    }else{
+                        this@ImageItem.fileSize = originalFileSize
                     }
                     if(originalImageDimension ==null){
                         computeImageDimension(context)
+                    }else{
+                        this@ImageItem.imageDimension = originalImageDimension
                     }
                     val imageItem = if (percentScale != null) {
                         computeScaledUriBySize(context)
@@ -124,7 +128,7 @@ data class ImageItem(
         return this
     }
 
-    internal suspend fun computeScaledUriBySize(context: Context): ImageItem {
+    internal fun computeScaledUriBySize(context: Context): ImageItem {
         percentScale?.let {
             val imageItem = compressImageToTargetSize(context, this, it)
             return imageItem

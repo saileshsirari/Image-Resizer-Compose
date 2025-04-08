@@ -1,5 +1,6 @@
 package com.image.resizer.compose
 
+import android.R.attr.onClick
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -48,7 +50,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import apps.sai.com.imageresizer.R
 import coil.request.ImageRequest
 import coil.size.Size
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 
@@ -78,7 +82,7 @@ fun GalleryImagesComponent(
                 if (index < imageItems.size) {
                     val imageItem = imageItems[index]
                     scope.launch(Dispatchers.IO) {
-                       imageItem.computeOriginalImageDetails(context)
+                        imageItem.computeOriginalImageDetails(context)
                     }
                 }
             }
@@ -156,19 +160,42 @@ internal fun ScaledImagesGrid(
             lazyGridState.layoutInfo.visibleItemsInfo.map { it.index }
         }
     }
-
-    LaunchedEffect(lazyGridState) {
-        snapshotFlow { visibleItems.value }.filter { it.isNotEmpty() }.collectLatest { indices ->
-            indices.forEach { index ->
-                if (index < scaledImages.size) {
-                    val imageItem = scaledImages[index]
-                    scope.launch(Dispatchers.IO) {
-                        imageItem.computeScaledUri(context)
+   // var isScrolling by remember { mutableStateOf(false) }
+  //  var isLoadData by remember { mutableStateOf(false) }
+    // Observe scrolling state and debounce loading
+   /* LaunchedEffect(lazyGridState) {
+        snapshotFlow { lazyGridState.isScrollInProgress }
+            .collect { scrolling ->
+                isScrolling = scrolling
+                if (!scrolling) {
+                    isLoadData = false
+                    delay(300)
+                    val visibleItems =
+                        lazyGridState.layoutInfo.visibleItemsInfo
+                    visibleItems.forEachIndexed { index, item ->
+                        if (index < scaledImages.size) {
+                            val imageItem = scaledImages[index]
+                            scope.launch(Dispatchers.IO) {
+                                imageItem.computeScaledUri(context)
+                            }
+                        }
                     }
+                    isLoadData = true
                 }
             }
-        }
-    }
+    }*/
+      LaunchedEffect(lazyGridState) {
+          snapshotFlow { visibleItems.value }.filter { it.isNotEmpty() }.collectLatest { indices ->
+              indices.forEach { index ->
+                  if (index < scaledImages.size) {
+                      val imageItem = scaledImages[index]
+                      scope.launch(Dispatchers.IO) {
+                          imageItem.computeScaledUri(context)
+                      }
+                  }
+              }
+          }
+      }
 
     if (imageItems.isEmpty()) {
         Text(
@@ -185,15 +212,14 @@ internal fun ScaledImagesGrid(
                 start = 5.dp,
                 end = 5.dp
             ),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = modifier
         ) {
             items(scaledImages, key = { item -> item.key.toString() }) { imageItem ->
                 Row(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .border(1.dp, Color.Gray),
+                        .fillMaxSize(),
                     horizontalArrangement = Arrangement.SpaceBetween, // Center columns
                     verticalAlignment = Alignment.CenterVertically // Center vertically
                 ) {
@@ -202,6 +228,7 @@ internal fun ScaledImagesGrid(
                         modifier = Modifier
                             .weight(1f) // Equal weight for both columns
                             .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
                             .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
                             .padding(4.dp),
                         horizontalAlignment = Alignment.CenterHorizontally, // Center image
@@ -214,7 +241,11 @@ internal fun ScaledImagesGrid(
                             val fileSizeInKb = it / 1024
                             val fileSizeText = if (fileSizeInKb > 1000) {
                                 "${fileSizeInKb / 1024} mb"
-                            } else "$fileSizeInKb kb"
+                            } else if(fileSizeInKb>0) {
+                                "$fileSizeInKb kb"
+                            }else{
+                                "${imageItem.originalFileSize} bytes"
+                            }
                             Text(fileSizeText, maxLines = 1)
                         }
 
@@ -222,16 +253,12 @@ internal fun ScaledImagesGrid(
                             model = ImageRequest.Builder(LocalContext.current)
                                 .data(imageItem.uri)
                                 .scale(coil.size.Scale.FIT)
-                                .size(Size(300, 300))
                                 .crossfade(true)
                                 .build(),
-                            contentDescription = "Original Image",
+                            contentDescription = "Original ",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.Companion
-                                .align(Alignment.CenterHorizontally)
-                                .padding(4.dp)
-                                .height(300.dp)
-                                .clip(RoundedCornerShape(1.dp))
+                                .aspectRatio(1f)
                                 .clickable(onClick = {
                                     onSelectedItemClicked(imageItem)
                                 }),
@@ -270,17 +297,13 @@ internal fun ScaledImagesGrid(
                         AsyncImage(
                             model = ImageRequest.Builder(LocalContext.current)
                                 .data(imageItem.scaledUri)
-                                .size(Size(300, 300))
                                 .scale(coil.size.Scale.FIT)
                                 .crossfade(true)
                                 .build(),
-                            contentDescription = "Scaled Image",
+                            contentDescription = "New ",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.Companion
-                                .align(Alignment.CenterHorizontally)
-                                .padding(4.dp)
-                                .height(300.dp)
-                                .clip(RoundedCornerShape(1.dp))
+                                .aspectRatio(1f)
                                 .clickable(onClick = {
                                     onSelectedItemClicked(imageItem)
                                 }),
