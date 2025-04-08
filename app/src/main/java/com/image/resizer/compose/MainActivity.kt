@@ -115,7 +115,7 @@ fun StoragePermissionDialog(
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        StrictMode.setThreadPolicy(
+      /*  StrictMode.setThreadPolicy(
             StrictMode.ThreadPolicy.Builder()
                 .detectAll()
                 .build()
@@ -124,7 +124,7 @@ class MainActivity : ComponentActivity() {
             StrictMode.VmPolicy.Builder()
                 .detectAll()
                 .build()
-        )
+        )*/
         enableEdgeToEdge()
         setContent {
             AppTheme {
