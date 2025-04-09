@@ -78,6 +78,9 @@ class HomeScreenViewModel(
     private var _savingState = MutableStateFlow<Int>(0)
     var savingState = _savingState.asStateFlow()
 
+    private var _replacingState = MutableStateFlow<Int>(0)
+    var replacingState = _replacingState.asStateFlow()
+
     init {
         log("HomeScreenViewModel init")
         log(
@@ -233,12 +236,15 @@ class HomeScreenViewModel(
                 uri = it.uri,
                 imageName = it.imageName,
                 originalFileSize = it.originalFileSize ?: 0L,
-                originalMimeType = it.originalMimeType,
                 originalRelativePath = requireNotNull(it.originalRelativePath),
+                originalMimeType = it.originalMimeType,
+                originalImageDimension = it.originalImageDimension,
                 timestamp = it.timestamp,
                 path = it.path
             )
         }
+        ImageItem.percentScale = null
+        ImageItem.scaleParams = null
         _selectedImageItems.value = selectedImageItems
         _galleryState.value = GalleryState.Success(GalleryStateData(_selectedImageItems.value))
         clearCache(context)
@@ -277,6 +283,21 @@ class HomeScreenViewModel(
             )
         }
         _selectedImageItems.value = selectedImageItems
+        //onGalleryImagesSelected(context,selectedImageItems)
+        ImageItem.percentScale = null
+        ImageItem.scaleParams = null
+    }
+
+    fun onClear(context: Context) {
+        log("onClear")
+        _cropState.value = CropState.Idle
+        _compressState.value = CompressState.Idle
+        _scaleState.value = ScaleState.Idle
+        _galleryState.value = GalleryState.Idle
+        _scaledImageItems.value = emptyList<ImageItem>()
+        _selectedImageItems.value = emptyList<ImageItem>()
+        _replacingState.value = 0
+        _savingState.value = 0
         //onGalleryImagesSelected(context,selectedImageItems)
         ImageItem.percentScale = null
         ImageItem.scaleParams = null
@@ -468,7 +489,11 @@ class HomeScreenViewModel(
                 //_isSaving.value = false
                 //  _savingState.value = 0
                 log("Exception here " + e.message)
-                onFail(e.message ?: "Unable to save some images").also { _isSaving.value = false }
+                onFail("Unable to replace some images").also {
+                    _isSaving.value = false
+                    _replacingState.value = 0
+                    _savingState.value = 0
+                }
                 return@async
             }
 
@@ -503,7 +528,7 @@ class HomeScreenViewModel(
                 println("Not enough space available")
                 return@async
             }
-            _savingState.value = 0
+            _replacingState.value = 0
             try {
                 ensureActive()
                 val dividedList = divideListManually(currentSelectedItems, 20)
@@ -544,11 +569,10 @@ class HomeScreenViewModel(
                                             )
                                             log("mediaHandler.overrideImage failed for $scaledUri")
                                             cancelSave()
-                                            throw  Exception("mediaHandler.overrideImage failed for $scaledUri")
+                                            throw Exception("mediaHandler.overrideImage failed for $scaledUri")
                                         } else {
-
                                             processed.add(media)
-                                            _savingState.value = processed.size
+                                            _replacingState.value = processed.size
 //                                                log("processed " + processed.size)
                                         }
                                     } else {
@@ -571,8 +595,10 @@ class HomeScreenViewModel(
                 //_isSaving.value = false
                 //  _savingState.value = 0
                 log("Exception here " + e.message)
-                onFail(e.message ?: "Unable to replace some images").also {
+                onFail("Unable to replace some images").also {
                     _isSaving.value = false
+                    _replacingState.value = 0
+                    _savingState.value = 0
                 }
                 return@async
             }
@@ -581,6 +607,7 @@ class HomeScreenViewModel(
         println("All done")
         job?.await()
         _isSaving.value = false
+        onClear(context)
         log("Images saved last")
         onSuccess("Images saved")
     }

@@ -2,7 +2,6 @@
 
 package com.image.resizer.compose
 
-import android.R.attr.action
 import android.app.Activity
 import android.app.RecoverableSecurityException
 import android.content.Context
@@ -10,7 +9,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -113,6 +111,47 @@ import com.image.resizer.compose.mediaApi.util.writeRequests
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+@Composable
+fun SavingImagesDialog(
+    savingState: State<Int>,
+    selectedImageItems: State<List<ImageItem>>,
+    title: String = "Saving Images..",
+    subTitle: String = "Saving: ",
+    onCancel: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = {
+            // Not dismissible by outside click
+        },
+        title = { Text(title) },
+        text = {
+            Column(modifier = Modifier.padding(horizontal = 6.dp)) {
+                val targetProgress =
+                    savingState.value.toFloat() / selectedImageItems.value.size.toFloat()
+                LinearProgressIndicatorWithPercentage(
+                    progress = targetProgress,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                )
+                Text(
+                    text = "$subTitle  ${savingState.value}/${selectedImageItems.value.size}",
+                )
+            }
+        },
+        confirmButton = {
+            // No confirm button
+        },
+        dismissButton = {
+            Button(onClick = {
+                onCancel()
+            }, modifier = Modifier.focusProperties { canFocus = false }) {
+                Text("Cancel")
+            }
+        }
+    )
+}
 
 @Composable
 fun HomeScreenPreview1() {
@@ -167,8 +206,9 @@ fun <T : Media> HomeScreen(
     }
 
     val selectedImageItems = homeScreenViewModel.selectedImageItems.collectAsState()
-    var savingState = homeScreenViewModel.savingState.collectAsState()
-    var isSaving = homeScreenViewModel.isSaving.collectAsState()
+    val savingState = homeScreenViewModel.savingState.collectAsState()
+    val replacingState = homeScreenViewModel.replacingState.collectAsState()
+    val isSaving = homeScreenViewModel.isSaving.collectAsState()
     val replaceSheetState = rememberAppBottomSheetState()
     val cropImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -196,7 +236,8 @@ fun <T : Media> HomeScreen(
                     }
                 }, onFail = {
                     homeScreenViewModel.showToast(it)
-                    scope.launch {homeScreenViewModel.showToast(it)
+                    scope.launch {
+                        homeScreenViewModel.showToast(it)
                         replaceSheetState.hide()
                     }
                 })
@@ -486,47 +527,23 @@ fun <T : Media> HomeScreen(
             }
 
             AnimatedVisibility(isSaving.value && savingState.value > 0) {
-                AlertDialog(
-                    onDismissRequest = {
-                        // Not dismissible by outside click
-                    },
-                    title = { Text("Saving Images..") },
-                    text = {
-                        Column(modifier = Modifier.padding(horizontal = 6.dp)) {
-                            val targetProgress =
-                                savingState.value.toFloat() / selectedImageItems.value.size.toFloat()
-//                            val animatedProgress by animateFloatAsState(
-//                                targetValue = if (isPaused) targetProgress else targetProgress,
-//                                animationSpec = if (isPaused) tween(durationMillis = 0) else tween(
-//                                    durationMillis = 10
-//                                ),
-//                                label = "Progress Animation",
-//                            )*/
+                SavingImagesDialog(
+                    savingState = savingState,
+                    selectedImageItems = selectedImageItems
+                ) {
+                    homeScreenViewModel.cancelSave()
+                }
+            }
 
-                            LinearProgressIndicatorWithPercentage(
-                                progress = targetProgress,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 8.dp),
-                                trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            )
-                            Text(
-                                text = "Saving: ${savingState.value}/${selectedImageItems.value.size}",
-                            )
-                        }
-                    },
-                    confirmButton = {
-                        // No confirm button
-                    },
-                    dismissButton = {
-                        Button(onClick = {
-                            log("Cancel button clicked! hasFocus: }")
-                            homeScreenViewModel.cancelSave()
-                        }, modifier = Modifier.focusProperties { canFocus = false }) {
-                            Text("Cancel")
-                        }
-                    }
-                )
+            AnimatedVisibility(isSaving.value && replacingState.value > 0) {
+                SavingImagesDialog(
+                    savingState = replacingState,
+                    selectedImageItems = selectedImageItems,
+                    title = "Replacing Images",
+                    subTitle = "Replacing "
+                ) {
+                    homeScreenViewModel.cancelSave()
+                }
             }
 
         }
@@ -534,16 +551,17 @@ fun <T : Media> HomeScreen(
 
     // Conditionally display the toast
     if (showToast.isNotEmpty()) {
-            AlertDialog(onDismissRequest = {  },
-                title = { Text("Message") },
-                text = { Text(showToast.toString()) },
-                confirmButton = {
-                    Button(onClick = {
-                        homeScreenViewModel.showToast("")
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text("Message") },
+            text = { Text(showToast.toString()) },
+            confirmButton = {
+                Button(onClick = {
+                    homeScreenViewModel.showToast("")
 
-                    }) { Text("Ok") }
-                }
-            )
+                }) { Text("Ok") }
+            }
+        )
     }
 
 
@@ -555,10 +573,22 @@ fun <T : Media> HomeScreen(
 
     ModifyDialog(
         appBottomSheetState = replaceSheetState,
-        data = selectedImageItems.value.map { UriMedia(uri = it.uri, label = it.imageName?:"",
-            timestamp = it.timestamp, size = it.originalFileSize?:0, mimeType = it.originalMimeType,
-            path = it.path, relativePath = it.originalRelativePath, albumID = 0, albumLabel = "",
-            favorite = 0, trashed = 0, fullDate = "", duration = "")
+        data = selectedImageItems.value.map {
+            UriMedia(
+                uri = it.uri,
+                label = it.imageName ?: "",
+                timestamp = it.timestamp,
+                size = it.originalFileSize ?: 0,
+                mimeType = it.originalMimeType,
+                path = it.path,
+                relativePath = it.originalRelativePath,
+                albumID = 0,
+                albumLabel = "",
+                favorite = 0,
+                trashed = 0,
+                fullDate = "",
+                duration = ""
+            )
         },
         action = DialogAction.REPLACE,
     ) {
