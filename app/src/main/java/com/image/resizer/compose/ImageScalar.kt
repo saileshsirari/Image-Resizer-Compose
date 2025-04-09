@@ -3,13 +3,15 @@ package com.image.resizer.compose
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
 import java.io.File
 import androidx.core.graphics.scale
 import com.image.resizer.compose.mediaApi.getExifOrientation
+import io.ktor.http.Url
 
 const val TARGET_PERCENTAGE = 100
 
-fun compressImageToTargetSize(
+suspend fun compressImageToTargetSize(
     context: Context,
     imageItem: ImageItem,
     percentOriginal: Int = TARGET_PERCENTAGE
@@ -17,23 +19,30 @@ fun compressImageToTargetSize(
     checkNotNull(imageItem.originalImageDimension == null) {
         "originalImageDimension is null in compressImageToTargetSize"
     }
+
+    checkNotNull(imageItem.originalFileSize == null) {
+        "originalFileSize is null in compressImageToTargetSize"
+    }
     check((imageItem.originalImageDimension?.first ?: 0) > 10) {
         "originalImageDimension is less than 10 in compressImageToTargetSize"
     }
     check((imageItem.originalImageDimension?.second ?: 0) > 10) {
         "originalImageDimension is less than 10 in compressImageToTargetSize"
     }
+    val targetFileSize = (imageItem.originalFileSize?:1).toFloat() * percentOriginal *.01f
     val orgWidth = imageItem.originalImageDimension?.first ?: 10
     val orgHeight = imageItem.originalImageDimension?.second ?: 10
     val desiredWidth = percentOriginal * .01f * orgWidth
     val desiredHeight = percentOriginal * .01f * orgHeight
-    val scaledBitmap: Bitmap? = BitmapScaler.scaleBitmapFromUri(
-        context,
-        imageItem.uri,
-        desiredWidth,
-        desiredHeight,
-        originalWidth = orgWidth.toFloat(),
-        originalHeight = orgHeight.toFloat()
+    val scaledBitmap: Bitmap? = BitmapScaler.decodeSampledBitmapToTargetSize(
+        context = context,
+        uri =  imageItem.uri,
+        targetFileSize =  targetFileSize.toInt(),
+        originalWidth = orgWidth,
+        originalHeight = orgHeight,
+        originalFileSize = (imageItem.originalFileSize?:1).toInt(),
+        estimatedBitmapSize = 1,
+        imageItem
     )
     val exif = getExifOrientation(context, imageItem.uri)
     scaledBitmap?.let { scaledBitmap ->

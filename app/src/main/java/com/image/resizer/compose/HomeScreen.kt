@@ -75,6 +75,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -82,10 +83,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowInsetsCompat
 import androidx.navigation.NavHostController
 import apps.sai.com.imageresizer.R
 import coil.compose.AsyncImage
-import coil.util.CoilUtils.result
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -144,6 +145,7 @@ fun <T : Media> HomeScreen(
     val navigator = rememberSupportingPaneScaffoldNavigator()
 
     val context = LocalContext.current
+    val view = LocalView.current
     val viewModel = ScaleImageViewModel()
     // State to control the popup's visibility
     val galleryPermissionState = rememberPermissionState(
@@ -158,6 +160,7 @@ fun <T : Media> HomeScreen(
     val scaleState by homeScreenViewModel.scaleState.collectAsState()
     val galleryState by homeScreenViewModel.galleryState.collectAsState()
     val showToast by homeScreenViewModel.showToast.collectAsState()
+    //val showAlert by homeScreenViewModel.showAlert.collectAsState()
     val scope = rememberCoroutineScope()
     val showImages by remember {
         derivedStateOf { galleryState is GalleryState.Success }
@@ -193,7 +196,7 @@ fun <T : Media> HomeScreen(
                     }
                 }, onFail = {
                     homeScreenViewModel.showToast(it)
-                    scope.launch {
+                    scope.launch {homeScreenViewModel.showToast(it)
                         replaceSheetState.hide()
                     }
                 })
@@ -531,11 +534,19 @@ fun <T : Media> HomeScreen(
 
     // Conditionally display the toast
     if (showToast.isNotEmpty()) {
-        LaunchedEffect(true) {
-            Toast.makeText(context, showToast, Toast.LENGTH_SHORT).show()
-            homeScreenViewModel.showToast("") // Reset the state after showing the toast
-        }
+            AlertDialog(onDismissRequest = {  },
+                title = { Text("Message") },
+                text = { Text(showToast.toString()) },
+                confirmButton = {
+                    Button(onClick = {
+                        homeScreenViewModel.showToast("")
+
+                    }) { Text("Ok") }
+                }
+            )
     }
+
+
 
 
     if (showRationale) {
@@ -545,20 +556,24 @@ fun <T : Media> HomeScreen(
     ModifyDialog(
         appBottomSheetState = replaceSheetState,
         data = selectedImageItems.value.map { UriMedia(uri = it.uri, label = it.imageName?:"",
-            timestamp = it.timestamp,
-            size = it.originalFileSize?:0,
-            mimeType = it.originalMimeType,
-            path = it.path,
-            relativePath = it.originalRelativePath,
-            albumID = 0,
-            albumLabel = "",
-            favorite = 0,
-            trashed = 0,
-            fullDate = "",
-            duration = "")},
+            timestamp = it.timestamp, size = it.originalFileSize?:0, mimeType = it.originalMimeType,
+            path = it.path, relativePath = it.originalRelativePath, albumID = 0, albumLabel = "",
+            favorite = 0, trashed = 0, fullDate = "", duration = "")
+        },
         action = DialogAction.REPLACE,
     ) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (view.rootWindowInsets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom > 0) {
+                Log.d(TAG, "HomeScreen:has navigation bar")
+            } else {
+                Log.d(TAG, "HomeScreen: No navigation bar")
+            }
+
+            if (view.rootWindowInsets.getInsets(WindowInsetsCompat.Type.statusBars()).top > 0) {
+                Log.d(TAG, "HomeScreen:has status bar")
+            } else {
+                Log.d(TAG, "HomeScreen: No status bar")
+            }
             selectedImageItems.value.let {
                 overrideRequest.launch(
                     it.map { it.uri }

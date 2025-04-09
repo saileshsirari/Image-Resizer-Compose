@@ -128,7 +128,7 @@ data class ImageItem(
         return this
     }
 
-    internal fun computeScaledUriBySize(context: Context): ImageItem {
+     internal suspend fun computeScaledUriBySize(context: Context): ImageItem {
         percentScale?.let {
             val imageItem = compressImageToTargetSize(context, this, it)
             return imageItem

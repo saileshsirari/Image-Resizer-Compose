@@ -65,14 +65,14 @@ fun ImageItemCard(imageItem: ImageItem, onClick: () -> Unit) {
     }
 }
 
-fun ImageItem.saveBitmapToTempAndGetUri(context: Context, bitmap: Bitmap): ImageItem {
+fun ImageItem.saveBitmapToTempAndGetUri(context: Context, bitmap: Bitmap,quality: Int = 100): ImageItem {
 
     val file = File(context.cacheDir, "$imageName")
     if(!file.exists()) {
         file.createNewFile()
     }
     val bos = ByteArrayOutputStream()
-    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bos)
+    bitmap.compress(Bitmap.CompressFormat.JPEG, quality, bos)
     val bitmapData = bos.toByteArray()
 
     val fos = FileOutputStream(file,false)

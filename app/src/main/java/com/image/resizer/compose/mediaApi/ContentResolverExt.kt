@@ -189,8 +189,8 @@ fun ContentResolver.overrideImage(
 
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
         //delete original and copy new
-        if (delete(uri, null, null) > 0) {
-            saveImage(
+        if (delete(uri, null, null) != -1) {
+            if(saveImage(
                 originalUri = originalUri,
                 context = context,
                 bitmap = bitmap,
@@ -199,7 +199,11 @@ fun ContentResolver.overrideImage(
                 relativePath = originalRelativePath,
                 displayName = displayName,
                 timeStampModified = timestamp
-            ) != null
+            ) == null){
+                throw Exception("overrideImage failed")
+            }else{
+                true
+            }
         } else {
             false
         }

@@ -234,8 +234,9 @@ class HomeScreenViewModel(
                 imageName = it.imageName,
                 originalFileSize = it.originalFileSize ?: 0L,
                 originalMimeType = it.originalMimeType,
-                originalRelativePath = requireNotNull(it.imageName),
-                timestamp = it.timestamp
+                originalRelativePath = requireNotNull(it.originalRelativePath),
+                timestamp = it.timestamp,
+                path = it.path
             )
         }
         _selectedImageItems.value = selectedImageItems
@@ -533,7 +534,17 @@ class HomeScreenViewModel(
                                                 timestamp = media.timestamp
                                             )
                                         ) {
-                                            println("mediaHandler.overrideImage failed for $scaledUri")
+                                            mediaHandler.saveImage(
+                                                media.uri,
+                                                bitmap = bitmap,
+                                                format = saveFormat.format,
+                                                relativePath = media.originalRelativePath,
+                                                displayName = media.imageName,
+                                                mimeType = saveFormat.mimeType
+                                            )
+                                            log("mediaHandler.overrideImage failed for $scaledUri")
+                                            cancelSave()
+                                            throw  Exception("mediaHandler.overrideImage failed for $scaledUri")
                                         } else {
 
                                             processed.add(media)
