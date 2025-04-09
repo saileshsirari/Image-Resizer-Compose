@@ -127,8 +127,9 @@ class HomeScreenViewModel(
     }
 
     fun onCropSuccess(context: Context, croppedUri: Uri?) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             onReset(context)
+            val croppedDimens = imageDimensionsFromUri(context, croppedUri!!)
             _scaledImageItems.value = listOf(
                 ImageItem(
                     uri = _selectedImageItems.value.first().uri,
@@ -136,10 +137,11 @@ class HomeScreenViewModel(
                     imageName = requireNotNull(_selectedImageItems.value.first().imageName),
                     originalRelativePath = requireNotNull(_selectedImageItems.value.first().originalRelativePath),
                     originalMimeType = requireNotNull(_selectedImageItems.value.first().originalMimeType),
-                    timestamp = _selectedImageItems.value.first().timestamp
+                    timestamp = _selectedImageItems.value.first().timestamp,
+                    scaledImageDimension = croppedDimens
                 )
             )
-            _cropState.value = CropState.Success(CropStateData(croppedUri))
+            _cropState.value = CropState.Success(CropStateData(_scaledImageItems.value.first()))
         }
     }
 
@@ -486,8 +488,6 @@ class HomeScreenViewModel(
 
 
             } catch (e: Exception) {
-                //_isSaving.value = false
-                //  _savingState.value = 0
                 log("Exception here " + e.message)
                 onFail("Unable to replace some images").also {
                     _isSaving.value = false

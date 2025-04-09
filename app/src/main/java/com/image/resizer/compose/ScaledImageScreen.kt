@@ -117,21 +117,18 @@ fun GalleryImagesComponent(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-
                 AsyncImage(
                     placeholder = painterResource(R.drawable.ic_undo_24dp),
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(imageItem.uri)
                         .scale(coil.size.Scale.FIT)
-                        .size(Size(300, 300))
                         .crossfade(true)
                         .build(),
                     contentDescription = null,
-                    contentScale = ContentScale.Crop,
+                    contentScale =  ContentScale.Crop,
                     modifier = Modifier.Companion
-                        .align(Alignment.CenterHorizontally)
                         .padding(4.dp)
-                        .height(200.dp)
+                        .aspectRatio(1f)
                         .clickable {
                             onImageItemClicked(imageItem)
                             // val uri =   compressImageToTargetSize(context ,imageItem,100).computedUri.toString()
@@ -257,7 +254,7 @@ internal fun ScaledImagesGrid(
                                 .build(),
                             contentDescription = "Original ",
                             contentScale = ContentScale.Crop,
-                            modifier = Modifier.Companion
+                            modifier = Modifier
                                 .aspectRatio(1f)
                                 .clickable(onClick = {
                                     onSelectedItemClicked(imageItem)

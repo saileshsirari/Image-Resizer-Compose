@@ -32,8 +32,6 @@ suspend fun compressImageToTargetSize(
     val targetFileSize = (imageItem.originalFileSize?:1).toFloat() * percentOriginal *.01f
     val orgWidth = imageItem.originalImageDimension?.first ?: 10
     val orgHeight = imageItem.originalImageDimension?.second ?: 10
-    val desiredWidth = percentOriginal * .01f * orgWidth
-    val desiredHeight = percentOriginal * .01f * orgHeight
     val scaledBitmap: Bitmap? = BitmapScaler.decodeSampledBitmapToTargetSize(
         context = context,
         uri =  imageItem.uri,

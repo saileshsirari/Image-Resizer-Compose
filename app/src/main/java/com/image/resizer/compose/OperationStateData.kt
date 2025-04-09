@@ -14,7 +14,7 @@ sealed class OperationState {
 }
 
 // Crop
-data class CropStateData(val croppedImageUri: Uri?) : OperationStateData
+data class CropStateData(val croppedImageUri: ImageItem?) : OperationStateData
 sealed class CropState : OperationState() {
     data object Idle : CropState()
     data object Loading : CropState()

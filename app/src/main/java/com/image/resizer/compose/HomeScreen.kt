@@ -21,23 +21,15 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
@@ -69,9 +61,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
@@ -85,6 +75,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.navigation.NavHostController
 import apps.sai.com.imageresizer.R
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -785,7 +776,7 @@ fun CompressToKbImageScreen(
 
 
 @Composable
-fun CroppedImageComponent(uri: Uri) {
+fun CroppedImageComponent(imageItem: ImageItem) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center // Center content in the Box
@@ -797,55 +788,23 @@ fun CroppedImageComponent(uri: Uri) {
             horizontalAlignment = Alignment.CenterHorizontally, // Align items horizontally
             verticalArrangement = Arrangement.spacedBy(16.dp) // Add vertical spacing between the image and button
         ) { // Centering the content within the column
+
+            if (imageItem.scaledImageDimension != null) {
+                Text("Cropped : ${imageItem.scaledImageDimension?.first ?: 0}x${imageItem.scaledImageDimension?.second ?: 0}")
+            }
             AsyncImage(
-                model = uri,
-                contentDescription = null,
-                modifier = Modifier.Companion.weight(4f)
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(imageItem.computedUri)
+                    .scale(coil.size.Scale.FIT)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = "Cropped ",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
             )
         }
 
-    }
-}
-
-
-@Composable
-private fun GalleryImagesComponent(selectedImageUris: List<Uri>) {
-    val columns = if (selectedImageUris.size > 1) {
-        GridCells.Fixed(2)
-    } else {
-        GridCells.Fixed(1)
-    }
-    LazyVerticalGrid(
-        columns = columns,
-        contentPadding = PaddingValues(1.dp),
-        verticalArrangement = Arrangement.spacedBy(1.dp),
-        horizontalArrangement = Arrangement.spacedBy(1.dp)
-    ) {
-        items(selectedImageUris) { uri ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
-                    .padding(4.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceAround
-            ) {
-                Spacer(modifier = Modifier.height(4.dp))
-
-                AsyncImage(
-                    model = uri,
-                    contentDescription = null,
-                    modifier = Modifier.Companion
-                        .align(Alignment.CenterHorizontally)
-                        .fillMaxHeight()
-                        .padding(4.dp)
-                        .sizeIn(minWidth = 100.dp, minHeight = 200.dp)
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(1.dp))
-
-                )
-            }
-        }
     }
 }
 
