@@ -11,15 +11,19 @@ import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisallowComposableCalls
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import apps.sai.com.imageresizer.R
 import com.image.resizer.compose.ImageItem
+import com.image.resizer.compose.RadioButtonSingleSelection
 import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.model.MediaState
@@ -54,6 +58,7 @@ inline fun <reified T: Media> TimelineScreen(
     noinline onMediaClick: @DisallowComposableCalls (media: T) -> Unit = {},
     noinline onOpenClick:(List<ImageItem>)-> Unit,
 ) {
+
     MediaScreen(
         paddingValues = paddingValues,
         albumId = albumId,

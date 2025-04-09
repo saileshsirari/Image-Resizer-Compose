@@ -289,6 +289,7 @@ private fun <T: Media> PinchZoomGridScope.MediaGridContentWithHeaders(
                             selectionState = selectionState,
                             selectedMedia = selectedMedia,
                             canClick = canScroll,
+                            id = mediaState.value.media.indexOf(it.media).toLong(),
                             onItemClick = {
                                 if (selectionState.value && allowSelection) {
                                     feedbackManager.vibrate()
@@ -356,6 +357,7 @@ private fun <T: Media> PinchZoomGridScope.MediaGridContent(
                         )
                         .pinchItem(key = media.key),
                     media = media,
+                    id = index.toLong(),
                     selectionState = selectionState,
                     selectedMedia = selectedMedia,
                     canClick = canScroll,

@@ -51,6 +51,7 @@ import com.image.resizer.compose.mediaApi.util.getUri
 import com.image.resizer.compose.mediaApi.util.isFavorite
 import com.image.resizer.compose.mediaApi.util.isVideo
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -61,8 +62,10 @@ fun <T: Media> MediaImage(
     selectionState: MutableState<Boolean>,
     selectedMedia: SnapshotStateList<T>,
     canClick: Boolean,
+    id:Long ?= null,
     onItemClick: (T) -> Unit,
     onItemLongClick: (T) -> Unit,
+
 ) {
     var isSelected by remember { mutableStateOf(false) }
     LaunchedEffect(selectionState.value, selectedMedia.size) {
@@ -72,6 +75,22 @@ fun <T: Media> MediaImage(
             }
         }
     }
+     if(id ==0L) {
+         LaunchedEffect(Unit) {
+             if (selectedMedia.isEmpty()) {
+                 onItemClick(media)
+                 if (selectionState.value) {
+                     isSelected = !isSelected
+                 }
+                 delay(100)
+                 onItemClick(media)
+                 if (selectionState.value) {
+                     isSelected = !isSelected
+                 }
+
+             }
+         }
+     }
     val selectedSize by animateDpAsState(
         if (isSelected) 12.dp else 0.dp, label = "selectedSize"
     )

@@ -17,3 +17,7 @@ local.properties
 app/demo/release/baselineProfiles/0/app-demo-release.dm
 /app/demo/release
 app/demo/release/baselineProfiles/0/app-demo-release.dm
+*.apk
+app/demo/release/app-demo-release.apk
+app/demo/release/baselineProfiles/0/app-demo-release.dm
+app/demo/release/baselineProfiles/1/app-demo-release.dm
