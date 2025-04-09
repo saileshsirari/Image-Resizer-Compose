@@ -1,6 +1,5 @@
 package com.image.resizer.compose
 
-import android.R.attr.onClick
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -49,10 +48,8 @@ import coil.compose.AsyncImage
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import apps.sai.com.imageresizer.R
 import coil.request.ImageRequest
-import coil.size.Size
-import kotlinx.coroutines.delay
+import com.image.resizer.compose.mediaApi.util.formatSize
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 
@@ -112,7 +109,8 @@ fun GalleryImagesComponent(
                     Text(" ${it.first}x${it.second}")
                 }
                 imageItem.originalFileSize?.let {
-                    Text("${it / 1024} kb", maxLines = 1)
+
+                    Text(formatSize(it), maxLines = 1)
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -125,7 +123,7 @@ fun GalleryImagesComponent(
                         .crossfade(true)
                         .build(),
                     contentDescription = null,
-                    contentScale =  ContentScale.Crop,
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier.Companion
                         .padding(4.dp)
                         .aspectRatio(1f)
@@ -157,42 +155,42 @@ internal fun ScaledImagesGrid(
             lazyGridState.layoutInfo.visibleItemsInfo.map { it.index }
         }
     }
-   // var isScrolling by remember { mutableStateOf(false) }
-  //  var isLoadData by remember { mutableStateOf(false) }
+    // var isScrolling by remember { mutableStateOf(false) }
+    //  var isLoadData by remember { mutableStateOf(false) }
     // Observe scrolling state and debounce loading
-   /* LaunchedEffect(lazyGridState) {
-        snapshotFlow { lazyGridState.isScrollInProgress }
-            .collect { scrolling ->
-                isScrolling = scrolling
-                if (!scrolling) {
-                    isLoadData = false
-                    delay(300)
-                    val visibleItems =
-                        lazyGridState.layoutInfo.visibleItemsInfo
-                    visibleItems.forEachIndexed { index, item ->
-                        if (index < scaledImages.size) {
-                            val imageItem = scaledImages[index]
-                            scope.launch(Dispatchers.IO) {
-                                imageItem.computeScaledUri(context)
-                            }
-                        }
+    /* LaunchedEffect(lazyGridState) {
+         snapshotFlow { lazyGridState.isScrollInProgress }
+             .collect { scrolling ->
+                 isScrolling = scrolling
+                 if (!scrolling) {
+                     isLoadData = false
+                     delay(300)
+                     val visibleItems =
+                         lazyGridState.layoutInfo.visibleItemsInfo
+                     visibleItems.forEachIndexed { index, item ->
+                         if (index < scaledImages.size) {
+                             val imageItem = scaledImages[index]
+                             scope.launch(Dispatchers.IO) {
+                                 imageItem.computeScaledUri(context)
+                             }
+                         }
+                     }
+                     isLoadData = true
+                 }
+             }
+     }*/
+    LaunchedEffect(lazyGridState) {
+        snapshotFlow { visibleItems.value }.filter { it.isNotEmpty() }.collectLatest { indices ->
+            indices.forEach { index ->
+                if (index < scaledImages.size) {
+                    val imageItem = scaledImages[index]
+                    scope.launch(Dispatchers.IO) {
+                        imageItem.computeScaledUri(context)
                     }
-                    isLoadData = true
                 }
             }
-    }*/
-      LaunchedEffect(lazyGridState) {
-          snapshotFlow { visibleItems.value }.filter { it.isNotEmpty() }.collectLatest { indices ->
-              indices.forEach { index ->
-                  if (index < scaledImages.size) {
-                      val imageItem = scaledImages[index]
-                      scope.launch(Dispatchers.IO) {
-                          imageItem.computeScaledUri(context)
-                      }
-                  }
-              }
-          }
-      }
+        }
+    }
 
     if (imageItems.isEmpty()) {
         Text(
@@ -235,14 +233,7 @@ internal fun ScaledImagesGrid(
                             Text("Original : ${it.first}x${it.second}")
                         }
                         imageItem.originalFileSize?.let {
-                            val fileSizeInKb = it / 1024
-                            val fileSizeText = if (fileSizeInKb > 1000) {
-                                "${fileSizeInKb / 1024} mb"
-                            } else if(fileSizeInKb>0) {
-                                "$fileSizeInKb kb"
-                            }else{
-                                "${imageItem.originalFileSize} bytes"
-                            }
+                            val fileSizeText = formatSize(it)
                             Text(fileSizeText, maxLines = 1)
                         }
 
@@ -282,10 +273,7 @@ internal fun ScaledImagesGrid(
                             if (imageItem.scaledImageDimension != null) {
                                 Text("Scaled : ${imageItem.scaledImageDimension?.first ?: 0}x${imageItem.scaledImageDimension?.second ?: 0}")
                                 imageItem.scaledFileSize?.let {
-                                    val fileSizeInKb = it / 1024
-                                    val fileSizeText = if (fileSizeInKb > 1000) {
-                                        "${fileSizeInKb / 1024} mb"
-                                    } else "$fileSizeInKb kb"
+                                    val fileSizeText = formatSize(it)
                                     Text(fileSizeText, maxLines = 1)
                                 }
                             }

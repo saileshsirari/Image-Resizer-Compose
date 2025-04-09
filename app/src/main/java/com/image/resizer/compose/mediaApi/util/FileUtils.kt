@@ -15,6 +15,7 @@ import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.text.TextUtils
 import android.util.Log
+import androidx.compose.runtime.Composable
 import apps.sai.com.imageresizer.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -37,10 +38,11 @@ suspend fun getFileDetails(context: Context, uri: Uri): Pair<Long, String?> = wi
     val fileType = context.contentResolver.getType(uri)
     return@withContext Pair(fileSize, fileType)
 }
+
 fun formatSize(size: Long): String {
     if (size <= 0) return "0 B"
 
-    val units = arrayOf("B", "KB", "MB", "GB", "TB")
+    val units = arrayOf("bytes", "kb", "mb", "gb", "tb")
     val digitGroups = (log10(size.toDouble()) / log10(1024.0)).toInt()
 
     val formattedSize = size / 1024.0.pow(digitGroups.toDouble())
