@@ -3,10 +3,18 @@ package com.image.resizer.compose.mediaApi;
 import android.os.Parcelable
 import androidx.annotation.Keep
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Redo
 import androidx.compose.material.icons.outlined.Adjust
+import androidx.compose.material.icons.outlined.Compress
 import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.Draw
 import androidx.compose.material.icons.outlined.Filter
+import androidx.compose.material.icons.outlined.Recycling
+import androidx.compose.material.icons.outlined.ReduceCapacity
+import androidx.compose.material.icons.outlined.Save
+import androidx.compose.material.icons.outlined.Scale
+import androidx.compose.material.icons.outlined.Undo
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -39,9 +47,9 @@ enum class EditorItems : Parcelable {
     val icon: ImageVector
         get() = when (this) {
             Crop -> Icons.Outlined.Crop
-            Compress -> Icons.Outlined.Adjust
-            Back -> Icons.Outlined.Draw
-            Replace -> Icons.Outlined.Adjust
-            Save -> Icons.Outlined.Draw
+            Compress -> Icons.Outlined.Compress
+            Back -> Icons.AutoMirrored.Outlined.ArrowBack
+            Replace -> Icons.Outlined.Recycling
+            Save -> Icons.Outlined.Save
         }
 }

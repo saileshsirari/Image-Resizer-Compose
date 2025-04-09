@@ -284,7 +284,7 @@ fun <T : Media> HomeScreen(
                                         homeScreenViewModel.onShowCompressPopup(context)
                                     }
 
-                                 
+
 
                                     Crop -> {
                                         homeScreenViewModel.onShowCropPopup(context)
