@@ -173,7 +173,7 @@ fun MainApp() {
     if (!::homeScreenViewModel.isInitialized) {
         homeScreenViewModel = HomeScreenViewModel(mediaHandleUseCase)
     } else {
-        log("homeScreenViewModel already initialized ${homeScreenViewModel.scaledImageItems.value.size} ${homeScreenViewModel.selectedImageItems.value.size}")
+        log("homeScreenViewModel already initialized ")
     }
     val activity = LocalActivity.current as Activity
 

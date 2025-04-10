@@ -11,8 +11,8 @@
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 10000008,
-      "versionName": "1.08-free",
+      "versionCode": 10000010,
+      "versionName": "2.00-free",
       "outputFile": "app-demo-release.apk"
     }
   ],
