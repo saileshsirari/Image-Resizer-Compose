@@ -1,6 +1,5 @@
 package com.image.resizer.compose
 
-import android.R.attr.onClick
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
@@ -11,14 +10,7 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -27,19 +19,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,7 +44,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -70,21 +59,25 @@ import java.io.File
 import java.io.FileOutputStream
 import androidx.core.net.toUri
 import androidx.core.graphics.createBitmap
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
+import coil.request.ImageRequest
+import coil.size.Size
+import com.github.panpf.sketch.resize.Scale
+import java.util.UUID
+import kotlin.uuid.Uuid
 
 
 data class ImageItem(
+    val key : String= UUID.randomUUID().toString(),
     val uri: Uri,
     var scaledBitmap: Bitmap? = null,
     var originalBitmap: Bitmap? = null,
     val fileSize: Long? = null, // Size in bytes
     val imageName: String? = null,// Original name of the image file
-    val imageDimension: Pair<Int, Int>?=null,
-    var scaledImageDimension: Pair<Int, Int>?=null,
-    var scaledFileSize: Long?=null,
-    var scaledUri: Uri ? =null
-    )
+    val imageDimension: Pair<Int, Int>? = null,
+    var scaledImageDimension: Pair<Int, Int>? = null,
+    var scaledFileSize: Long? = null,
+    var scaledUri: Uri? = null
+)
 
 
 @Preview
@@ -131,21 +124,21 @@ fun ScaledImageScreenPreview() {
     ScaledImageScreen(
         imageItems = imageItems,
         scaleParamsList = scaleParams,
-        onSaveClicked = {
-            println("Save button clicked")
-        }
+        scaledImages = mutableListOf()
     )
 }
+
 const val TAG = "ScaledImageScreen"
 
 @Composable
 fun ScaledImageScreen(
     imageItems: List<ImageItem>,
     scaleParamsList: List<ScaleParams>,
-    onSaveClicked: () -> Unit,
+    scaledImages: MutableList<ImageItem> = mutableListOf(),
+    onSelectedItemClicked: (ImageItem) -> Unit = {}
 ) {
     var imagesScaled by remember { mutableStateOf(false) }
-    var scaledImages by remember { mutableStateOf(listOf<ImageItem>()) }
+
     val context = LocalContext.current
     LaunchedEffect(scaleParamsList) {
         if (scaleParamsList.isNotEmpty()) {
@@ -153,49 +146,35 @@ fun ScaledImageScreen(
             withContext(Dispatchers.IO) {
                 scaleImages(imageItems, scaleParamsList, context) {
                     imagesScaled = true
-                    scaledImages = imageItems
+                    scaledImages.clear()
+                    scaledImages.addAll(imageItems)
                 }
 
             }
         }
     }
-    Box(modifier = Modifier
-        .fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+    ) {
         Column(
             modifier = Modifier.Companion
                 .fillMaxWidth(),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.Companion.CenterHorizontally
         ) {
-            Log.d(TAG,"ScaledImageScreen $imagesScaled ${scaleParamsList?.size}" )
-             if(imagesScaled) {
-                 ScaledImagesGrid(
-                     modifier = Modifier
-                         .fillMaxSize()
-                         .padding(bottom = 10.dp), scaledImages, imageItems
-                 )
-             }else{
-                 Text("Scaling...")
-             }
-        }
-        // Save button at the bottom, above the FAB
-        if (imagesScaled) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .padding(16.dp) // Padding around the button
-                    .background(Color.LightGray) // Background for better visibility
-            ) {
-                Button(
-                    onClick = {
-                        saveImagesToGallery(context, imageItems)
-                        onSaveClicked()
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = "Save Scaled Images")
-                }
+            Log.d(TAG, "ScaledImageScreen $imagesScaled ${scaleParamsList?.size}")
+            if (imagesScaled) {
+                ScaledImagesGrid(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 10.dp),
+                    scaledImages,
+                    imageItems,
+                    onSelectedItemClicked = onSelectedItemClicked
+                )
+            } else {
+                Text("Scaling...")
             }
         }
     }
@@ -253,23 +232,23 @@ fun GalleryImagesComponentPreview1() {
 }
 
 
-
 @Composable
- fun GalleryImagesComponent(imageItems: List<ImageItem>) {
+fun GalleryImagesComponent(imageItems: List<ImageItem>) {
     val columns = if (imageItems.size > 1) {
         GridCells.Fixed(2)
     } else {
         GridCells.Fixed(1)
     }
-    Spacer(modifier = Modifier.height(20.dp))
+    Spacer(modifier = Modifier.height(10.dp))
     LazyVerticalGrid(
+        modifier = Modifier.fillMaxSize(),
         columns = columns,
         contentPadding = PaddingValues(1.dp),
         verticalArrangement = Arrangement.spacedBy(1.dp),
         horizontalArrangement = Arrangement.spacedBy(1.dp)
     ) {
         items(imageItems) { imageItem ->
-            Column   (
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
@@ -279,7 +258,7 @@ fun GalleryImagesComponentPreview1() {
             ) {
 
                 imageItem.imageDimension?.let {
-                    Text(" ${it.first}x${it.second}"  )
+                    Text(" ${it.first}x${it.second}")
                 }
                 imageItem.fileSize?.let {
                     Text("${it / 1024} kb", maxLines = 1)
@@ -287,17 +266,21 @@ fun GalleryImagesComponentPreview1() {
 
                 Spacer(modifier = Modifier.height(4.dp))
 
+
                 AsyncImage(
                     placeholder = painterResource(R.drawable.ic_undo_24dp),
-                    model = imageItem.uri,
+                    model  = ImageRequest.Builder(LocalContext.current)
+                        .data(imageItem.uri)
+                        .scale(coil.size.Scale.FIT)
+                        .size(Size(300,300))
+                        .crossfade(true)
+                        .build(),
                     contentDescription = null,
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier.Companion
                         .align(Alignment.CenterHorizontally)
-                        .fillMaxHeight()
                         .padding(4.dp)
-                        .sizeIn(minWidth = 100.dp, minHeight = 200.dp)
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(1.dp))
+                        .height(200.dp)
                 )
             }
         }
@@ -308,150 +291,118 @@ fun GalleryImagesComponentPreview1() {
 internal fun ScaledImagesGrid(
     modifier: Modifier,
     scaledImages: List<ImageItem>,
-    imageItems: List<ImageItem>
+    imageItems: List<ImageItem>,
+    onSelectedItemClicked: (ImageItem) -> Unit = {}
 ) {
     val context = LocalContext.current
-    var selectedImageItem by remember { mutableStateOf<ImageItem?>(null) }
     val lazyGridState = rememberLazyGridState()
-    var showComparisonView by remember { mutableStateOf(false) }
-    val lifecycleOwner = LocalLifecycleOwner.current
-    LaunchedEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                showComparisonView = false
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-    }
     if (imageItems.isEmpty()) {
         Text(
             text = "No images selected.",
             textAlign = TextAlign.Center
         )
     } else {
-        if (showComparisonView && selectedImageItem != null) {
-
-            AnimatedVisibility(
-                visible = showComparisonView,
-                enter = slideInHorizontally(
-                    initialOffsetX = { fullWidth -> fullWidth },
-                    animationSpec = tween(durationMillis = 1500)
-                ) + fadeIn(),
-                exit = slideOutHorizontally(
-                    targetOffsetX = { fullWidth -> fullWidth },
-                    animationSpec = tween(durationMillis = 1500)
-                ) + fadeOut()
-            ) {
-                ImageComparisonView(imageItem = selectedImageItem!!)
-            }
-        }else if(!showComparisonView) {
-            LazyVerticalGrid(
-                state = lazyGridState,
-                columns = GridCells.Fixed(1),
-                contentPadding = PaddingValues(
-                    bottom = 5.dp,
-                    top = 10.dp,
-                    start = 5.dp,
-                    end = 5.dp
-                ),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                horizontalArrangement = Arrangement.spacedBy(5.dp),
-                modifier = modifier
-            ) {
-                items(scaledImages, key = { item -> item.uri.hashCode() }) { imageItem ->
-                    Row(
+        LazyVerticalGrid(
+            state = lazyGridState,
+            columns = GridCells.Fixed(1),
+            contentPadding = PaddingValues(
+                bottom = 5.dp,
+                top = 10.dp,
+                start = 5.dp,
+                end = 5.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            modifier = modifier
+        ) {
+            items(scaledImages, key = { item -> item.uri.hashCode() }) { imageItem ->
+                Row(
+                    modifier = Modifier
+                        .clickable(onClick = {
+                            val item = saveBitmapToTempAndGetUri(context, imageItem)
+                            onSelectedItemClicked(item)
+                        })
+                        .fillMaxSize()
+                        .border(1.dp, Color.Gray),
+                    horizontalArrangement = Arrangement.SpaceBetween, // Center columns
+                    verticalAlignment = Alignment.CenterVertically // Center vertically
+                ) {
+                    // First Column
+                    Column(
                         modifier = Modifier
-                            .clickable(onClick = {
-                                selectedImageItem = saveBitmapToTempAndGetUri(context, imageItem)
-                                showComparisonView = true
-                            })
-                            .fillMaxSize()
-                            .border(1.dp, Color.Gray),
-                        horizontalArrangement = Arrangement.SpaceBetween, // Center columns
-                        verticalAlignment = Alignment.CenterVertically // Center vertically
+                            .weight(1f) // Equal weight for both columns
+                            .fillMaxWidth()
+                            .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+                            .padding(4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally, // Center image
+                        verticalArrangement = Arrangement.SpaceBetween
                     ) {
-                        // First Column
-                        Column(
-                            modifier = Modifier
-                                .weight(1f) // Equal weight for both columns
-                                .fillMaxWidth()
-                                .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
-                                .padding(4.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally, // Center image
-                            verticalArrangement = Arrangement.SpaceBetween
-                        ) {
 
-                            if (imageItem.originalBitmap != null) {
-                                Text("Original : ${imageItem.originalBitmap?.width ?: 0}x${imageItem.originalBitmap?.height ?: 0}")
-                                imageItem.fileSize?.let {
-                                    val fileSizeInKb = it / 1024
-                                    val fileSizeText = if (fileSizeInKb > 1000) {
-                                        "${fileSizeInKb / 1024} mb"
-                                    } else "$fileSizeInKb kb"
-                                    Text(fileSizeText, maxLines = 1)
-                                }
-                                Image(
-                                    bitmap = imageItem.originalBitmap!!.asImageBitmap(),
-                                    contentDescription = "Scaled Image",
-                                    modifier = Modifier
-                                        .sizeIn(
-                                            minWidth = 200.dp,
-                                            minHeight = 200.dp,
-                                            maxHeight = 300.dp
-                                        )
-                                        .fillMaxWidth()
-                                        .fillMaxHeight()
-                                        .padding(1.dp),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Text(
-                                    text = "loading ...",
-                                    textAlign = TextAlign.Center
-                                )
+                        if (imageItem.originalBitmap != null) {
+                            Text("Original : ${imageItem.originalBitmap?.width ?: 0}x${imageItem.originalBitmap?.height ?: 0}")
+                            imageItem.fileSize?.let {
+                                val fileSizeInKb = it / 1024
+                                val fileSizeText = if (fileSizeInKb > 1000) {
+                                    "${fileSizeInKb / 1024} mb"
+                                } else "$fileSizeInKb kb"
+                                Text(fileSizeText, maxLines = 1)
                             }
+                            Image(
+                                bitmap = imageItem.originalBitmap!!.asImageBitmap(),
+                                contentDescription = "Scaled Image",
+                                contentScale = ContentScale.FillHeight,
+                                modifier = Modifier.Companion
+                                    .align(Alignment.CenterHorizontally)
+                                    .fillMaxSize()
+                                    .padding(4.dp)
+                                    .height(300.dp)
+                                    .clip(RoundedCornerShape(1.dp))
+                            )
+
+                        } else {
+                            Text(
+                                text = "loading ...",
+                                textAlign = TextAlign.Center
+                            )
                         }
+                    }
 
 
-                        // Second Column
-                        Column(
-                            modifier = Modifier
-                                .weight(1f) // Equal weight for both columns
-                                .fillMaxWidth()
-                                .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
-                                .padding(4.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally, // Center image
-                            verticalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            if (imageItem.scaledBitmap != null) {
-                                Text("Scaled : ${imageItem.scaledBitmap?.width ?: 0}x${imageItem.scaledBitmap?.height ?: 0}")
-                                imageItem.scaledFileSize?.let {
-                                    val fileSizeInKb = it / 1024
-                                    val fileSizeText = if (fileSizeInKb > 1000) {
-                                        "${fileSizeInKb / 1024} mb"
-                                    } else "$fileSizeInKb kb"
-                                    Text(fileSizeText, maxLines = 1)
-                                }
-                                Image(
-                                    bitmap = imageItem.scaledBitmap!!.asImageBitmap(),
-                                    contentDescription = "Scaled Image",
-                                    modifier = Modifier
-                                        .sizeIn(
-                                            minWidth = 200.dp,
-                                            minHeight = 200.dp,
-                                            maxHeight = 300.dp
-                                        )
-                                        .fillMaxWidth()
-                                        .fillMaxHeight()
-                                        .padding(1.dp),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Text(
-                                    text = "loading ...",
-                                    textAlign = TextAlign.Center
-                                )
+                    // Second Column
+                    Column(
+                        modifier = Modifier
+                            .weight(1f) // Equal weight for both columns
+                            .fillMaxWidth()
+                            .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+                            .padding(4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally, // Center image
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        if (imageItem.scaledBitmap != null) {
+                            Text("Scaled : ${imageItem.scaledBitmap?.width ?: 0}x${imageItem.scaledBitmap?.height ?: 0}")
+                            imageItem.scaledFileSize?.let {
+                                val fileSizeInKb = it / 1024
+                                val fileSizeText = if (fileSizeInKb > 1000) {
+                                    "${fileSizeInKb / 1024} mb"
+                                } else "$fileSizeInKb kb"
+                                Text(fileSizeText, maxLines = 1)
                             }
+                            Image(
+                                bitmap = imageItem.scaledBitmap!!.asImageBitmap(),
+                                contentDescription = "Scaled Image",
+                                contentScale = ContentScale.FillHeight,
+                                modifier = Modifier.Companion
+                                    .align(Alignment.CenterHorizontally)
+                                    .fillMaxSize()
+                                    .padding(4.dp)
+                                    .height(300.dp)
+                                    .clip(RoundedCornerShape(1.dp))
+                            )
+                        } else {
+                            Text(
+                                text = "loading ...",
+                                textAlign = TextAlign.Center
+                            )
                         }
                     }
                 }
@@ -461,7 +412,7 @@ internal fun ScaledImagesGrid(
 }
 
 
-private  fun scaleImages(
+private fun scaleImages(
     imageItems: List<ImageItem>,
     scaleParamsList: List<ScaleParams>,
     context: Context,
@@ -487,7 +438,7 @@ private  fun scaleImages(
             imageItem.scaledFileSize = sizeInBytes
         }
 
-        imageItem.scaledImageDimension = Pair(scaledWidth,scaledHeight)
+        imageItem.scaledImageDimension = Pair(scaledWidth, scaledHeight)
         imageItem.scaledBitmap = scaledBitmap
     }
     onComplete()
@@ -509,72 +460,79 @@ internal fun imageDimensionsFromUri(
     return Pair(originalWidth, originalHeight)
 }
 
-internal fun saveImagesToGallery(context: Context, imageItems: List<ImageItem?>,
-                                 customDirectoryName: String="ImageResizer") {
+internal fun saveImagesToGallery(
+    context: Context, imageItems: List<ImageItem?>,
+    customDirectoryName: String = "ImageResizer"
+) {
     val customDirectoryName = customDirectoryName
     val resolver = context.contentResolver
 
-    imageItems.filterNotNull().forEach { imageItem ->
-        imageItem.scaledBitmap?.let { bitmap ->
-            val displayName =
-                "imageResizer_${
-                    SimpleDateFormat(
-                        "MMdd_HHmm",
-                        Locale.getDefault()
-                    ).format(Date())
-                }.jpg"
-            val mimeType = "image/jpeg"
+    return runCatching {
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                // For Android 10 (Q) and above
-                val values = ContentValues().apply {
-                    put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
-                    put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
-                    put(
-                        MediaStore.MediaColumns.RELATIVE_PATH,
-                        "${Environment.DIRECTORY_PICTURES}/$customDirectoryName"
-                    )
-                }
+        imageItems.filterNotNull().forEach { imageItem ->
+            imageItem.scaledBitmap?.let { bitmap ->
+                val displayName =
+                    "imageResizer_${
+                        SimpleDateFormat(
+                            "MMdd_HHmmss",
+                            Locale.getDefault()
+                        ).format(Date())
+                    }.jpg"
+                val mimeType = "image/jpeg"
 
-                try {
-                    val uri =
-                        resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-                    uri?.let {
-                        resolver.openOutputStream(uri)?.use { outputStream ->
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    // For Android 10 (Q) and above
+                    val values = ContentValues().apply {
+                        put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
+                        put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+                        put(
+                            MediaStore.MediaColumns.RELATIVE_PATH,
+                            "${Environment.DIRECTORY_PICTURES}/$customDirectoryName"
+                        )
+                    }
+
+                    try {
+                        val uri =
+                            resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                        uri?.let {
+                            resolver.openOutputStream(uri)?.use { outputStream ->
+                                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                            }
+                        }
+                        Log.d("SaveImage", "Image saved to gallery (Q+): $uri")
+
+                    } catch (e: IOException) {
+                        Log.e("SaveImage", "Error saving image (Q+): ${e.message}")
+                    }
+                } else {
+                    // For Android versions before 10 (Q)
+                    val picturesDir =
+                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                    val customDir = File(picturesDir, customDirectoryName)
+                    if (!customDir.exists()) {
+                        customDir.mkdirs()
+                    }
+                    val file = File(customDir, displayName)
+                    try {
+                        FileOutputStream(file).use { outputStream ->
                             bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
                         }
+                        // Make sure the file is visible in the gallery immediately
+                        MediaScannerConnection.scanFile(
+                            context,
+                            arrayOf(file.toString()),
+                            arrayOf(mimeType),
+                            null
+                        )
+                        Log.d("SaveImage", "Image saved to gallery (pre-Q): $file")
+                    } catch (e: IOException) {
+                        Log.e("SaveImage", "Error saving image (pre-Q): ${e.message}")
                     }
-                    Log.d("SaveImage", "Image saved to gallery (Q+): $uri")
-
-                } catch (e: IOException) {
-                    Log.e("SaveImage", "Error saving image (Q+): ${e.message}")
-                }
-            } else {
-                // For Android versions before 10 (Q)
-                val picturesDir =
-                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-                val customDir = File(picturesDir, customDirectoryName)
-                if (!customDir.exists()) {
-                    customDir.mkdirs()
-                }
-                val file = File(customDir, displayName)
-                try {
-                    FileOutputStream(file).use { outputStream ->
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                    }
-                    // Make sure the file is visible in the gallery immediately
-                    MediaScannerConnection.scanFile(
-                        context,
-                        arrayOf(file.toString()),
-                        arrayOf(mimeType),
-                        null
-                    )
-                    Log.d("SaveImage", "Image saved to gallery (pre-Q): $file")
-                } catch (e: IOException) {
-                    Log.e("SaveImage", "Error saving image (pre-Q): ${e.message}")
                 }
             }
         }
+    }.getOrElse {
+        throw it
     }
 }
 

@@ -58,6 +58,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextFieldDefaults.contentPadding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -67,6 +68,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -87,6 +89,7 @@ import coil.compose.SubcomposeAsyncImage
 import coil.compose.SubcomposeAsyncImageContent
 import com.image.resizer.compose.ImageHelper.getRealCompressedImageUris
 import com.image.resizer.compose.ImageReplacer.deleteSelectedImages
+import com.image.resizer.compose.mediaApi.util.Constants.CUSTOM_FOLDER_NAME
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.collections.remove
@@ -105,7 +108,9 @@ const val IMAGES_PER_PAGE = 6
 fun MyImagesScreen() {
     val context = LocalContext.current
 
-    val totalImagesCount = getTotalTransformedImagesCount(context)
+    val totalImagesCount by remember {
+        mutableIntStateOf(getTotalTransformedImagesCount(context))
+    }
 
     var loadingImages by remember {
         mutableStateOf(mutableSetOf<Int>())
@@ -299,18 +304,7 @@ fun MyImagesScreen() {
         }
         if(deleteImages) {
 
-                deleteSelectedImages(context, selectedImages.map { it.uri }, onDeleted = {
-                    val list = actualImageItems.toMutableList()
-                    selectedImages.forEach {
-                        list.remove(it)
-                    }
-                    actualImageItems = list
-                    selectedImages.clear()
-                    selectAll = false
-                    imageSelectionMode = false
-                    actualImageItems = getActualImageUris(context, placeholders)
-                    deleteImages = false
-                })
+
 
         }
         if (showShareSheet) {
@@ -338,18 +332,19 @@ fun MyImagesScreen() {
         } else {
             LazyVerticalGrid(
                 state = lazyGridState,
-                columns = GridCells.Fixed(3),
+                columns = GridCells.Fixed(2),
                 modifier = Modifier
                     .fillMaxSize()
+                    .height(200.dp)
                     .padding(innerPadding)
                     .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
                 contentPadding = PaddingValues(0.dp)
             ) {
                 itemsIndexed(
                     items = actualImageItems,
-                    key = { index, imageItem -> imageItem.uri },
+                    key = { index, imageItem -> imageItem.key },
                 ) { index, imageItem ->
                     AnimatedVisibility(
                         visible = true,
@@ -461,10 +456,11 @@ fun getActualImageUris(context: Context, placeholders: List<Nothing?>): List<Ima
     val projection = arrayOf(
         MediaStore.Images.Media._ID,
         MediaStore.Images.Media.DISPLAY_NAME,
-        MediaStore.Images.Media.SIZE
+        MediaStore.Images.Media.SIZE,
+        MediaStore.Images.Media.RELATIVE_PATH,
     )
-    val selection = "${MediaStore.Images.Media.DISPLAY_NAME} LIKE ?"
-    val selectionArgs = arrayOf("imageResizer_%")
+    val selection = "${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?"
+    val selectionArgs = arrayOf("%$CUSTOM_FOLDER_NAME%" )
     val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
     val queryUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
     val contentResolver = context.contentResolver
@@ -530,12 +526,13 @@ fun getTotalTransformedImagesCount(context: Context): Int {
     val projection = arrayOf(
         MediaStore.Images.Media._ID,
         MediaStore.Images.Media.DISPLAY_NAME,
-        MediaStore.Images.Media.SIZE
+        MediaStore.Images.Media.SIZE,
+        MediaStore.Images.Media.RELATIVE_PATH,
     )
     val customDirectoryName: String = "ImageResizer"
-    val selection = "${MediaStore.Images.Media.DISPLAY_NAME} LIKE ?"
 //    val selectionArgs = arrayOf("%$customDirectoryName/%")
-    val selectionArgs = arrayOf("imageResizer_%")
+    val selection = "${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?"
+    val selectionArgs = arrayOf("%$CUSTOM_FOLDER_NAME%" )
 
     val queryUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
     val contentResolver = context.contentResolver

@@ -1,6 +1,7 @@
 package com.image.resizer.compose
 
 import android.Manifest
+import android.app.Activity
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
@@ -12,49 +13,54 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.border
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import coil.compose.AsyncImage
+import com.image.resizer.compose.ImageReplacer.getBitmapFromUri
+import com.image.resizer.compose.Screen.ImageDetailScreen
+import com.image.resizer.compose.mediaApi.AlbumsViewModel
+import com.image.resizer.compose.mediaApi.ImageDetailsScreen
+import com.image.resizer.compose.mediaApi.MediaHandleUseCase
+import com.image.resizer.compose.mediaApi.MediaRepositoryImpl
+import com.image.resizer.compose.mediaApi.MediaViewModel
+import com.image.resizer.compose.mediaApi.TimelineScreen
+import com.image.resizer.compose.mediaApi.model.Media.UriMedia
+import com.image.resizer.compose.mediaApi.model.MediaState
+import com.image.resizer.compose.mediaApi.util.Constants.Animation.navigateInAnimation
+import com.image.resizer.compose.mediaApi.util.Constants.Animation.navigateUpAnimation
+import com.image.resizer.compose.mediaApi.util.Constants.CUSTOM_FOLDER_NAME
 import com.image.resizer.compose.theme.AppTheme
+import kotlinx.coroutines.Dispatchers
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
@@ -97,8 +103,13 @@ fun BottomNavigationBar(navController: NavHostController) {
     NavigationBar {
         items.forEach { item ->
             NavigationBarItem(
-                icon = { Icon(item.icon, contentDescription = item.title) },
-                label = { Text(item.title) },
+                icon = {
+                    Icon(
+                        item.icon ?: Icons.Filled.MoreVert,
+                        contentDescription = item.title
+                    )
+                },
+                label = { Text(item.title ?: "") },
                 selected = currentRoute == item.route,
                 onClick = {
                     navController.navigate(item.route) {
@@ -122,20 +133,133 @@ fun BottomNavigationBar(navController: NavHostController) {
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
-    NavHost(
-        navController = navController,
-        startDestination = Screen.Home.route,
-        modifier = Modifier.padding(innerPadding)
-    ) {
-        composable(Screen.Home.route) {
-            HomeScreen()
-        }
-        composable(Screen.MyImages.route) {
-            MyImagesScreen()
-        }
+    val mediaRepository = MediaRepositoryImpl(LocalContext.current)
+    val mediaHandleUseCase =
+        MediaHandleUseCase(repository = mediaRepository)
+    val albumsViewModel = AlbumsViewModel(mediaRepository, mediaHandleUseCase).apply {
+        albumId = -1
+    }
+    val albumsState =
+        albumsViewModel.albumsFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+    val homeScreenViewModel = HomeScreenViewModel(mediaHandleUseCase)
+    val activity = LocalActivity.current as Activity
 
+    val context = LocalContext.current
+
+    val hideTimeline by remember { mutableStateOf(true) }
+
+    SharedTransitionLayout {
+        NavHost(
+            navController = navController,
+            startDestination = Screen.Home.route,
+            enterTransition = { navigateInAnimation },
+            exitTransition = { navigateUpAnimation },
+            popEnterTransition = { navigateInAnimation },
+            popExitTransition = { navigateUpAnimation },
+            modifier = Modifier.padding(innerPadding)
+        ) {
+
+            composable(Screen.Home.route) {
+
+                val mediaState =
+                    albumsViewModel.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+                HomeScreen(
+                    homeScreenViewModel = homeScreenViewModel,
+                    albumsViewModel = albumsViewModel,
+                    mediaState = mediaState,
+                    selectionState = albumsViewModel.multiSelectState,
+                    selectedMedia = albumsViewModel.selectedPhotoState,
+                    paddingValues = innerPadding,
+                    navController = navController,
+                    albumsState = albumsState,
+                    onItemClick = {
+                        navController.navigate(Screen.AlbumsScreen.route) {
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    navigate = {
+                        navController.navigate(it) {
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    handler = albumsViewModel.handler,
+                    navigateUp = {
+                        navController.navigateUp()
+                    },
+                )
+            }
+            composable(
+                route = Screen.MyImages.route
+            ) { backStackEntry ->
+
+                val myImages =
+                    albumsState.value.albums.firstOrNull { it.label == CUSTOM_FOLDER_NAME }
+                if (myImages != null) {
+                    var myImagesVm = MediaViewModel(
+                        repository = mediaRepository,
+                        handler = mediaHandleUseCase
+                    ).apply {
+                        albumId = myImages.id
+                    }
+                    val myImagesMediaState =
+                        myImagesVm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+
+
+                    TimelineScreen(
+                        paddingValues = innerPadding,
+                        albumId = myImages.id,
+                        albumName = myImages.label,
+                        handler = myImagesVm.handler,
+                        mediaState = myImagesMediaState,
+                        albumsState = albumsState,
+                        selectionState = myImagesVm.multiSelectState,
+                        selectedMedia = myImagesVm.selectedPhotoState,
+                        allowNavBar = false,
+                        allowHeaders = !hideTimeline,
+                        enableStickyHeaders = !hideTimeline,
+                        toggleSelection = myImagesVm::toggleSelection,
+                        activity = activity,
+                        navigate = {
+                            navController.navigate(it) {
+                            }
+                        },
+                        navigateUp = {
+                            navController.navigateUp()
+                        },
+                        toggleNavbar = {
+
+                        },
+                        isScrolling = mutableStateOf(false),
+                        sharedTransitionScope = this@SharedTransitionLayout,
+                        animatedContentScope = this,
+                        onCompressClick = {
+                            homeScreenViewModel.handlePickedImages(it, context) {
+
+                            }
+                        },
+                        onMediaClick = {
+                            homeScreenViewModel.handlePickedImages(listOf(it.uri), context) {
+
+
+                            }
+                        }
+                    )
+
+                }
+            }
+
+
+            composable(ImageDetailScreen.route) {
+                homeScreenViewModel.selectedItem?.let {
+                    ImageDetailsScreen(it)
+                }
+            }
+        }
     }
 }
 
@@ -211,7 +335,6 @@ fun getStoragePermission(): String {
 }
 
 // Placeholder functions (replace with your actual image processing logic)
-
 
 
 fun compressAndSaveImages(imageUris: List<Uri>, context: Context): List<Uri> {

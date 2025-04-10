@@ -3,28 +3,31 @@
 package com.image.resizer.compose
 
 import android.app.Activity
+import android.app.RecoverableSecurityException
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VisibilityThreshold
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -51,44 +54,90 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
+import androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldRole
+import androidx.compose.material3.adaptive.navigation.rememberSupportingPaneScaffoldNavigator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisallowComposableCalls
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import com.image.resizer.compose.ImageHelper.getFileNameAndSize
-import com.image.resizer.compose.ImageReplacer.deleteImage
 import com.image.resizer.compose.ImageReplacer.deleteSelectedImages
+import com.image.resizer.compose.mediaApi.AlbumsViewModel
+import com.image.resizer.compose.mediaApi.EditorDestination.*
+import com.image.resizer.compose.mediaApi.EditorDestination.ExternalEditor
+import com.image.resizer.compose.mediaApi.EditorNavigator
+import com.image.resizer.compose.mediaApi.MediaHandleUseCase
+import com.image.resizer.compose.mediaApi.NavigationButton
+import com.image.resizer.compose.mediaApi.PickerMediaSheet
+import com.image.resizer.compose.mediaApi.model.AlbumState
+import com.image.resizer.compose.mediaApi.model.Media
+import com.image.resizer.compose.mediaApi.model.MediaState
+import com.image.resizer.compose.mediaApi.rememberAppBottomSheetState
+import com.image.resizer.compose.mediaApi.util.Constants.Animation.enterAnimation
+import com.image.resizer.compose.mediaApi.util.Constants.Animation.exitAnimation
+import com.image.resizer.compose.mediaApi.util.rememberActivityResult
+import com.image.resizer.compose.mediaApi.util.writeRequests
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 
 @Composable
 fun HomeScreenPreview1() {
-    HomeScreen()
+//    HomeScreen()
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
+@OptIn(
+    ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class,
+    ExperimentalSharedTransitionApi::class, ExperimentalMaterial3AdaptiveApi::class
+)
 @Composable
-fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
+fun <T : Media> HomeScreen(
+    homeScreenViewModel: HomeScreenViewModel,
+    albumsViewModel: AlbumsViewModel,
+    paddingValues: PaddingValues,
+    mediaState: State<MediaState<Media.UriMedia>>,
+    selectionState: MutableState<Boolean>,
+    selectedMedia: SnapshotStateList<T>,
+    albumName: String = stringResource(R.string.app_name),
+    navigate: (route: String) -> Unit,
+    onItemClick: () -> Unit,
+    albumsState: State<AlbumState>,
+    handler: MediaHandleUseCase,
+    navController: NavHostController,
+    navigateUp: @DisallowComposableCalls () -> Unit,
+) {
+// Preloaded viewModels
+    val copySheetState = rememberAppBottomSheetState()
+
+    val navigator = rememberSupportingPaneScaffoldNavigator()
 
     val context = LocalContext.current
     var scaledParams by remember { mutableStateOf(listOf<ScaleParams>()) }
@@ -106,6 +155,9 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
     val scaleState by homeScreenViewModel.scaleState.collectAsState()
     val galleryState by homeScreenViewModel.galleryState.collectAsState()
     val showToast by homeScreenViewModel.showToast.collectAsState()
+    val scope = rememberCoroutineScope()
+    val imagesSelected by remember { mutableStateOf(homeScreenViewModel.selectedImageItems.isNotEmpty()) }
+
 
     val showImages by remember {
         derivedStateOf { galleryState is GalleryState.Success }
@@ -116,6 +168,7 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                     compressState is CompressState.Success
         }
     }
+    var saveRequested by remember { mutableStateOf(false) }
 
     val cropImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -131,65 +184,155 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
         }
 
     }
+    val overrideRequest = rememberActivityResult(
+        onResultOk = {
+            var replaced = false
+            homeScreenViewModel.saveOverride(onSuccess = {
+                homeScreenViewModel.showToast("Images replaced")
 
-    val multiplePhotoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(),
-        onResult = { uris ->
-            if (uris.isNotEmpty()) {
-                val selectedImageItems = uris.map { uri ->
-                    val (imageName, fileSize) = getFileNameAndSize(context, uri)
-                    val imagesDimensions = imageDimensionsFromUri(context, uri)
-                    ImageItem(
-                        uri,
-                        imageName = imageName,
-                        fileSize = fileSize,
-                        imageDimension = imagesDimensions
-                    )
-                }
-                homeScreenViewModel.onGalleryImagesSelected(selectedImageItems)
-            }
+            }, onFail = {
+                homeScreenViewModel.showToast("Error in replacing images  ")
+
+            })
         }
-    )
 
+    )
     Scaffold(
-        topBar = {
-            HomeScreenTopAppBar(
-                imagesTransformed = imagesTransformed,
-                galleryState = galleryState,
-                onShowScalePopup = {
-                    homeScreenViewModel.onShowScalePopup()
-                },
-                onCrop = { show, uri ->
-                    homeScreenViewModel.onShowCropPopup()
-                },
-                onUndo = {
-                    homeScreenViewModel.onUndo()
-                }, onShowCompress = {
-                    homeScreenViewModel.onShowCompressPopup()
-                }
-            )
-        },
-        floatingActionButton = {
-            // Custom position for the FloatingActionButton
-            Box(modifier = Modifier.fillMaxSize()) {
-                FloatingActionButton(
-                    onClick = {
-                        showDialog = true
-                        if (galleryPermissionState.status.isGranted) {
-                            multiplePhotoPickerLauncher.launch(
-                                PickVisualMediaRequest(
-                                    ActivityResultContracts.PickVisualMedia.ImageOnly
-                                )
-                            )
-                        } else {
-                            showRationale = true
-                        }
-                    },
+        bottomBar = {
+            AnimatedVisibility(
+                visible =
+                    galleryState is GalleryState.Success || cropState is CropState.Success
+                            || scaleState is ScaleState.Success || compressState is CompressState.Success,
+                enter = enterAnimation,
+                exit = exitAnimation
+            ) {
+                Column(
                     modifier = Modifier
-                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .animateContentSize(
+                            animationSpec = spring(
+                                stiffness = Spring.StiffnessHigh,
+                                visibilityThreshold = IntSize.VisibilityThreshold
+                            )
+                        )
                 ) {
-                    Icon(Icons.Filled.Add, "Select Images")
+                    AnimatedVisibility(
+                        visible =
+                            navigator.scaffoldValue[SupportingPaneScaffoldRole.Supporting] == PaneAdaptedValue.Hidden,
+                        enter = enterAnimation,
+                        exit = exitAnimation
+                    ) {
+                        EditorNavigator(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            navController = navController,
+                            targetImage = null,
+                            targetUri = null,
+                            startCropping = {
+                            },
+                            homeScreenViewModel = homeScreenViewModel,
+                            onItemClick = {
+                                when (it) {
+                                    Compress -> {
+                                        homeScreenViewModel.onShowCompressPopup()
+                                    }
+
+                                    Scale -> {
+                                        homeScreenViewModel.onShowScalePopup()
+                                    }
+
+                                    Crop -> {
+                                        homeScreenViewModel.onShowCropPopup()
+                                    }
+
+                                    Undo -> {
+                                        homeScreenViewModel.onUndo()
+                                    }
+
+                                    Editor -> {
+
+                                    }
+
+                                    Save -> {
+                                        homeScreenViewModel.saveCopy(onSuccess = {
+                                            homeScreenViewModel.showToast()
+                                        }, onFail = {
+                                            homeScreenViewModel.showToast("Failed")
+                                        })
+
+                                    }
+
+                                    Replace -> {
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                            homeScreenViewModel.selectedImageItems.let {
+                                                overrideRequest.launch(
+                                                    it.map { it.uri }
+                                                        .writeRequests((context as Activity).contentResolver)
+                                                )
+                                            }
+                                        } else {
+                                            homeScreenViewModel.saveOverride(onSuccess = {
+                                                homeScreenViewModel.showToast()
+                                                homeScreenViewModel.showSelectedImages()
+                                                saveRequested = false
+                                            }, onFail = {
+                                                homeScreenViewModel.showToast("Failed")
+                                                saveRequested = false
+                                            })
+                                        }
+
+                                    }
+
+                                    ExternalEditor -> {
+
+                                    }
+
+                                }
+                            },
+                        )
+                    }
                 }
+            }
+        },
+
+        floatingActionButton = {
+            AnimatedVisibility(visible = albumsState.value.albums.isNotEmpty()) {
+                // Custom position for the FloatingActionButton
+                Box(modifier = Modifier.fillMaxSize()) {
+                    PickerMediaSheet(
+                        sheetState = copySheetState,
+                        mediaList = selectedMedia,
+                        albumsState = albumsState,
+                        paddingValues = paddingValues,
+                        mediaState = mediaState,
+                        homeScreenViewModel = homeScreenViewModel,
+                        activity = context as Activity
+                    )
+
+
+                    FloatingActionButton(
+                        onClick = {
+                            showDialog = true
+                            if (galleryPermissionState.status.isGranted) {
+                                if (albumsState.value.albums.isNotEmpty()) {
+                                    scope.launch {
+                                        copySheetState.show()
+                                    }
+                                } else {
+                                    homeScreenViewModel.showToast("No Pictures found")
+                                }
+
+                            } else {
+                                showRationale = true
+                            }
+                        },
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                    ) {
+                        Icon(Icons.Filled.Add, "Select Images")
+                    }
+                }
+
             }
         }
     ) { innerPadding ->
@@ -202,17 +345,17 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(bottom = 64.dp), // Add padding at the bottom for the FAB
+                    .padding(bottom = 14.dp), // Add padding at the bottom for the FAB
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
                 HandleGalleryState(galleryState, showImages)
 
+
                 val currentCropState = cropState
                 when (currentCropState) {
                     is CropState.PopupShown -> {
-                        Log.d(TAG, "CropState.PopupShown")
                         if (homeScreenViewModel.selectedImageItems.isNotEmpty()) {
                             val intent = Intent(context, CropScreen::class.java)
                             intent.putExtra(
@@ -266,8 +409,7 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
 
                     is ScaleState.ShowPopup -> {
                         val originalDimensions =
-                            homeScreenViewModel.selectedImageItems.map { it.imageDimension }
-                                .filterNotNull()
+                            homeScreenViewModel.selectedImageItems.mapNotNull { it.imageDimension }
                         // Implement image scaling logic here
                         AnimatedVisibility(
                             visible = true,
@@ -294,16 +436,25 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                     }
 
                     is ScaleState.Success -> {
+
+
                         if (homeScreenViewModel.selectedImageItems.isNotEmpty()) {
                             val imageItems =
                                 homeScreenViewModel.selectedImageItems
+                            var scaledImages by remember { mutableStateOf(mutableListOf<ImageItem>()) }
                             ScaledImageScreen(
                                 imageItems = imageItems,
                                 currentScaleState.data.scaleParamsList,
-                                onSaveClicked = {
-                                    homeScreenViewModel.showToast()
-                                    homeScreenViewModel.showSelectedImages()
-                                })
+                                scaledImages = scaledImages,
+                                onSelectedItemClicked = {
+                                    homeScreenViewModel.onSelectedItemClicked(it) {
+                                        navController.navigate(it) {
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    }
+                                }
+                            )
                         }
 
                     }
@@ -317,6 +468,7 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
                 HandleCompressState(
                     currentCompressState,
                     homeScreenViewModel,
+                    navController
                 )
             }
         }
@@ -324,11 +476,22 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
 
     // Conditionally display the toast
     if (showToast.isNotEmpty()) {
-        LaunchedEffect(key1 = true) {
+        LaunchedEffect(true) {
             Toast.makeText(context, showToast, Toast.LENGTH_SHORT).show()
             homeScreenViewModel.showToast("") // Reset the state after showing the toast
         }
     }
+
+
+    if (saveRequested) {
+
+
+    }
+    if (showDialog) {
+
+
+    }
+
     if (showRationale) {
         AlertDialog(
             onDismissRequest = {
@@ -360,52 +523,71 @@ fun HomeScreen(homeScreenViewModel: HomeScreenViewModel = viewModel()) {
 
 }
 
+
 @Composable
 private fun HandleCompressState(
     currentCompressState: CompressState,
     homeScreenViewModel: HomeScreenViewModel,
+    navController: NavHostController
 ) {
     var deleteImages by remember { mutableStateOf(false) }
-
+    val scope = rememberCoroutineScope { Dispatchers.IO }
     val context = LocalContext.current
-    if(deleteImages) {
-
-        deleteImage(context, homeScreenViewModel.selectedImageItems.map { it.uri }.first(), onDeleted = {
-
-
-        })
-        deleteImages =false
-
+    var deletePendingUris by remember {
+        mutableStateOf<List<Uri>>(
+            emptyList()
+        )
     }
+    var deletePendingRecoverableSecurityException by remember {
+        mutableStateOf<RecoverableSecurityException?>(
+            null
+        )
+    }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { result: ActivityResult ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            // Retry deletion for all uris
+            if (deletePendingRecoverableSecurityException != null) {
+                deletePendingRecoverableSecurityException?.let { exception ->
+                    deletePendingUris.forEach { uri ->
+                        try {
+                            context.contentResolver.delete(uri, null, null)
+                        } catch (e: SecurityException) {
+                            // Handle any further errors (e.g., log them)
+                            e.printStackTrace()
+                        }
+                    }
+                }
+            }
+
+        } else {
+            // Handle failure or user cancellation
+            Log.e("MyImagesScreen", "Deletion failed or cancelled by user")
+        }
+        deletePendingUris = emptyList()
+        deletePendingRecoverableSecurityException = null
+    }
+
+    if (deleteImages) {
+        deleteSelectedImages(
+            true,
+            context,
+            result = launcher,
+            selectedImages = homeScreenViewModel.selectedImageItems.map { it.uri })
+        deleteImages = false
+    }
+
     when (currentCompressState) {
         is CompressState.Success -> {
             if (homeScreenViewModel.selectedImageItems.isNotEmpty()) {
                 CompressToKbImageScreen(
                     imageItems = homeScreenViewModel.selectedImageItems,
-                    sizeInKb = currentCompressState.data.size,
-                    onSaveClicked = {
-//                        deleteImages =true
-                        saveImagesToGallery(context, it)
-                        homeScreenViewModel.showToast()
-                        homeScreenViewModel.showSelectedImages()
-                    },
-                    onSReplaceClicked = {
-                        var replaced = true
-                        it.forEach { imageItem ->
-                            imageItem.scaledBitmap?.let {
-                                replaced = ImageReplacer.replaceOriginalImageWithBitmap(
-                                    context,
-                                    imageItem.uri,
-                                    it
-                                )
-                            }
-                        }
-                        if(replaced) {
-                            homeScreenViewModel.showToast("Images replaced")
-                        }else{
-                            homeScreenViewModel.showToast("Error in replacing images  ")
-                        }
-                    })
+                    sizeInPercentage = currentCompressState.data.size,
+                    homeScreenViewModel = homeScreenViewModel,
+                    navController = navController
+                )
             }
         }
 
@@ -430,6 +612,7 @@ private fun HandleCompressState(
         }
     }
 }
+
 
 @Composable
 private fun HandleGalleryState(
@@ -466,20 +649,20 @@ private fun HandleGalleryState(
 @Composable
 fun CompressToKbImageScreen(
     imageItems: List<ImageItem>,
-    sizeInKb: Int = 100,
-    onSaveClicked: (List<ImageItem?>) -> Unit,
-    onSReplaceClicked: (List<ImageItem>) -> Unit,
+    sizeInPercentage: Int = 100,
+    homeScreenViewModel: HomeScreenViewModel,
+    navController: NavHostController
 ) {
     var imagesScaled by remember { mutableStateOf(false) }
     var scaledImages by remember { mutableStateOf(listOf<ImageItem>()) }
     val context = LocalContext.current
 
-    LaunchedEffect(sizeInKb) {
+    LaunchedEffect(sizeInPercentage) {
         imagesScaled = false
         withContext(Dispatchers.IO) {
             val imageScalar = ImageScalar(context)
             val scaledUris = withContext(Dispatchers.IO) {
-                imageScalar.compressImagesToTargetSize(imageItems, sizeInKb = sizeInKb)
+                imageScalar.compressImagesToTargetSize(context, imageItems, percentOriginal = sizeInPercentage)
             }
             imagesScaled = true
             scaledImages = scaledUris.filterNotNull()
@@ -500,27 +683,18 @@ fun CompressToKbImageScreen(
                 ScaledImagesGrid(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(bottom = 100.dp), scaledImages, imageItems
+                        .padding(bottom = 10.dp), scaledImages, imageItems,
+                    onSelectedItemClicked = {
+                        homeScreenViewModel.onSelectedItemClicked(it) {
+                            navController.navigate(it) {
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    }
                 )
             } else {
                 Text("Scaling...")
-            }
-        }
-        // Save button at the bottom, above the FAB
-        if (imagesScaled) {
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(16.dp) // Padding around the button
-            ) {
-                Button(
-                    onClick = {
-                        onSaveClicked(scaledImages)
-                    },
-                ) {
-                    Text(text = "Save Images")
-                }
-
             }
         }
     }
@@ -622,26 +796,25 @@ fun HomeScreenTopAppBarPreview() {
     val onShowCompress: () -> Unit = {
 
     }
-    HomeScreenTopAppBar(
-        imagesTransformed = imagesTransformed,
-        galleryState = galleryState,
-        onUndo = onUndo,
-        onShowScalePopup = onShowScalePopup,
-        onCrop = onCrop,
-        onShowCompress = onShowCompress
-    )
+    /*    HomeScreenTopAppBar(
+            imagesTransformed = imagesTransformed,
+            galleryState = galleryState,
+            onUndo = onUndo,
+            onShowScalePopup = onShowScalePopup,
+            onCrop = onCrop,
+            onShowCompress = onShowCompress
+        )*/
 }
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreenTopAppBar(
-    imagesTransformed: Boolean = false,
-    galleryState: GalleryState,
-    onUndo: () -> Unit,
-    onShowScalePopup: () -> Unit,
-    onCrop: (Boolean, Uri?) -> Unit,
-    onShowCompress: () -> Unit,
+fun <T : Media> HomeScreenTopAppBar(
+    albumId: Long = -1L,
+    target: String? = remember { null },
+    navigateUp: () -> Unit,
+    selectionState: MutableState<Boolean>,
+    selectedMedia: SnapshotStateList<T>,
 ) {
     TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
@@ -649,95 +822,21 @@ fun HomeScreenTopAppBar(
             titleContentColor = MaterialTheme.colorScheme.primary
         ),
         title = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(IntrinsicSize.Min),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Image Resizer",
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 8.dp),
-                    textAlign = TextAlign.Start,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Row(
-                    modifier = Modifier
-                        .padding(end = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-
-                ) {
-
-                    when (galleryState) {
-                        is GalleryState.Success -> {
-                            val selectedImageUris = galleryState.data.imageItems
-                            if (selectedImageUris.isNotEmpty()) {
-                                ActionButtonWithText(
-                                    enabled = true,
-                                    onClick = {
-                                        onShowCompress()
-                                    },
-                                    iconId = R.drawable.ic_compress_24dp,
-                                    modifier = Modifier.padding(end = 10.dp),
-                                    text = "Compress"
-                                )
-                                ActionButtonWithText(
-                                    onClick = {
-                                        onShowScalePopup()
-                                    },
-                                    enabled = true,
-                                    iconId = R.drawable.ic_scale_24dp,
-                                    modifier = Modifier.padding(end = 10.dp),
-                                    text = "Scale"
-                                )
-                                if (selectedImageUris.size == 1) {
-                                    ActionButtonWithText(
-                                        onClick = {
-                                            onCrop(
-                                                true, selectedImageUris.first().uri
-                                            )
-                                        },
-                                        iconId = R.drawable.ic_crop_24dp,
-                                        modifier = Modifier.padding(end = 10.dp),
-                                        text = "Crop"
-                                    )
-                                }
-
-                            }
-                        }
-
-                        is GalleryState.Error -> {
-
-                        }
-
-                        GalleryState.Idle -> {
-
-                        }
-
-                        GalleryState.Loading -> {
-
-                        }
-                    }
-
-
-                    if (imagesTransformed) {
-                        ActionButtonWithText(
-                            onClick = {
-                                onUndo()
-                            },
-                            iconId = R.drawable.ic_undo_24dp,
-                            modifier = Modifier.padding(end = 15.dp),
-                            text = "Undo"
-                        )
-                    }
-                }
-            }
+            Text(stringResource(R.string.app_name))
         },
+        navigationIcon = {
+            NavigationButton(
+                albumId = albumId,
+                target = target,
+                navigateUp = navigateUp,
+                clearSelection = {
+                    selectionState.value = false
+                    selectedMedia.clear()
+                },
+                selectionState = selectionState,
+                alwaysGoBack = true,
+            )
+        }
     )
 }
 
