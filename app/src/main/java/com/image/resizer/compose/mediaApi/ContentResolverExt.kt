@@ -11,7 +11,6 @@ import android.content.Context
 import android.content.Intent
 import android.database.ContentObserver
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
@@ -23,9 +22,10 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.util.Log
+import apps.sai.com.imageresizer.BuildConfig
+import com.image.resizer.compose.ExifHandler
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.util.Constants
-import com.image.resizer.compose.mediaApi.util.Constants.CUSTOM_FOLDER_NAME
 import com.image.resizer.compose.mediaApi.util.getUri
 import com.image.resizer.compose.mediaApi.util.isVideo
 import kotlinx.coroutines.Dispatchers
@@ -155,6 +155,12 @@ private fun replaceImageBelowQ(context: Context, originalUri: Uri, newBitmap: Bi
                 FileOutputStream(file).use { outputStream ->
                     newBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
                     outputStream.flush()
+                    ExifHandler.setExifDataAfterScalingWithUri(
+                        context = context,
+                        originalImageUri = originalUri,
+                        scaledBitmap = newBitmap,
+                        outputUri = originalUri,
+                    )
                 }
             }
         }
@@ -170,32 +176,39 @@ private fun replaceImageBelowQ(context: Context, originalUri: Uri, newBitmap: Bi
 }
 
 fun ContentResolver.overrideImage(
+    originalUri: Uri,
     context: Context,
     uri: Uri,
     bitmap: Bitmap,
-    format: Bitmap.CompressFormat = Bitmap.CompressFormat.PNG
+    displayName: String,
+    originalRelativePath: String,
+    mimeType: String,
+    format: Bitmap.CompressFormat,
+    timestamp: Long,
 ): Boolean {
 
-    val values = ContentValues().apply {
-        put(MediaStore.MediaColumns.DATE_MODIFIED, System.currentTimeMillis())
-    }
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        return runCatching {
-            update(uri, values, null)
-            openOutputStream(uri)?.use { stream ->
-                if (!bitmap.compress(format, 100, stream))
-                    throw IOException("Failed to save bitmap.")
-            } ?: throw IOException("Failed to open output stream.")
-            update(
-                uri,
-                ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) },
-                null
-            ) > 0
-        }.getOrElse {
-            throw it
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        //delete original and copy new
+        if (delete(uri, null, null) != -1) {
+            if(saveImage(
+                originalUri = originalUri,
+                context = context,
+                bitmap = bitmap,
+                format = format,
+                mimeType = mimeType,
+                relativePath = originalRelativePath,
+                displayName = displayName,
+                timeStampModified = timestamp
+            ) == null){
+                throw Exception("overrideImage failed")
+            }else{
+                true
+            }
+        } else {
+            false
         }
     } else {
-        return runCatching {
+        runCatching {
             replaceImageBelowQ(context, uri, bitmap)
         }.getOrElse {
             throw it
@@ -205,14 +218,17 @@ fun ContentResolver.overrideImage(
 
 
 fun ContentResolver.saveImage(
+    originalUri: Uri,
     context: Context,
     bitmap: Bitmap,
     format: Bitmap.CompressFormat = Bitmap.CompressFormat.JPEG,
     mimeType: String = "image/jpeg",
     relativePath: String = Environment.DIRECTORY_PICTURES,
-    displayName: String
+    displayName: String,
+    timeStampModified: Long? = null,
 ): Uri? {
     val values = ContentValues().apply {
+
         put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
         put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
         put(
@@ -229,9 +245,28 @@ fun ContentResolver.saveImage(
                 uri = it // Keep uri reference so it can be removed on failure
 
                 openOutputStream(it)?.use { stream ->
-                    if (!bitmap.compress(format, 100, stream))
+                    if (!bitmap.compress(format, 100, stream)) {
                         throw IOException("Failed to save bitmap.")
+                    } else {
+                        ExifHandler.setExifDataAfterScalingWithUri(
+                            context = context,
+                            originalImageUri = originalUri,
+                            scaledBitmap = bitmap,
+                            outputUri = uri,
+                        )
+                        if (timeStampModified != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            values.clear()
+                            values.put(MediaStore.MediaColumns.DATE_MODIFIED, timeStampModified)
+                            update(
+                                uri,
+                                values,
+                                null
+                            )
+                        }
+
+                    }
                 } ?: throw IOException("Failed to open output stream.")
+
 
             } ?: throw IOException("Failed to create new MediaStore record.")
         }.getOrElse {
@@ -257,7 +292,14 @@ fun ContentResolver.saveImage(
                 } else {
                     bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
                 }
+                ExifHandler.setExifDataAfterScalingWithUri(
+                    context = context,
+                    originalImageUri = originalUri,
+                    scaledBitmap = bitmap,
+                    outputUri = Uri.fromFile(file),
+                )
             }
+
             // Make sure the file is visible in the gallery immediately
             MediaScannerConnection.scanFile(
                 context,

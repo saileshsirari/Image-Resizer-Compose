@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Image Resizer Compose</string>
+    <string name="app_name">Image Resizer </string>
     <string name="my_images">My Images</string>
     <string name="select_all">Select All</string>
     <string name="share">Share</string>
@@ -20,7 +20,7 @@
     <string name="kb">KB</string>
     <string name="mb">MB</string>
     <string name="gb">GB</string>
-    <string name="no_media_title">Seems empty here</string>
+    <string name="no_media_title">No Images</string>
     <string name="unselect_all">Unselect all</string>
     <string name="drop_down_cd">Drop down</string>
     <string name="back_cd">Back</string>
@@ -73,6 +73,10 @@
     <string name="dialog_delete">Deleting Permanently</string>
     <string name="trashing_items">Trashing %1$s items..</string>
     <string name="deleting_items">Deleting %1$s items...</string>
+    <string name="replacing_items">Replacing %1$s items...</string>
+
+    <string name="dialog_replace">Replacing Permanently</string>
+
     <string name="trash_incompatible_title">Some items cannot be trashed!</string>
     <string name="trash_incompatible_summary">Such items will be deleted permanently instead.</string>
     <string name="long_press_to_remove">Long press to remove</string>

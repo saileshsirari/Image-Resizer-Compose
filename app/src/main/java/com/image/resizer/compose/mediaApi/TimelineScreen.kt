@@ -11,18 +11,26 @@ import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisallowComposableCalls
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import com.image.resizer.compose.R
+import apps.sai.com.imageresizer.R
+import com.image.resizer.compose.ImageItem
+import com.image.resizer.compose.RadioButtonSingleSelection
 import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.model.MediaState
-
+sealed class TimelineScreenType {
+    object All : TimelineScreenType()
+    object MyImages : TimelineScreenType()
+}
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 inline fun <reified T: Media> TimelineScreen(
@@ -46,9 +54,11 @@ inline fun <reified T: Media> TimelineScreen(
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedContentScope,
     activity: Activity,
+    timelineScreenType: TimelineScreenType = TimelineScreenType.All,
     noinline onMediaClick: @DisallowComposableCalls (media: T) -> Unit = {},
-    noinline onCompressClick:(List<Uri>)-> Unit
+    noinline onOpenClick:(List<ImageItem>)-> Unit,
 ) {
+
     MediaScreen(
         paddingValues = paddingValues,
         albumId = albumId,
@@ -64,8 +74,9 @@ inline fun <reified T: Media> TimelineScreen(
         showMonthlyHeader = true,
         enableStickyHeaders = enableStickyHeaders,
         allowNavBar = allowNavBar,
-        onCompressClick = onCompressClick,
+        onOpenClick = onOpenClick,
         activity = activity,
+        timelineScreenType = timelineScreenType,
         navActionsContent = { expandedDropDown: MutableState<Boolean>, _ ->
             TimelineNavActions(
                 albumId = albumId,
@@ -75,7 +86,7 @@ inline fun <reified T: Media> TimelineScreen(
                 selectedMedia = selectedMedia,
                 selectionState = selectionState,
                 navigate = navigate,
-                navigateUp = navigateUp
+                navigateUp = navigateUp,
             )
         },
         navigate = navigate,

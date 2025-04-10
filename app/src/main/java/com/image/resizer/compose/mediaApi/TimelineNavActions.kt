@@ -7,6 +7,8 @@
 
 package com.image.resizer.compose.mediaApi
 
+import android.R.attr.onClick
+import android.R.attr.text
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -26,14 +28,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import com.image.resizer.compose.R
+import apps.sai.com.imageresizer.R
 import com.image.resizer.compose.Screen
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.model.MediaState
 import kotlinx.coroutines.launch
 
 @Composable
-inline fun <reified T: Media> TimelineNavActions(
+inline fun <reified T : Media> TimelineNavActions(
     albumId: Long,
     handler: MediaHandleUseCase,
     expandedDropDown: MutableState<Boolean>,
@@ -64,20 +66,26 @@ inline fun <reified T: Media> TimelineNavActions(
     val optionList = remember(selectionState.value) {
         mutableListOf(
             OptionItem(
-                text = if (selectionState.value)
-                    context.getString(R.string.unselect_all)
-                else
                     context.getString(R.string.select_all),
                 onClick = {
-                    selectionState.value = !selectionState.value
-                    if (selectionState.value)
-                        selectedMedia.addAll(mediaState.value.media)
-                    else
-                        selectedMedia.clear()
+                    selectionState.value = true
+                    selectedMedia.addAll(mediaState.value.media)
                     expandedDropDown.value = false
                 }
-            )
+            ),
+
         ).apply {
+            if(selectionState.value) {
+                add(OptionItem(
+                    text = context.getString(R.string.unselect_all),
+
+                    onClick = {
+                        selectionState.value = false
+                        selectedMedia.clear()
+                        expandedDropDown.value = false
+                    }
+                ))
+            }
             /* if (albumId != -1L && T::class == Media.UriMedia::class) {
                 add(
                     OptionItem(

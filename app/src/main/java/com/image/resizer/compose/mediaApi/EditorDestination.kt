@@ -11,8 +11,6 @@ sealed class EditorDestination {
     @Serializable
     data object Crop : EditorDestination()
 
-    @Serializable
-    data object Scale : EditorDestination()
 
     @Serializable
     data object Save : EditorDestination()

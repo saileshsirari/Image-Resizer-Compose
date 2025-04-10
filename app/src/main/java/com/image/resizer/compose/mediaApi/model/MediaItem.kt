@@ -5,6 +5,8 @@
 package com.image.resizer.compose.mediaApi.model
 
 import androidx.compose.runtime.Stable
+import java.util.UUID
+import kotlin.uuid.Uuid
 
 @Stable
 sealed class MediaItem<T: Media> {
@@ -19,7 +21,7 @@ sealed class MediaItem<T: Media> {
 
     @Stable
     data class MediaViewItem<T: Media> (
-        override val key: String,
+        override val key: String = UUID.randomUUID().toString(),
         val media: T
     ) : MediaItem<T>()
 

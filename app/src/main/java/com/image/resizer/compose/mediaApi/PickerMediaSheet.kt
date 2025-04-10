@@ -1,7 +1,6 @@
 package com.image.resizer.compose.mediaApi
 
 import android.app.Activity
-import android.net.http.SslCertificate.restoreState
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.layout.PaddingValues
@@ -22,18 +21,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.SecureFlagPolicy
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.image.resizer.compose.HomeScreenViewModel
-import com.image.resizer.compose.R
+import apps.sai.com.imageresizer.R
 import com.image.resizer.compose.Screen
 import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.model.MediaState
+import com.image.resizer.compose.toImageItem
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -56,8 +56,11 @@ fun <T : Media> PickerMediaSheet(
     val mediaHandleUseCase =
         MediaHandleUseCase(repository = mediaRepository)
     val albumsViewModel = AlbumsViewModel(mediaRepository, mediaHandleUseCase)
+    val exceptionHandler = CoroutineExceptionHandler { _, e ->
+        println("[ERROR] ${e.message}")
+    }
 
-    if (sheetState.isVisible) {
+        if (sheetState.isVisible) {
         if (hideSheet) {
             LaunchedEffect(Unit) {
                 sheetState.hide()
@@ -138,7 +141,7 @@ fun <T : Media> PickerMediaSheet(
                         val context = LocalContext.current
 
                         val hideTimeline by remember { mutableStateOf(true) }
-                        val mediaState = vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+                        val mediaState = vm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO+exceptionHandler)
 
                         TimelineScreen(
                             paddingValues = paddingValues,
@@ -167,7 +170,7 @@ fun <T : Media> PickerMediaSheet(
                             isScrolling = mutableStateOf(false),
                             sharedTransitionScope = this@SharedTransitionLayout,
                             animatedContentScope = this,
-                            onCompressClick = {
+                            onOpenClick = {
                                 homeScreenViewModel.handlePickedImages(it, context) {
                                     scope.launch (Dispatchers.Main){
                                         sheetState.hide()
@@ -176,7 +179,7 @@ fun <T : Media> PickerMediaSheet(
                                 }
                             },
                             onMediaClick = {
-                                homeScreenViewModel.handlePickedImages(listOf(it.uri), context) {
+                                homeScreenViewModel.handlePickedImages(listOf(it.toImageItem()), context) {
                                         scope.launch (Dispatchers.Main){
                                             sheetState.hide()
                                             navController.popBackStack(Screen.AlbumsScreen.route,false)

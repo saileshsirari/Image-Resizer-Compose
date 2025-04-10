@@ -43,8 +43,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
 import com.dokar.pinchzoomgrid.PinchZoomGridLayout
 import com.dokar.pinchzoomgrid.rememberPinchZoomGridState
-import com.image.resizer.compose.MainActivity
-import com.image.resizer.compose.Screen
+import com.image.resizer.compose.ImageItem
 import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.model.MediaState
@@ -80,13 +79,14 @@ fun <T: Media> MediaScreen(
     searchBarActive: MutableState<Boolean> = remember { mutableStateOf(false) },
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedContentScope,
-    onCompressClick:(List<Uri>)-> Unit,
+    onOpenClick:(List<ImageItem>)-> Unit,
     activity: Activity,
+    timelineScreenType: TimelineScreenType ,
     onMediaClick: @DisallowComposableCalls (media: T) -> Unit = {},
     onActivityResult: (result: ActivityResult) -> Unit,
 
 
-) {
+    ) {
     val showSearchBar = remember { albumId == -1L && target == null }
     var canScroll by rememberSaveable { mutableStateOf(true) }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
@@ -192,7 +192,8 @@ fun <T: Media> MediaScreen(
                 albumsState = albumsState,
                 handler = handler,
                 activity = activity,
-                onCompressClick  = onCompressClick
+                timelineScreenType = timelineScreenType,
+                onOpenClick  = onOpenClick
 
             )
         }

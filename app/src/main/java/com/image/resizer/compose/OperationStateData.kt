@@ -14,7 +14,7 @@ sealed class OperationState {
 }
 
 // Crop
-data class CropStateData(val croppedImageUri: Uri?) : OperationStateData
+data class CropStateData(val croppedImageUri: ImageItem?) : OperationStateData
 sealed class CropState : OperationState() {
     data object Idle : CropState()
     data object Loading : CropState()
@@ -34,7 +34,7 @@ sealed class CompressState : OperationState() {
 }
 
 // Scale
-data class ScaleStateData(val scaleParamsList: List<ScaleParams>) : OperationStateData
+data class ScaleStateData(val scaleParamsList: ScaleParams?) : OperationStateData
 sealed class ScaleState : OperationState() {
     data object Idle : ScaleState()
     data object Loading : ScaleState()

@@ -1,6 +1,7 @@
 package com.image.resizer.compose
 
 import android.net.Uri
+import android.util.Log.i
 import androidx.activity.result.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -20,10 +21,11 @@ data class PredefinedDimension(val width: Int, val height: Int) {
 
 
 data class ScaleParams(
-    val newWidth: Int,
-    val newHeight: Int,
+    val newWidth: Int?=null,
+    val newHeight: Int?=null,
     val scaleFactor: Float? = null,
-    val keepAspectRatio: Boolean = true
+    val keepAspectRatio: Boolean = true,
+    val compressPercentage: Int? = null
 )
 
 class ScaleImageViewModel : ViewModel() {
@@ -59,12 +61,10 @@ class ScaleImageViewModel : ViewModel() {
         private set
 
     fun setOriginalDimensions(originalDimensions: List<Pair<Int, Int>>) {
+
         this.originalDimensions.clear()
         this.originalDimensions.addAll(originalDimensions)
-        aspectRatio.clear()
-        originalDimensions.forEach { (width, height) ->
-            aspectRatio.add(width.toFloat() / height.toFloat())
-        }
+
     }
 
     fun changeMode(newMode: String) {
@@ -111,94 +111,70 @@ class ScaleImageViewModel : ViewModel() {
          }*/
     }
 
-    fun toggleDropdown() {
-        expanded = !expanded
-    }
 
     fun updatePercentage(newPercentage: Float) {
         percentage = newPercentage
     }
 
-    private fun updateHeightBasedOnWidth() {
-        val newWidth = width.toIntOrNull() ?: 0
-        val newHeight = (newWidth / aspectRatio[0]).roundToInt()
-        height = newHeight.toString()
-    }
 
-    private fun updateWidthBasedOnHeight() {
-        val newHeight = height.toIntOrNull() ?: 0
-        val newWidth = (newHeight * aspectRatio[0]).roundToInt()
-        width = newWidth.toString()
-    }
-
-    fun onScaleForList(onResult: (List<ScaleParams>) -> Unit) {
-        val resultList = mutableListOf<ScaleParams>()
+    fun onScaleForList(): ScaleParams? {
+        var result :ScaleParams?=null
 
         if (mode == "custom") {
             if (selectedPredefinedDimension.width != -1 && selectedPredefinedDimension.height != -1) {
                 width = selectedPredefinedDimension.width.toString()
                 height = selectedPredefinedDimension.height.toString()
+                result =  ScaleParams(
+                    selectedPredefinedDimension.width,
+                    selectedPredefinedDimension.height,
+                    null,
+                    keepAspectRatio)
+                return  result
             }
+
             if (keepAspectRatio) {
                 if (width.isNotEmpty()) {
                     val newWidth = width.toInt()
-                    originalDimensions.forEach { (width, height) ->
-                        //original aspect ratio
-                        val aspect = width.toFloat() / height.toFloat()
-                        resultList.add(
-                            ScaleParams(
-                                newWidth,
-                                (newWidth / aspect).roundToInt(),
-                                null,
-                                keepAspectRatio
-                            )
-                        )
-                    }
+                    result =    ScaleParams(
+                        newWidth,
+                        null,
+                        null,
+                        keepAspectRatio
+                    )
+
                 } else if (height.isNotEmpty()) {
                     val newHeight = height.toInt()
-                    originalDimensions.forEach { (width, height) ->
-                        //original aspect ratio
-                        val aspect = width.toFloat() / height.toFloat()
-                        resultList.add(
-                            ScaleParams(
-                                (newHeight * aspect).roundToInt(),
-                                newHeight,
-                                null,
-                                keepAspectRatio
-                            )
-                        )
-                    }
+                    result =   ScaleParams(
+                        null,
+                        newHeight,
+                        null,
+                        keepAspectRatio
+                    )
+
                 }
             }
             if (!keepAspectRatio && width.isNotEmpty() && height.isNotEmpty()) {
                 val newWidth = width.toInt()
                 val newHeight = height.toInt()
-                originalDimensions.forEach { (_, _) ->
-                    resultList.add(
-                        ScaleParams(
-                            newWidth,
-                            newHeight,
-                            null,
-                            keepAspectRatio
-                        )
-                    )
-                }
+                result =   ScaleParams(
+                    newWidth,
+                    newHeight,
+                    null,
+                    keepAspectRatio
+                )
+
             }
 
         } else {
-            for (i in 0 until originalDimensions.size) {
-                val scaleFactor = percentage / 100f
-                resultList.add(
-                    ScaleParams(
-                        (originalDimensions[i].first * scaleFactor).roundToInt(),
-                        (originalDimensions[i].second * scaleFactor).roundToInt(),
-                        scaleFactor,
-                        true
-                    )
-                )
-            }
+            result =  ScaleParams(
+                null,
+                null,
+                percentage / 100f,
+                keepAspectRatio
+            )
+
         }
-        onResult(resultList)
+      return  result
     }
 
     fun resetSelectedPredefinedDimension() {

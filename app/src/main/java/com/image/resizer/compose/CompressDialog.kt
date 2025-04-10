@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,7 +29,7 @@ fun CompressDialog(
     onConfirm: (Int) -> Unit
 ) {
     var sliderValue by remember { mutableFloatStateOf(50f) } // Start at 50%
-    val percentage = sliderValue.roundToInt()
+    var percentage by remember { mutableFloatStateOf(sliderValue.roundToInt().toFloat()) } // Update percentage based on sliderValue
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -39,13 +40,14 @@ fun CompressDialog(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(text = "Compression in percentage of original:")
-                    Spacer(modifier = Modifier.weight(1f))
-                    Text(text = "$percentage%")
+                    Text(text = "${percentage.roundToInt()}%", fontSize = MaterialTheme.typography.headlineMedium.fontSize) // Use the updated percentage here
                 }
                 Slider(
                     value = sliderValue,
-                    onValueChange = { sliderValue = it },
+                    onValueChange = {
+                        sliderValue = it
+                        percentage = it
+                    },
                     valueRange = 10f..100f, // Slider values from 10% to 100%
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -55,7 +57,7 @@ fun CompressDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val quality = percentage
+                    val quality = percentage.roundToInt() // Use the updated percentage here
                     onConfirm(quality) // Pass the percentage value
                 }
             ) {

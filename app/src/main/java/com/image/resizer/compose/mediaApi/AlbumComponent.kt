@@ -28,21 +28,28 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.panpf.sketch.AsyncImage
-import com.image.resizer.compose.R
+import apps.sai.com.imageresizer.R
+import coil.request.ImageRequest
 import com.image.resizer.compose.mediaApi.model.Album
 import com.image.resizer.compose.mediaApi.util.formatSize
+import com.image.resizer.compose.mediaApi.util.getFileDetails
 import com.image.resizer.compose.mediaApi.util.rememberFeedbackManager
+import kotlinx.coroutines.launch
+import java.io.File
 
 @Composable
 fun AlbumComponent(
@@ -132,8 +139,9 @@ fun AlbumImage(
     val radius = if (isPressed.value) 32.dp else 16.dp
     val cornerRadius by animateDpAsState(targetValue = radius, label = "cornerRadius")
     val feedbackManager = rememberFeedbackManager()
+    // Pre-load file details in a background thread
 
-    AsyncImage(
+    coil.compose.AsyncImage(
         modifier = modifier
             .fillMaxSize()
             .border(
@@ -154,7 +162,7 @@ fun AlbumImage(
                     }
                 }
             ),
-        uri = album.uri.toString(),
+        model = album.uri.toString(),
         contentDescription = album.label,
         contentScale = ContentScale.Crop,
     )

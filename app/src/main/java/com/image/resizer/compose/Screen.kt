@@ -11,6 +11,7 @@ sealed class Screen(val route: String, val title: String?="", val icon: ImageVec
     object MyImages : Screen("my_images", "My Images", Icons.Filled.Image)
     object Settings : Screen("settings", "Settings", Icons.Filled.Settings)
     data object ImageDetailScreen : Screen("image_details")
+    data object ZoomableScreen : Screen("zoomable_screen")
     data object TimelineScreen : Screen("timeline_screen")
     data object SettingsScreen : Screen("settings_screen")
     data object LibraryScreen : Screen("library_screen")

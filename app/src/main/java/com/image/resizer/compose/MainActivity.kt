@@ -1,6 +1,7 @@
 package com.image.resizer.compose
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ContentValues
 import android.content.Context
@@ -10,6 +11,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.StrictMode
 import android.provider.MediaStore
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -25,17 +27,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -46,6 +50,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.PermissionState
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 import com.image.resizer.compose.ImageReplacer.getBitmapFromUri
 import com.image.resizer.compose.Screen.ImageDetailScreen
 import com.image.resizer.compose.mediaApi.AlbumsViewModel
@@ -54,23 +62,71 @@ import com.image.resizer.compose.mediaApi.MediaHandleUseCase
 import com.image.resizer.compose.mediaApi.MediaRepositoryImpl
 import com.image.resizer.compose.mediaApi.MediaViewModel
 import com.image.resizer.compose.mediaApi.TimelineScreen
-import com.image.resizer.compose.mediaApi.model.Media.UriMedia
-import com.image.resizer.compose.mediaApi.model.MediaState
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.navigateInAnimation
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.navigateUpAnimation
 import com.image.resizer.compose.mediaApi.util.Constants.CUSTOM_FOLDER_NAME
 import com.image.resizer.compose.theme.AppTheme
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
+import com.image.resizer.compose.Screen.ZoomableScreen
+import com.image.resizer.compose.mediaApi.MediaRepository
+import com.image.resizer.compose.mediaApi.TimelineScreenType
+import com.image.resizer.compose.mediaApi.model.Album
 
 // Data class to hold original and compressed image URIs
 data class ImagePair(val originalImageItem: ImageItem, val transFormedImageItem: ImageItem)
 
+@Composable
+@OptIn(ExperimentalPermissionsApi::class)
+fun StoragePermissionDialog(
+    galleryPermissionState: PermissionState
+): Boolean {
+    var showRationale by remember { mutableStateOf(true) }
+
+    AlertDialog(
+        onDismissRequest = {
+            showRationale = false
+        },
+        title = { Text("Permission Required") },
+        text = { Text("The app needs permission to access your gallery.") },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    showRationale = false
+                    galleryPermissionState.launchPermissionRequest()
+                }
+            ) {
+                Text("Grant Permission")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    showRationale = false
+                }
+            ) {
+                Text("Dismiss")
+            }
+        })
+    return showRationale
+}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        /*  StrictMode.setThreadPolicy(
+              StrictMode.ThreadPolicy.Builder()
+                  .detectAll()
+                  .build()
+          )
+          StrictMode.setVmPolicy(
+              StrictMode.VmPolicy.Builder()
+                  .detectAll()
+                  .build()
+          )*/
         enableEdgeToEdge()
         setContent {
             AppTheme {
@@ -80,15 +136,69 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        log("onResume main")
+    }
+
+    override fun onStop() {
+        log("onStop main")
+        super.onStop()
+    }
 }
 
+lateinit var homeScreenViewModel: HomeScreenViewModel
+
+
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun MainApp() {
     val navController = rememberNavController()
-    Scaffold(
-        bottomBar = { BottomNavigationBar(navController) }
-    ) { innerPadding ->
-        Navigation(navController, innerPadding)
+    // State to control the popup's visibility
+    val galleryPermissionState = rememberPermissionState(
+        getStoragePermission()
+    )
+    var showRationale by remember { mutableStateOf(false) }
+
+    showRationale = !galleryPermissionState.status.isGranted
+    log("MainApp")
+    val mediaRepository = MediaRepositoryImpl(LocalContext.current)
+    val mediaHandleUseCase =
+        MediaHandleUseCase(repository = mediaRepository)
+    val albumsViewModel = AlbumsViewModel(mediaRepository, mediaHandleUseCase).apply {
+        albumId = -1
+    }
+
+    if (!::homeScreenViewModel.isInitialized) {
+        homeScreenViewModel = HomeScreenViewModel(mediaHandleUseCase)
+    } else {
+        log("homeScreenViewModel already initialized ")
+    }
+    val activity = LocalActivity.current as Activity
+
+    val context = LocalContext.current
+
+    val hideTimeline by remember { mutableStateOf(true) }
+    if (showRationale) {
+        StoragePermissionDialog(galleryPermissionState)
+    } else {
+        Scaffold(
+            bottomBar = { BottomNavigationBar(navController) }
+        ) { innerPadding ->
+            Navigation(
+                context,
+                activity,
+                navController,
+                albumsViewModel,
+                homeScreenViewModel,
+                mediaRepository,
+                mediaHandleUseCase,
+                hideTimeline,
+                innerPadding
+            )
+
+        }
     }
 }
 
@@ -133,23 +243,27 @@ fun BottomNavigationBar(navController: NavHostController) {
     }
 }
 
+val exceptionHandler = CoroutineExceptionHandler { _, e ->
+    println("[ERROR] ${e.message}")
+}
+
+@SuppressLint("UnrememberedMutableState")
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
-    val mediaRepository = MediaRepositoryImpl(LocalContext.current)
-    val mediaHandleUseCase =
-        MediaHandleUseCase(repository = mediaRepository)
-    val albumsViewModel = AlbumsViewModel(mediaRepository, mediaHandleUseCase).apply {
-        albumId = -1
-    }
+fun Navigation(
+    context: Context,
+    activity: Activity,
+    navController: NavHostController,
+    albumsViewModel: AlbumsViewModel,
+    homeScreenViewModel: HomeScreenViewModel,
+    mediaRepository: MediaRepository,
+    mediaHandleUseCase: MediaHandleUseCase,
+    hideTimeline: Boolean,
+    innerPadding: PaddingValues
+) {
+    log("navigation")
     val albumsState =
-        albumsViewModel.albumsFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
-    val homeScreenViewModel = HomeScreenViewModel(mediaHandleUseCase)
-    val activity = LocalActivity.current as Activity
-
-    val context = LocalContext.current
-
-    val hideTimeline by remember { mutableStateOf(true) }
+        albumsViewModel.albumsFlow.collectAsStateWithLifecycle(context = Dispatchers.IO + exceptionHandler)
 
     SharedTransitionLayout {
         NavHost(
@@ -163,9 +277,10 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
         ) {
 
             composable(Screen.Home.route) {
+                log("Screen.Home.route")
 
                 val mediaState =
-                    albumsViewModel.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
+                    albumsViewModel.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO + exceptionHandler)
                 HomeScreen(
                     homeScreenViewModel = homeScreenViewModel,
                     albumsViewModel = albumsViewModel,
@@ -196,67 +311,85 @@ fun Navigation(navController: NavHostController, innerPadding: PaddingValues) {
             composable(
                 route = Screen.MyImages.route
             ) { backStackEntry ->
-
+                val emptyAlbum = Album(
+                    id = -11,
+                    label = CUSTOM_FOLDER_NAME,
+                    uri = Uri.EMPTY,
+                    pathToThumbnail = "",
+                    relativePath = "",
+                    timestamp = 0
+                )
                 val myImages =
                     albumsState.value.albums.firstOrNull { it.label == CUSTOM_FOLDER_NAME }
-                if (myImages != null) {
-                    var myImagesVm = MediaViewModel(
-                        repository = mediaRepository,
-                        handler = mediaHandleUseCase
-                    ).apply {
-                        albumId = myImages.id
-                    }
-                    val myImagesMediaState =
-                        myImagesVm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO)
-
-
-                    TimelineScreen(
-                        paddingValues = innerPadding,
-                        albumId = myImages.id,
-                        albumName = myImages.label,
-                        handler = myImagesVm.handler,
-                        mediaState = myImagesMediaState,
-                        albumsState = albumsState,
-                        selectionState = myImagesVm.multiSelectState,
-                        selectedMedia = myImagesVm.selectedPhotoState,
-                        allowNavBar = false,
-                        allowHeaders = !hideTimeline,
-                        enableStickyHeaders = !hideTimeline,
-                        toggleSelection = myImagesVm::toggleSelection,
-                        activity = activity,
-                        navigate = {
-                            navController.navigate(it) {
-                            }
-                        },
-                        navigateUp = {
-                            navController.navigateUp()
-                        },
-                        toggleNavbar = {
-
-                        },
-                        isScrolling = mutableStateOf(false),
-                        sharedTransitionScope = this@SharedTransitionLayout,
-                        animatedContentScope = this,
-                        onCompressClick = {
-                            homeScreenViewModel.handlePickedImages(it, context) {
-
-                            }
-                        },
-                        onMediaClick = {
-                            homeScreenViewModel.handlePickedImages(listOf(it.uri), context) {
-
-
-                            }
-                        }
-                    )
-
+                        ?: emptyAlbum
+                var myImagesVm = MediaViewModel(
+                    repository = mediaRepository,
+                    handler = mediaHandleUseCase
+                ).apply {
+                    albumId = myImages.id
                 }
+                val exceptionHandler = CoroutineExceptionHandler { _, e ->
+                    println("[ERROR] ${e.message}")
+                }
+                val myImagesMediaState =
+                    myImagesVm.mediaFlow.collectAsStateWithLifecycle(context = Dispatchers.IO + exceptionHandler)
+
+                TimelineScreen(
+                    paddingValues = innerPadding,
+                    albumId = myImages.id,
+                    albumName = myImages.label,
+                    handler = myImagesVm.handler,
+                    mediaState = myImagesMediaState,
+                    albumsState = albumsState,
+                    selectionState = myImagesVm.multiSelectState,
+                    selectedMedia = myImagesVm.selectedPhotoState,
+                    allowNavBar = false,
+                    allowHeaders = !hideTimeline,
+                    enableStickyHeaders = !hideTimeline,
+                    toggleSelection = myImagesVm::toggleSelection,
+                    activity = activity,
+                    timelineScreenType = TimelineScreenType.MyImages,
+                    navigate = {
+                        navController.navigate(it) {
+                        }
+                    },
+                    navigateUp = {
+                        navController.navigateUp()
+                    },
+                    toggleNavbar = {
+
+                    },
+                    isScrolling = mutableStateOf(false),
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    animatedContentScope = this,
+                    onOpenClick = {
+                        homeScreenViewModel.handlePickedImages(it, context) {
+
+                        }
+                    },
+                    onMediaClick = {
+                        homeScreenViewModel.handlePickedImages(
+                            listOf(it.toImageItem()),
+                            context
+                        ) {
+
+
+                        }
+                    }
+                )
+
+
             }
 
 
             composable(ImageDetailScreen.route) {
                 homeScreenViewModel.selectedItem?.let {
                     ImageDetailsScreen(it)
+                }
+            }
+            composable(ZoomableScreen.route) {
+                homeScreenViewModel.selectedItem?.let {
+                    ZoomableImage(it.computedUri ?: it.uri)
                 }
             }
         }

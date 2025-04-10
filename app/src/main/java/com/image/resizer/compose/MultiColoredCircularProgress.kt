@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import apps.sai.com.imageresizer.R
 
 @Composable
 fun MultiColoredCircularProgress(
@@ -171,7 +172,7 @@ fun PreviewAnimatedMultiColoredCircularProgress() {
             Text("Change Progress")
         }
     }
-   /* Box(modifier = Modifier.size(200.dp), contentAlignment = Alignment.Center) {
+   /* Box(modifier = Modifier.originalFileSize(200.dp), contentAlignment = Alignment.Center) {
         AnimatedMultiColoredCircularProgress(
             targetProgress = 0.7f,
             colors = listOf(Color.Red, Color.Green, Color.Blue),

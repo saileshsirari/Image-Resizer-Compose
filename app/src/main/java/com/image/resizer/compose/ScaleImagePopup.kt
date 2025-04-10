@@ -1,13 +1,9 @@
 package com.image.resizer.compose
 
-import android.R.attr.label
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -17,127 +13,95 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import kotlin.math.roundToInt
+import apps.sai.com.imageresizer.R
+import com.image.resizer.compose.mediaApi.MediaHandleUseCase
+import com.image.resizer.compose.mediaApi.MediaRepositoryImpl
+import com.image.resizer.compose.theme.MyTypography
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScaleImagePopup(
-    show: Boolean,
     onDismiss: () -> Unit,
-    originalDimensions: List<Pair<Int, Int>>,
-    onScale: (List<ScaleParams>) -> Unit,
+    onScale: (ScaleParams?) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ScaleImageViewModel
 ) {
-        if (show) {
-            var tabIndex by remember { mutableIntStateOf(0) }
-            val tabs = listOf("Custom", "Percentage")
-            viewModel.setOriginalDimensions(originalDimensions)
-            var isButtonEnabled by remember { mutableStateOf(false) }
-            var hasPredefinedSelection by remember { mutableStateOf(false) }
-// Calculate fixed height for the content
-            val fixedContentHeight = 250.dp // Adjust this value as needed
 
-            fun updateButtonEnableState() {
-                if (viewModel.mode == "custom") {
-                    isButtonEnabled =
-                        ( !viewModel.keepAspectRatio &&
-                        viewModel.width.isNotEmpty() && viewModel.height.isNotEmpty())
-                                ||  (viewModel.keepAspectRatio &&
-                                (viewModel.width.isNotEmpty() || viewModel.height.isNotEmpty())) || hasPredefinedSelection
-                } else {
-                    isButtonEnabled = true
-                }
-            }
-
-            LaunchedEffect(
-                viewModel.width,
-                viewModel.height,
-                hasPredefinedSelection,
-                viewModel.keepAspectRatio,
-                viewModel.mode
-            ) {
-                updateButtonEnableState()
-            }
-
-            AlertDialog(
-                onDismissRequest = {  },
-                title = { Text("Scale Image") },
-                modifier = modifier,
-                text = {
-
-                    Column(
-                        modifier = Modifier
-                            .wrapContentHeight()
-                            .fillMaxWidth()
-                    ) {
-                        TabRow(selectedTabIndex = tabIndex) {
-                            tabs.forEachIndexed { index, title ->
-                                Tab(
-                                    text = { Text(title) },
-                                    selected = tabIndex == index,
-                                    onClick = {
-                                        tabIndex = index
-                                        viewModel.changeMode(if (index == 0) "custom" else "percentage")
-                                        hasPredefinedSelection = false
-                                    }
-                                )
-                            }
-                        }
-                        HorizontalDivider()
-                        // Use a fixed height container
-                        Column(
-                            modifier = Modifier
-                                .height(fixedContentHeight) // Fixed height!
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            when (tabIndex) {
-                                0 -> CustomScaleTabContent(
-                                    viewModel,
-                                    onPredefinedSelect = { hasPredefinedSelection = it })
-
-                                1 -> PercentageScaleTabContent(viewModel)
-                            }
-                        }
-
-                    }
-                },
-                confirmButton = {
-                    Button(onClick = {
-                        viewModel.onScaleForList(onScale)
-                    }, enabled = isButtonEnabled) {
-                        Text("Apply")
-                    }
-                },
-                dismissButton = {
-                    Button(onClick = onDismiss) {
-                    }
-                },
-//            properties = PopupProperties(focusable = true)
-            )
+    var isButtonEnabled by remember { mutableStateOf(false) }
+    var hasPredefinedSelection by remember { mutableStateOf(false) }
+    fun updateButtonEnableState() {
+        isButtonEnabled = if (viewModel.mode == "custom") {
+            ((!viewModel.keepAspectRatio &&
+                    viewModel.width.isNotEmpty() && viewModel.height.isNotEmpty())
+                    || (viewModel.keepAspectRatio &&
+                    (viewModel.width.isNotEmpty() || viewModel.height.isNotEmpty())) || hasPredefinedSelection)
+        } else {
+            true
         }
+    }
+
+    LaunchedEffect(
+        viewModel.width,
+        viewModel.height,
+        hasPredefinedSelection,
+        viewModel.keepAspectRatio,
+        viewModel.mode
+    ) {
+        updateButtonEnableState()
+    }
+
+    AlertDialog(
+        onDismissRequest = { onDismiss() }, // Dismiss on outside click
+        title = { Text("Scale Image") },
+        modifier = modifier,
+        text = {
+            Column(
+                modifier = Modifier
+                    .wrapContentHeight()
+                    .fillMaxWidth()
+            ) {
+                // Removed TabRow and HorizontalDivider
+                // Added CustomScaleTabContent directly
+                CustomScaleTabContent(
+                    viewModel,
+                    onPredefinedSelect = { hasPredefinedSelection = it },
+                )
+
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val scaleParam  =  viewModel.onScaleForList()
+                    onScale(scaleParam)
+                },
+                enabled = isButtonEnabled
+            ) {
+                Text("Apply")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 
 }
 
@@ -147,10 +111,12 @@ fun ScaleImagePopup(
 fun CustomScaleTabContent(viewModel: ScaleImageViewModel, onPredefinedSelect: (Boolean) -> Unit) {
     var isDropdownExpanded by remember { mutableStateOf(false) }
     val maxChar = 4
+
     Column(Modifier.padding(16.dp)) {
         // Dropdown for Predefined Dimensions
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
+
                 value = viewModel.selectedPredefinedDimension.let {
                     if (it.width == -1 && it.height == -1) {
                         "Select"
@@ -162,9 +128,9 @@ fun CustomScaleTabContent(viewModel: ScaleImageViewModel, onPredefinedSelect: (B
 
                 },
                 readOnly = true,
-                label = { Text("Select Dimension") },
+                label = { Text("Select Dimension", style = MyTypography.titleMedium) },
                 trailingIcon = {
-                    IconButton(onClick = { isDropdownExpanded = true }) {
+                    IconButton( onClick = { isDropdownExpanded = true }) {
                         Icon(
                             painterResource(id = R.drawable.ic_compress_24dp),
                             contentDescription = "Dropdown"
@@ -178,7 +144,7 @@ fun CustomScaleTabContent(viewModel: ScaleImageViewModel, onPredefinedSelect: (B
                 expanded = isDropdownExpanded,
                 onDismissRequest = { isDropdownExpanded = false }) {
                 DropdownMenuItem(
-                    text = { Text("Select") },
+                    text = { Text("Select", style = MyTypography.titleMedium) },
                     onClick = {
                         viewModel.resetSelectedPredefinedDimension()
                         onPredefinedSelect(false)
@@ -186,7 +152,8 @@ fun CustomScaleTabContent(viewModel: ScaleImageViewModel, onPredefinedSelect: (B
                     })
                 viewModel.predefinedDimensions.forEachIndexed { index, dimension ->
                     DropdownMenuItem(
-                        text = { Text(dimension.toString()) },
+                        text = { Text(dimension.toString(),
+                            style = MyTypography.bodyMedium) },
                         onClick = {
                             viewModel.selectPredefinedDimension(dimension, index)
                             onPredefinedSelect(true)
@@ -205,19 +172,20 @@ fun CustomScaleTabContent(viewModel: ScaleImageViewModel, onPredefinedSelect: (B
 
                 value = viewModel.width,
                 onValueChange = {
-                    if(it.length<=maxChar) {
+                    if (it.length <= maxChar) {
                         viewModel.updateWidth(it)
                         viewModel.resetSelectedPredefinedDimension()
                         onPredefinedSelect(false)
                         isDropdownExpanded = false
                     }
                 },
-                label = { Text("Width") },
+                label = { Text("Width",style = MyTypography.titleMedium) },
                 modifier = Modifier.weight(1f)
             )
             Spacer(modifier = Modifier.width(8.dp))
             OutlinedTextField(
                 value = viewModel.height,
+
                 onValueChange = {
                     if (it.length <= maxChar) {
                         viewModel.updateHeight(it)
@@ -226,7 +194,7 @@ fun CustomScaleTabContent(viewModel: ScaleImageViewModel, onPredefinedSelect: (B
                         isDropdownExpanded = false
                     }
                 },
-                label = { Text("Height") },
+                label = { Text("Height",  style = MyTypography.titleMedium) },
                 modifier = Modifier.weight(1f)
             )
         }
@@ -247,23 +215,12 @@ fun CustomScaleTabContent(viewModel: ScaleImageViewModel, onPredefinedSelect: (B
     }
 }
 
+@Preview
 @Composable
-fun PercentageScaleTabContent(viewModel: ScaleImageViewModel) {
-    val animatedAlpha by animateFloatAsState(
-        targetValue = viewModel.percentage,
-        label = "alpha"
-    )
-    Column(Modifier.padding(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = "Percentage: ${viewModel.percentage.roundToInt()}%")
-        }
-        Slider(
-            value = viewModel.percentage,
-            onValueChange = { viewModel.updatePercentage(it) },
-            valueRange = 1f..200f,
-            steps = 199,
+fun CustomScaleTabContentPreview(){
+    val viewModel = ScaleImageViewModel()
+    CustomScaleTabContent(viewModel) {
 
-        )
     }
 }
 
@@ -272,11 +229,12 @@ fun PercentageScaleTabContent(viewModel: ScaleImageViewModel) {
 fun ScaleImagePopupPreview() {
     var showDialog by remember { mutableStateOf(true) }
     var onDismiss by remember { mutableStateOf({}) }
+    val mediaRepository = MediaRepositoryImpl(LocalContext.current)
+    val mediaHandleUseCase = MediaHandleUseCase(mediaRepository)
+    val homeScreenViewModel = HomeScreenViewModel(mediaHandleUseCase)
     val originalDimensions = listOf(Pair(1000, 2000))
     ScaleImagePopup(
-        showDialog,
         onDismiss,
-        originalDimensions,
         viewModel = ScaleImageViewModel(),
         onScale = {
 

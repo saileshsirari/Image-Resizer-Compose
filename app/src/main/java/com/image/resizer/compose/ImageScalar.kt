@@ -1,104 +1,126 @@
 package com.image.resizer.compose
 
-import android.R.attr.height
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.os.Environment
-import android.util.Log
-import com.image.resizer.compose.mediaApi.getExifOrientation
-import com.image.resizer.compose.mediaApi.rotateBitmap
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileOutputStream
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import androidx.core.graphics.scale
+import com.image.resizer.compose.mediaApi.getExifOrientation
+import io.ktor.http.Url
 
-class ImageScalar(private val context: Context) {
+const val TARGET_PERCENTAGE = 100
 
-    companion object {
-        private const val TAG = "ImageScaler"
-        private const val TARGET_FILE_SIZE_KB = 100
+suspend fun compressImageToTargetSize(
+    context: Context,
+    imageItem: ImageItem,
+    percentOriginal: Int = TARGET_PERCENTAGE
+): ImageItem {
+    checkNotNull(imageItem.originalImageDimension == null) {
+        "originalImageDimension is null in compressImageToTargetSize"
     }
 
-    suspend fun compressImagesToTargetSize(context: Context, imageItems: List<ImageItem>, percentOriginal:Int = TARGET_FILE_SIZE_KB): List<ImageItem?> =
-        withContext(Dispatchers.IO) {
-            val compressedImageUris = mutableListOf<ImageItem?>()
-            imageItems.forEach { imageItem ->
-                val imageUri = imageItem.uri
-                var bitmap = loadBitmapFromUri(imageUri) ?: return@forEach
-                // Get EXIF orientation
-                val exifOrientation = getExifOrientation(context,imageUri)
-               // bitmap = rotateBitmap(bitmap, exifOrientation)
-                imageItem.originalBitmap =  bitmap.config?.let { bitmap.copy(it, true)}
-                var currentFileSizeBytes = getFileSize(imageUri)
-                var scaleFactor = 1.0f
-                val desiredSize = (currentFileSizeBytes *(percentOriginal.toFloat()/100f)).toLong()
-                while (currentFileSizeBytes > desiredSize) {
-                    scaleFactor *= 0.9f // Decrease scale factor
-                    val newWidth = (bitmap.width * scaleFactor).toInt()
-                    val newHeight = (bitmap.height * scaleFactor).toInt()
-                    if(newWidth <=10 && newHeight <=10){
-                        break
-                    }
-                    try {
-                        val scaledBitmap = bitmap.scale(newWidth, newHeight)
+    checkNotNull(imageItem.originalFileSize == null) {
+        "originalFileSize is null in compressImageToTargetSize"
+    }
+    check((imageItem.originalImageDimension?.first ?: 0) > 10) {
+        "originalImageDimension is less than 10 in compressImageToTargetSize"
+    }
+    check((imageItem.originalImageDimension?.second ?: 0) > 10) {
+        "originalImageDimension is less than 10 in compressImageToTargetSize"
+    }
+    val targetFileSize = (imageItem.originalFileSize?:1).toFloat() * percentOriginal *.01f
+    val orgWidth = imageItem.originalImageDimension?.first ?: 10
+    val orgHeight = imageItem.originalImageDimension?.second ?: 10
+    val scaledBitmap: Bitmap? = BitmapScaler.decodeSampledBitmapToTargetSize(
+        context = context,
+        uri =  imageItem.uri,
+        targetFileSize =  targetFileSize.toInt(),
+        originalWidth = orgWidth,
+        originalHeight = orgHeight,
+        originalFileSize = (imageItem.originalFileSize?:1).toInt(),
+        estimatedBitmapSize = 1,
+        imageItem
+    )
+    val exif = getExifOrientation(context, imageItem.uri)
+    scaledBitmap?.let { scaledBitmap ->
+        val scaledImageItem = imageItem.saveBitmapToTempAndGetUri(context, scaledBitmap)
+        val outputFile = File(context.cacheDir, "${imageItem.imageName}")
+        ExifHandler.setExifDataAfterScaling(
+            context = context,
+            originalImageUri = imageItem.uri,
+            scaledBitmap = scaledBitmap,
+            outputFile = outputFile,
+            orientation = exif
+        )
+        scaledBitmap.recycle()
+        return scaledImageItem
+    }
+    return imageItem
+}
 
-                        // Update file size after scaling
-                        val tempFile = createTempFile(context)
-                        scaledBitmap.compress(
-                            Bitmap.CompressFormat.JPEG,
-                            100,
-                            FileOutputStream(tempFile)
-                        )
-                        currentFileSizeBytes = (tempFile.length()).toLong()
-                        bitmap = scaledBitmap // Update bitmap for next iteration
-                        imageItem.scaledFileSize = currentFileSizeBytes
-                    }catch (e: Exception){
-                        Log.e(TAG, "Error scaling image: $imageUri", e)
-                        break
-                    }
-                }
-             //   bitmap = rotateBitmap(bitmap, exifOrientation)
-                // Save the scaled bitmap and add its Uri to the list
-                imageItem.scaledBitmap = bitmap
-              //  val savedUri = saveImageToGallery(bitmap)
-                compressedImageUris.add(imageItem)
-            }
-            return@withContext compressedImageUris
+fun ImageItem.scaleImage(
+    scaleParams: ScaleParams,
+    context: Context,
+): ImageItem {
+    val imageItem = this
+    val scaledWidth =
+        scaleParams.newWidth
+    val scaledHeight =
+        scaleParams.newHeight
+
+    checkNotNull(originalImageDimension) {
+        "originalImageDimension is null in scaleImage"
+    }
+
+    val width = originalImageDimension?.first ?: run {
+        log("not able to load dimen")
+        1
+    }
+    val height = originalImageDimension?.second ?: 1
+
+
+    val exif = getExifOrientation(context, imageItem.uri)
+    if (scaleParams.scaleFactor != null) {
+        val newWidth = (width * scaleParams.scaleFactor).toInt()
+        val newHeight = (height * scaleParams.scaleFactor).toInt()
+        scaledImageDimension = Pair(newWidth, newHeight)
+    } else if (scaleParams.keepAspectRatio) {
+        val aspect = width.toFloat() / height.toFloat()
+        if (scaledWidth != null) {
+            val newHeight = (scaledWidth / aspect).toInt()
+            scaledImageDimension = Pair(scaledWidth, newHeight)
+        } else if (scaledHeight != null) {
+            val newWidth = (scaledHeight * aspect).toInt()
+            scaledImageDimension = Pair(newWidth, scaledHeight)
         }
-
-    private fun loadBitmapFromUri(imageUri: Uri): Bitmap? {
-        return try {
-            val inputStream = context.contentResolver.openInputStream(imageUri)
-            BitmapFactory.decodeStream(inputStream)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error loading bitmap from URI: $imageUri", e)
-            null
+    } else if (scaledWidth != null && scaledHeight != null) {
+        scaledImageDimension = Pair(scaledWidth, scaledHeight)
+    }
+    scaledImageDimension?.let { scaledImageDimension ->
+        val scaledBitmap: Bitmap? = BitmapScaler.scaleBitmapFromUri(
+            context,
+            imageItem.uri,
+            scaledImageDimension.first.toFloat(),
+            scaledImageDimension.second.toFloat(),
+            originalWidth = width.toFloat(),
+            originalHeight = height.toFloat()
+        )
+        scaledBitmap?.let {
+            val scaledImageItem = imageItem.saveBitmapToTempAndGetUri(context, scaledBitmap)
+            val outputFile = File(context.cacheDir, "${imageItem.imageName}")
+            ExifHandler.setExifDataAfterScaling(
+                context = context,
+                originalImageUri = imageItem.uri,
+                scaledBitmap = scaledBitmap,
+                outputFile = outputFile,
+                orientation = exif
+            )
+            scaledBitmap.recycle()
+            return scaledImageItem
         }
     }
-
-    private fun getFileSize(imageUri: Uri): Long {
-        return try {
-            val parcelFileDescriptor = context.contentResolver.openFileDescriptor(imageUri, "r")
-            val size = parcelFileDescriptor?.statSize ?: 0
-            parcelFileDescriptor?.close()
-            size
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting file size for URI: $imageUri", e)
-            0
-        }
-    }
-
-    private fun createTempFile(context: Context): File {
-        val timeStamp: String =
-            SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val storageDir: File? = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-        return File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir)
-    }
+    return imageItem
 
 }
+

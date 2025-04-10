@@ -8,7 +8,7 @@ package com.image.resizer.compose.mediaApi
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import com.image.resizer.compose.R
+import apps.sai.com.imageresizer.R
 
 fun Context.launchMap(lat: Double, lang: Double) {
     startActivity(

@@ -1,6 +1,5 @@
 package com.image.resizer.compose.mediaApi
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -16,10 +15,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.unit.dp
+import com.google.common.math.LinearTransformation.horizontal
 import com.image.resizer.compose.CompressState
 import com.image.resizer.compose.CropState
 import com.image.resizer.compose.HomeScreenViewModel
 import com.image.resizer.compose.ScaleState
+import com.image.resizer.compose.mediaApi.EditorItems.*
 
 @Composable
 fun EditorSelector(
@@ -31,6 +32,7 @@ fun EditorSelector(
     val cropState by homeScreenViewModel.cropState.collectAsState()
     val compressState by homeScreenViewModel.compressState.collectAsState()
     val scaleState by homeScreenViewModel.scaleState.collectAsState()
+    val selectedImageItems by homeScreenViewModel.selectedImageItems.collectAsState()
 
     val imagesTransformed by remember {
         derivedStateOf {
@@ -39,7 +41,10 @@ fun EditorSelector(
         }
     }
     val padding = remember(isSupportingPanel) {
-        if (isSupportingPanel) PaddingValues(0.dp) else PaddingValues(horizontal = 16.dp, vertical = 2.dp)
+        if (isSupportingPanel) PaddingValues(0.dp) else PaddingValues(
+            horizontal = 16.dp,
+            vertical = 2.dp
+        )
     }
 
     SupportiveLazyLayout(
@@ -58,27 +63,21 @@ fun EditorSelector(
             items = EditorItems.entries,
             key = { _, it -> it.name }
         ) { index, editorItem ->
-            if(editorItem == EditorItems.Undo || editorItem == EditorItems.Replace
-                || editorItem == EditorItems.Save){
-                EditorItem(
-                    enabled =   imagesTransformed,
-                    imageVector = editorItem.icon,
-                    title = editorItem.translatedName,
-                    horizontal = isSupportingPanel,
-                    onItemClick = {
-                        onItemClick(editorItem)
+            if (editorItem == Back || editorItem == Replace
+                || editorItem == Save
+            ) {
+                if (imagesTransformed) {
+                    newEditorItem(editorItem, isSupportingPanel, onItemClick)
+                }
+            } else {
+                if (editorItem == Crop  && !imagesTransformed) {
+                    if (selectedImageItems.size == 1) {
+                        newEditorItem(editorItem, isSupportingPanel, onItemClick)
                     }
-                )
-            }else {
-                EditorItem(
-                    enabled =   !imagesTransformed,
-                    imageVector = editorItem.icon,
-                    title = editorItem.translatedName,
-                    horizontal = isSupportingPanel,
-                    onItemClick = {
-                        onItemClick(editorItem)
+                } else
+                    if (!imagesTransformed) {
+                        newEditorItem(editorItem, isSupportingPanel, onItemClick)
                     }
-                )
             }
 
             if (isSupportingPanel && index < EditorItems.entries.size - 1) {
@@ -86,4 +85,20 @@ fun EditorSelector(
             }
         }
     }
+}
+
+@Composable
+private fun newEditorItem(
+    editorItem: EditorItems,
+    isSupportingPanel: Boolean,
+    onItemClick: (EditorItems) -> Unit
+) {
+    EditorItem(
+        imageVector = editorItem.icon,
+        title = editorItem.translatedName,
+        horizontal = isSupportingPanel,
+        onItemClick = {
+            onItemClick(editorItem)
+        }
+    )
 }

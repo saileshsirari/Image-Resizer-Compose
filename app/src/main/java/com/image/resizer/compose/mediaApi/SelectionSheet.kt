@@ -6,7 +6,6 @@
 package com.image.resizer.compose.mediaApi
 
 import android.app.Activity
-import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -31,11 +30,8 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.DriveFileMove
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.CopyAll
 import androidx.compose.material.icons.outlined.DeleteOutline
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.FileOpen
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.IconButton
@@ -66,10 +62,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.image.resizer.compose.R
+import apps.sai.com.imageresizer.R
+import com.image.resizer.compose.ImageItem
 import com.image.resizer.compose.mediaApi.model.AlbumState
 import com.image.resizer.compose.mediaApi.model.Media
-import com.image.resizer.compose.mediaApi.util.getUri
+import com.image.resizer.compose.toImageItem
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
@@ -81,7 +78,8 @@ fun <T: Media> SelectionSheet(
     albumsState: State<AlbumState>,
     handler: MediaHandleUseCase,
     activity: Activity,
-    onCompressClick:(List<Uri>)-> Unit
+    timelineScreenType: TimelineScreenType ,
+    onOpenClick:(List<ImageItem>)-> Unit
 
 ) {
     fun clearSelection() {
@@ -93,8 +91,6 @@ fun <T: Media> SelectionSheet(
     val scope = rememberCoroutineScope()
     var shouldMoveToTrash by rememberSaveable { mutableStateOf(true) }
     val trashSheetState = rememberAppBottomSheetState()
-    val moveSheetState = rememberAppBottomSheetState()
-    val copySheetState = rememberAppBottomSheetState()
     val result = rememberActivityResult(
         onResultOk = {
             clearSelection()
@@ -176,16 +172,20 @@ fun <T: Media> SelectionSheet(
                 ) {
                     context.shareMedia(selectedMedia)
                 }
-                SelectionBarColumn(
-                    imageVector = Icons.Outlined.FileOpen,
-                    tabletMode = tabletMode,
-                    title = stringResource(R.string.open)
-                ) {
-                    scope.launch {
-                        val uriList = selectedMedia.map{ it }
-                        onCompressClick(uriList.map { it.getUri() })
-                    }
+                if(timelineScreenType!=TimelineScreenType.MyImages) {
+                    SelectionBarColumn(
+                        imageVector = Icons.Outlined.FileOpen,
+                        tabletMode = tabletMode,
+                        title = stringResource(R.string.open)
+                    ) {
+                        scope.launch {
+                            onOpenClick(selectedMedia.mapNotNull {
+                                (it as? Media.UriMedia)?.toImageItem(
+                                )
+                            })
+                        }
 
+                    }
                 }
                 // Trash Component
                 val trashEnabled by remember { mutableStateOf(true) }
@@ -213,12 +213,11 @@ fun <T: Media> SelectionSheet(
         }
     }
 
-
-    TrashDialog(
+    ModifyDialog(
         appBottomSheetState = trashSheetState,
-        data = selectedMedia,
+        data = selectedMedia as List<Media.UriMedia>,
         action = remember(shouldMoveToTrash) {
-            if (shouldMoveToTrash) TrashDialogAction.TRASH else TrashDialogAction.DELETE
+            if (shouldMoveToTrash) DialogAction.TRASH else DialogAction.DELETE
         },
     ) {
         if (shouldMoveToTrash) {

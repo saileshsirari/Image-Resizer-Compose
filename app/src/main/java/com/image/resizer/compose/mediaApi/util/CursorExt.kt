@@ -6,6 +6,7 @@
 package com.image.resizer.compose.mediaApi.util
 
 import android.database.Cursor
+import android.util.Log.e
 import androidx.core.database.getLongOrNull
 import androidx.core.database.getStringOrNull
 import com.image.resizer.compose.mediaApi.Resource
@@ -18,21 +19,29 @@ fun <T> Cursor?.mapEachRow(
     projection: Array<String>,
     mapping: (Cursor, Array<Int>) -> T,
 ) = this?.use { cursor ->
-    if (!cursor.moveToFirst()) {
-        return@use emptyList<T>()
+    try {
+        if (!cursor.moveToFirst()) {
+            return@use emptyList<T>()
+        }
+
+        val indexCache = projection.map { column ->
+            cursor.getColumnIndexOrThrow(column)
+        }.toTypedArray()
+
+        val data = mutableListOf<T>()
+        do {
+            data.add(mapping(cursor, indexCache))
+        } while (cursor.moveToNext())
+
+        data.toList()
+    }catch (e: Throwable){
+        e.printStackTrace()
+        emptyList<T>()
+    }finally {
+        cursor.close()
     }
 
-    val indexCache = projection.map { column ->
-        cursor.getColumnIndexOrThrow(column)
-    }.toTypedArray()
-
-    val data = mutableListOf<T>()
-    do {
-        data.add(mapping(cursor, indexCache))
-    } while (cursor.moveToNext())
-
-    data.toList()
-} ?: emptyList()
+} ?: emptyList<T>()
 
 fun Cursor?.tryGetString(columnIndex: Int, fallback: String? = null): String? {
     return this?.getStringOrNull(columnIndex) ?: fallback

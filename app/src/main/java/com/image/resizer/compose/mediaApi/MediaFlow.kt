@@ -26,6 +26,8 @@ import kotlinx.coroutines.flow.Flow
 import com.image.resizer.compose.mediaApi.util.mapEachRow
 import com.image.resizer.compose.mediaApi.util.tryGetLong
 import com.image.resizer.compose.mediaApi.util.tryGetString
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
 
 /**
  * Media flow
@@ -124,7 +126,7 @@ class MediaFlow(
         )
     }
 
-    override fun flowData() = flowCursor().mapEachRow  (MediaQuery.MediaProjection) { it, indexCache ->
+    override fun flowData() = flowCursor().flowOn(Dispatchers.IO).mapEachRow  (MediaQuery.MediaProjection) { it, indexCache ->
         var i = 0
 
         val id = it.getLong(indexCache[i++])

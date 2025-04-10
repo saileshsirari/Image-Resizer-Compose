@@ -10,6 +10,7 @@ import android.net.Uri
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
 import com.image.resizer.compose.mediaApi.model.Media
+import com.image.resizer.compose.mediaApi.overrideImage
 import com.image.resizer.compose.mediaApi.util.mediaPair
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -51,18 +52,32 @@ class MediaHandleUseCase(
 
 
     fun saveImage(
+        originalUri: Uri,
         bitmap: Bitmap,
         format: Bitmap.CompressFormat,
         mimeType: String,
         relativePath: String,
         displayName: String
-    ) = repository.saveImage(bitmap, format, mimeType, relativePath, displayName)
+    ) = repository.saveImage(originalUri,bitmap, format, mimeType, relativePath, displayName)
 
     fun overrideImage(
+        originalUri: Uri,
         uri: Uri,
         bitmap: Bitmap,
-        format: Bitmap.CompressFormat
-    ) = repository.overrideImage(uri, bitmap, format,)
-
+        displayName: String,
+        originalRelativePath:String,
+        mimeType: String,
+        format: Bitmap.CompressFormat,
+        timestamp: Long
+    ) = repository.overrideImage(
+        originalUri = originalUri,
+        uri = uri,
+        bitmap = bitmap,
+        displayName = displayName,
+        originalRelativePath = originalRelativePath,
+        mimeType = mimeType,
+        format = format,
+        timestamp = timestamp
+    )
 
 }

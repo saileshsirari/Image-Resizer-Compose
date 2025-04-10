@@ -4,6 +4,7 @@ androidImageCropper = "4.9.1"
 androidImageCropperVersion = "4.6.0"
 composeBomVersion = "2025.02.00"
 datastorePreferences = "1.1.3"
+firebaseBom = "33.11.0"
 kotlin = "2.0.21"
 coreKtx = "1.10.1"
 junit = "4.13.2"
@@ -21,6 +22,9 @@ lifecycleViewmodelCompose = "2.8.7"
 navigationCompose = "2.8.6"
 kotlinxSerializationJson = "1.7.3"
 sketch = "4.0.2"
+workMultiprocess = "2.10.0"
+workRuntimeKtx = "2.10.0"
+workTesting = "2.10.0"
 zoomimageViewSketch = "1.1.1"
 pinchzoomgrid = "0.0.5"
 room = "2.6.1"
@@ -43,6 +47,11 @@ androidx-datastore-preferences = { module = "androidx.datastore:datastore-prefer
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleViewmodelCompose" }
 androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
+androidx-work-multiprocess = { module = "androidx.work:work-multiprocess", version.ref = "workMultiprocess" }
+androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "workRuntimeKtx" }
+androidx-work-testing = { module = "androidx.work:work-testing", version.ref = "workTesting" }
+firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }

@@ -24,7 +24,6 @@ interface MediaRepository {
         allowedMedia: AllowedMedia
     ): Flow<Resource<List<UriMedia>>>
     fun getMediaByType(allowedMedia: AllowedMedia): Flow<Resource<List<UriMedia>>>
-    fun getAlbumsWithType(allowedMedia: AllowedMedia): Flow<Resource<List<Album>>>
     fun getMediaByAlbumId(albumId: Long): Flow<Resource<List<UriMedia>>>
     suspend fun getCategoryForMediaId(mediaId: Long): String?
     fun getMediaListByUris(listOfUris: List<Uri>, reviewMode: Boolean): Flow<Resource<List<UriMedia>>>
@@ -44,6 +43,7 @@ interface MediaRepository {
 
 
     fun saveImage(
+        originalUri: Uri,
         bitmap: Bitmap,
         format: Bitmap.CompressFormat,
         mimeType: String,
@@ -52,9 +52,14 @@ interface MediaRepository {
     ): Uri?
 
     fun overrideImage(
+        originalUri: Uri,
         uri: Uri,
         bitmap: Bitmap,
-        format: Bitmap.CompressFormat
+        displayName: String,
+        originalRelativePath:String,
+        mimeType: String,
+        format: Bitmap.CompressFormat,
+        timestamp: Long
     ): Boolean
 
 }

@@ -1,3 +1,4 @@
+import org.codehaus.groovy.runtime.ArrayTypeUtils.dimension
 import org.gradle.kotlin.dsl.implementation
 import org.jetbrains.kotlin.compose.compiler.gradle.ComposeFeatureFlag
 import java.io.FileInputStream
@@ -9,6 +10,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     id("kotlin-parcelize")
     alias(libs.plugins.kotlinSerialization)
+    id("com.google.gms.google-services")// Add this line
 //    alias(libs.plugins.roomPlugin)
 //    alias(libs.plugins.kspAndroid)
 }
@@ -36,24 +38,32 @@ val allowAllFilesAccess: String
         }
     }
 android {
-    namespace = "com.image.resizer.compose"
+    namespace = "apps.sai.com.imageresizer"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.image.resizer.compose"
+        applicationId = "apps.sai.com.imageresizer"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
-
+        versionCode = 10000010
+        versionName = "2.00"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Add signingConfigs block here
+    signingConfigs {
+        create("release") { // Signing configuration name
+            storeFile = file("/opt/sdk/sai.jks") //path to the .keystore file
+            storePassword = "saisai"
+            keyAlias = "sai"
+            keyPassword = "saisai"
+        }
+    }
     buildTypes {
         debug {
             isMinifyEnabled = false
             isDebuggable = true
-            applicationIdSuffix = ".debug"
+//            applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             manifestPlaceholders["appProvider"] = "com.dot.gallery.debug.media_provider"
             buildConfigField("Boolean", "ALLOW_ALL_FILES_ACCESS", allowAllFilesAccess)
@@ -68,7 +78,8 @@ android {
             manifestPlaceholders += mapOf(
                 "appProvider" to "com.dot.gallery.media_provider"
             )
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             manifestPlaceholders["appProvider"] = "com.dot.staging.debug.media_provider"
             buildConfigField(
                 "String",
@@ -79,6 +90,32 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
+        }
+    }
+    flavorDimensions += "version"
+    productFlavors {
+        create("demo") {
+            dimension = "version"
+            applicationIdSuffix = ".demo"
+            versionNameSuffix = "-free"
+        }
+        create("full") {
+            dimension = "version"
+            applicationIdSuffix = ".full"
+            versionNameSuffix = "-full"
+        }
+    }
+
+    // Define flavor specific resources
+    sourceSets {
+        getByName("demo") {
+            java.srcDirs("src/demo/java")
+            res.srcDirs("src/demo/res")
+        }
+        getByName("full") {
+            java.srcDirs("src/full/java")
+            res.srcDirs("src/full/res")
         }
     }
     compileOptions {
@@ -125,6 +162,9 @@ dependencies {
     implementation(libs.sketch.http.ktor)
     // Subsampling
     implementation(libs.zoomimage.sketch)
+    // Import the Firebase BoM
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.analytics)
     // Pinch to zoom
     implementation(libs.pinchzoomgrid)
     // Composables - Core
@@ -144,7 +184,14 @@ dependencies {
     // Kotlin Extensions and Coroutines support for Room
 //    implementation(libs.room.ktx)
 //    ksp(libs.room.compiler)
+    // Kotlin + coroutines
+    implementation(libs.androidx.work.runtime.ktx)
 
+    // optional - Test helpers
+    androidTestImplementation(libs.androidx.work.testing)
+
+    //optional - Multiprocess support
+    implementation(libs.androidx.work.multiprocess)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -5,6 +5,7 @@
 
 package com.image.resizer.compose.mediaApi.model
 
+import android.R.attr.contentDescription
 import android.widget.CheckBox
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -12,6 +13,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
@@ -49,6 +51,7 @@ import com.image.resizer.compose.mediaApi.util.getUri
 import com.image.resizer.compose.mediaApi.util.isFavorite
 import com.image.resizer.compose.mediaApi.util.isVideo
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -59,8 +62,10 @@ fun <T: Media> MediaImage(
     selectionState: MutableState<Boolean>,
     selectedMedia: SnapshotStateList<T>,
     canClick: Boolean,
+    id:Long ?= null,
     onItemClick: (T) -> Unit,
     onItemLongClick: (T) -> Unit,
+
 ) {
     var isSelected by remember { mutableStateOf(false) }
     LaunchedEffect(selectionState.value, selectedMedia.size) {
@@ -70,6 +75,22 @@ fun <T: Media> MediaImage(
             }
         }
     }
+     if(id ==0L) {
+         LaunchedEffect(Unit) {
+             if (selectedMedia.isEmpty()) {
+                 onItemClick(media)
+                 if (selectionState.value) {
+                     isSelected = !isSelected
+                 }
+                 delay(100)
+                 onItemClick(media)
+                 if (selectionState.value) {
+                     isSelected = !isSelected
+                 }
+
+             }
+         }
+     }
     val selectedSize by animateDpAsState(
         if (isSelected) 12.dp else 0.dp, label = "selectedSize"
     )
@@ -123,23 +144,14 @@ fun <T: Media> MediaImage(
                     color = strokeColor
                 )
         ) {
-            AsyncImage(
+            coil.compose.AsyncImage(
                 modifier = Modifier
                     .fillMaxSize(),
-                request = ComposableImageRequest(media.getUri().toString()) {
-                    scale(Scale.CENTER_CROP)
-                    setExtra(
-                        key = "mediaKey",
-                        value = media.toString(),
-                    )
-                    setExtra(
-                        key = "realMimeType",
-                        value = media.mimeType,
-                    )
-                },
+                model =(media.getUri().toString()),
                 contentDescription = media.label,
                 contentScale = ContentScale.Crop,
             )
+
         }
 
 

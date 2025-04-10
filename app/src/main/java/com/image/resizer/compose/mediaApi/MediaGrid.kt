@@ -33,7 +33,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.dokar.pinchzoomgrid.PinchZoomGridScope
-import com.image.resizer.compose.R
+import apps.sai.com.imageresizer.R
 import com.image.resizer.compose.mediaApi.model.Media
 import com.image.resizer.compose.mediaApi.model.MediaImage
 import com.image.resizer.compose.mediaApi.model.MediaItem
@@ -289,6 +289,7 @@ private fun <T: Media> PinchZoomGridScope.MediaGridContentWithHeaders(
                             selectionState = selectionState,
                             selectedMedia = selectedMedia,
                             canClick = canScroll,
+                            id = mediaState.value.media.indexOf(it.media).toLong(),
                             onItemClick = {
                                 if (selectionState.value && allowSelection) {
                                     feedbackManager.vibrate()
@@ -341,7 +342,7 @@ private fun <T: Media> PinchZoomGridScope.MediaGridContent(
 
         itemsIndexed(
             items = mediaState.value.media,
-            key = { _, item -> item.toString() },
+            key = { _, item -> item.key },
             contentType = { _, item -> item.isImage }
         ) { index, media ->
             with(sharedTransitionScope) {
@@ -354,16 +355,15 @@ private fun <T: Media> PinchZoomGridScope.MediaGridContent(
                         .animateItem(
                             fadeInSpec = null
                         )
-                        .pinchItem(key = media.toString()),
+                        .pinchItem(key = media.key),
                     media = media,
+                    id = index.toLong(),
                     selectionState = selectionState,
                     selectedMedia = selectedMedia,
                     canClick = canScroll,
                     onItemClick = {
-                        if (selectionState.value && allowSelection) {
-                            feedbackManager.vibrate()
-                            toggleSelection(index)
-                        } else onMediaClick(it)
+                        feedbackManager.vibrate()
+                        toggleSelection(index)
                     },
                     onItemLongClick = {
                         if (allowSelection) {

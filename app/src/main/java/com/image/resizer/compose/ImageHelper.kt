@@ -28,47 +28,6 @@ object ImageHelper {
         return Pair("", 0L)
     }
 
-    internal fun getRealCompressedImageUris(context: Context, indexesToLoad: List<Int>): List<ImageItem?> {
-        val compressedImageUris = mutableListOf<ImageItem>()
-        if (indexesToLoad.isEmpty()) return compressedImageUris
-
-        val projection = arrayOf(
-            MediaStore.Images.Media._ID,
-            MediaStore.Images.Media.DISPLAY_NAME,
-            MediaStore.Images.Media.SIZE,
-            MediaStore.Images.Media.RELATIVE_PATH,
-        )
-        val  customDirectoryName: String="ImageResizer"
-        val selection = "${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?"
-        val selectionArgs = arrayOf("%$CUSTOM_FOLDER_NAME%" )
-//    val selectionArgs = arrayOf("%$customDirectoryName/%")
-        val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
-        val queryUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-        val contentResolver = context.contentResolver
-        val cursor = contentResolver.query(
-            queryUri,
-            projection,
-            selection,
-            selectionArgs,
-            sortOrder
-        )
-        cursor?.use {
-            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-            val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME)
-            val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.SIZE)
-            val totalCount = cursor.count
-            if (totalCount == 0) {
-                return emptyList()
-            }
-            while (cursor.moveToNext()) {
-                val id = cursor.getLong(idColumn)
-                val contentUri = ContentUris.withAppendedId(queryUri, id)
-                val imageItem = ImageItem(uri = contentUri, imageName = cursor.getString(nameColumn), fileSize = cursor.getLong(sizeColumn))
-                compressedImageUris.add(imageItem)
-            }
-        }
-        return compressedImageUris
-    }
 
     fun getImagesFromCustomFolder(context: Context, folderName: String): List<Uri> {
         val imageUris = mutableListOf<Uri>()
