@@ -29,6 +29,7 @@ import kotlinx.serialization.Serializable
 enum class EditorItems : Parcelable {
     Crop,
     Compress,
+    Scale,
     Save,
     Replace,
     Back;
@@ -38,6 +39,7 @@ enum class EditorItems : Parcelable {
         get() = when (this) {
             Crop -> stringResource(R.string.crop)
             Compress -> stringResource(R.string.compress)
+            Scale -> stringResource(R.string.scale)
             Back -> stringResource(R.string.back_cd)
             Save -> stringResource(R.string.save)
             Replace ->stringResource(R.string.replace)
@@ -48,6 +50,7 @@ enum class EditorItems : Parcelable {
         get() = when (this) {
             Crop -> Icons.Outlined.Crop
             Compress -> Icons.Outlined.Compress
+            Scale -> Icons.Outlined.Scale
             Back -> Icons.AutoMirrored.Outlined.ArrowBack
             Replace -> Icons.Outlined.Recycling
             Save -> Icons.Outlined.Save

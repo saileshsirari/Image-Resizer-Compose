@@ -25,6 +25,7 @@ fun EditorNavigator(
         homeScreenViewModel = homeScreenViewModel,
         onItemClick = { editorItem ->
             val dest =  when (editorItem) {
+                EditorItems.Scale -> EditorDestination.Scale
                 EditorItems.Crop -> EditorDestination.Crop
                 EditorItems.Compress -> EditorDestination.Compress
                 EditorItems.Back -> EditorDestination.Undo
