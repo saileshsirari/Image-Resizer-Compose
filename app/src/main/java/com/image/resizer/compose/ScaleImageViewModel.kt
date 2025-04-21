@@ -43,12 +43,29 @@ class ScaleImageViewModel : ViewModel() {
         private set
     var aspectRatio = mutableListOf<Float>()
         private set
+
     val predefinedDimensions = listOf(
-        PredefinedDimension(320, 240),
-        PredefinedDimension(640, 480),
-        PredefinedDimension(800, 600),
-        PredefinedDimension(1024, 768),
-        PredefinedDimension(1280, 1024)
+        PredefinedDimension(144, 176),
+        PredefinedDimension(240, 320),
+        PredefinedDimension(288, 352),
+        PredefinedDimension(480, 640),
+        PredefinedDimension(480, 720),
+        PredefinedDimension(600, 800),
+        PredefinedDimension(720, 1280),
+        PredefinedDimension(900, 1600),
+        PredefinedDimension(1080, 1920),
+        PredefinedDimension(1170, 2080),
+        PredefinedDimension(1200, 1600),
+        PredefinedDimension(1458, 2592),
+        PredefinedDimension(1536, 2048),
+        PredefinedDimension(1560, 2080),
+        PredefinedDimension(1836, 3264),
+        PredefinedDimension(1944, 2592),
+        PredefinedDimension(2052, 3648),
+        PredefinedDimension(2304, 4096),
+        PredefinedDimension(2448, 3264),
+        PredefinedDimension(2736, 3648),
+        PredefinedDimension(3072, 4096)
     )
     var selectedPredefinedDimension by mutableStateOf<PredefinedDimension>(
         PredefinedDimension(
