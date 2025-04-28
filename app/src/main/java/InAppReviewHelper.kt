@@ -60,13 +60,14 @@ object InAppReviewHelper {
         return diffInDays >= REVIEW_REQUEST_INTERVAL_DAYS
     }
 
-    suspend fun requestReview(context: Context) {
+    suspend fun requestReview(context: Context): Boolean {
         if (shouldRequestReview(context)) {
             val reviewManager: ReviewManager = ReviewManagerFactory.create(context)
             try {
                 val reviewInfo = reviewManager.requestReview()
                 if (context is Activity) {
                     reviewManager.launchReview(context, reviewInfo)
+                    return  true
                     log(tag = TAG, message =  "Review Launched")
                 } else {
                     log(tag = TAG, message =  "Can't launch review because context is not Activity")
@@ -78,6 +79,8 @@ object InAppReviewHelper {
             }
         } else {
             log(tag = TAG, message = "Can't request a review")
+
         }
+       return false
     }
 }

@@ -99,7 +99,9 @@ import com.image.resizer.compose.mediaApi.util.Constants.Animation.enterAnimatio
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.exitAnimation
 import com.image.resizer.compose.mediaApi.util.rememberActivityResult
 import com.image.resizer.compose.mediaApi.util.writeRequests
+import com.image.resizer.utils.AnalyticsHelper
 import com.image.resizer.utils.InAppReviewHelper
+import com.image.resizer.utils.logEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -308,8 +310,15 @@ fun <T : Media> HomeScreen(
                                                 context = context,
                                                 onSuccess = {
                                                     homeScreenViewModel.showToast(it)
+                                                    scope.logEvent {
+                                                        AnalyticsHelper.logImageSaved()
+                                                    }
                                                     scope.launch {
-                                                        InAppReviewHelper.requestReview(context)
+                                                        if (InAppReviewHelper.requestReview(context)) {
+                                                            scope.logEvent {
+                                                                AnalyticsHelper.logImageSaved()
+                                                            }
+                                                        }
                                                     }
                                                 },
                                                 onFail = {
@@ -329,6 +338,9 @@ fun <T : Media> HomeScreen(
                                                 homeScreenViewModel.saveOverride(
                                                     context = context,
                                                     onSuccess = {
+                                                        scope.logEvent {
+                                                            AnalyticsHelper.logImageReplaced()
+                                                        }
                                                         homeScreenViewModel.showToast(it)
                                                         homeScreenViewModel.showSelectedImages()
                                                     },
