@@ -682,6 +682,9 @@ private fun HandleCompressState(
     when (currentCompressState) {
         is CompressState.Success -> {
             if (selectedImageItems.isNotEmpty()) {
+                scope.logEvent {
+                    AnalyticsHelper.logImageCompressed()
+                }
                 ScaledImagesGrid(
                     modifier = Modifier
                         .fillMaxSize()
@@ -733,6 +736,7 @@ private fun HandleGalleryState(
     selectedImageItems: List<ImageItem>,
     homeScreenViewModel: HomeScreenViewModel
 ) {
+    val scope = rememberCoroutineScope { Dispatchers.IO }
     val currentGalleryState = galleryState
     when (currentGalleryState) {
         is GalleryState.Success -> {
@@ -741,6 +745,9 @@ private fun HandleGalleryState(
                 enter = fadeIn(animationSpec = tween(durationMillis = 3000)),
                 exit = fadeOut(animationSpec = tween(durationMillis = 3000))
             ) {
+                scope.logEvent {
+                    AnalyticsHelper.logImagesSelected(selectedImageItems.size)
+                }
                 GalleryImagesComponent(selectedImageItems) {
                     homeScreenViewModel.onImageItemClicked(it) {
                         navController.navigate(it) {

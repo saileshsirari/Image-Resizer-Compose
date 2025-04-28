@@ -4,6 +4,7 @@ import android.os.Bundle
 import com.google.firebase.analytics.FirebaseAnalytics
 import android.content.Context
 import android.util.StatsLog.logEvent
+import androidx.core.os.bundleOf
 import com.image.resizer.compose.log
 import com.image.resizer.utils.AnalyticsHelper.EVENT_IMAGE_SAVED
 import kotlinx.coroutines.CoroutineScope
@@ -24,14 +25,19 @@ object AnalyticsHelper {
     private const val EVENT_IMAGE_COMPRESSED = "image_compressed"
     private const val EVENT_IMAGE_SCALED = "image_scaled"
     private const val EVENT_IMAGE_SAVED = "image_scaled"
+    private const val EVENT_IMAGES_SELECTED = "images_selected"
 
 
     private lateinit var analytics: FirebaseAnalytics
+
 
     fun initialize(context: Context) {
         analytics = FirebaseAnalytics.getInstance(context)
     }
 
+     fun logImagesSelected(count: Int) {
+         logEvent(EVENT_IMAGES_SELECTED, bundleOf(FirebaseAnalytics.Param.VALUE to count))
+     }
     fun logReviewShown() {
         logEvent(EVENT_REVIEW_SHOWN)
     }
