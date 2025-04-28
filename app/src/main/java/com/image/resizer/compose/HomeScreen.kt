@@ -99,6 +99,7 @@ import com.image.resizer.compose.mediaApi.util.Constants.Animation.enterAnimatio
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.exitAnimation
 import com.image.resizer.compose.mediaApi.util.rememberActivityResult
 import com.image.resizer.compose.mediaApi.util.writeRequests
+import com.image.resizer.utils.InAppReviewHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -307,6 +308,9 @@ fun <T : Media> HomeScreen(
                                                 context = context,
                                                 onSuccess = {
                                                     homeScreenViewModel.showToast(it)
+                                                    scope.launch {
+                                                        InAppReviewHelper.requestReview(context)
+                                                    }
                                                 },
                                                 onFail = {
                                                     homeScreenViewModel.showToast(it)

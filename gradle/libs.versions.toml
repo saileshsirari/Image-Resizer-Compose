@@ -23,6 +23,7 @@ accompanistPermissions = "0.37.0"
 lifecycleViewmodelCompose = "2.8.7"
 navigationCompose = "2.8.6"
 kotlinxSerializationJson = "1.7.3"
+reviewKtx = "2.0.2"
 sketch = "4.0.2"
 striktCore = "0.34.0"
 striktJunit5 = "0.3.1"
@@ -76,6 +77,7 @@ junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", vers
 lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtxVersion" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coilCompose" }
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanistPermissions" }
+review-ktx = { module = "com.google.android.play:review-ktx", version.ref = "reviewKtx" }
 strikt-core = { module = "io.strikt:strikt-core", version.ref = "striktCore" }
 strikt-junit5 = { module = "io.strikt:strikt-junit5", version.ref = "striktJunit5" }
 vanniktech-android-image-cropper = { module = "com.vanniktech:android-image-cropper", version.ref = "androidImageCropperVersion" }
