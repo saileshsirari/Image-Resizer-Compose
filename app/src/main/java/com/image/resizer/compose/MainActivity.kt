@@ -36,15 +36,18 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -75,6 +78,14 @@ import com.image.resizer.compose.Screen.ZoomableScreen
 import com.image.resizer.compose.mediaApi.MediaRepository
 import com.image.resizer.compose.mediaApi.TimelineScreenType
 import com.image.resizer.compose.mediaApi.model.Album
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.seconds
 
 // Data class to hold original and compressed image URIs
 data class ImagePair(val originalImageItem: ImageItem, val transFormedImageItem: ImageItem)
@@ -202,6 +213,7 @@ fun MainApp() {
     }
 }
 
+
 @Composable
 fun BottomNavigationBar(navController: NavHostController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -261,7 +273,13 @@ fun Navigation(
     hideTimeline: Boolean,
     innerPadding: PaddingValues
 ) {
+
+
     log("navigation")
+    LaunchedEffect(Unit) {
+
+    }
+
     val albumsState =
         albumsViewModel.albumsFlow.collectAsStateWithLifecycle(context = Dispatchers.IO + exceptionHandler)
 

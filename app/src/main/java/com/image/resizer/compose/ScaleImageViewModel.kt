@@ -1,16 +1,11 @@
 package com.image.resizer.compose
 
-import android.net.Uri
-import android.util.Log.i
-import androidx.activity.result.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import kotlin.math.roundToInt
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.yield
 
 data class ScaleOption(val label: String, val scaleFactor: Float? = null)
 data class PredefinedDimension(val width: Int, val height: Int) {
@@ -102,11 +97,11 @@ class ScaleImageViewModel : ViewModel() {
          }*/
     }
 
-    fun toggleKeepAspectRatio(newKeepAspectRatio: Boolean) {
+    internal  fun toggleKeepAspectRatio(newKeepAspectRatio: Boolean) {
         keepAspectRatio = newKeepAspectRatio
     }
 
-    fun selectPredefinedDimension(dimension: PredefinedDimension, index: Int) {
+    fun selectPredefinedDimension(dimension: PredefinedDimension) {
         selectedPredefinedDimension = dimension
         if (selectedPredefinedDimension.width != -1 && selectedPredefinedDimension.height != -1) {
             //  width = selectedPredefinedDimension.width.toString()
@@ -133,8 +128,9 @@ class ScaleImageViewModel : ViewModel() {
         percentage = newPercentage
     }
 
-
     fun onScaleForList(): ScaleParams? {
+
+
         var result :ScaleParams?=null
 
         if (mode == "custom") {
@@ -150,40 +146,45 @@ class ScaleImageViewModel : ViewModel() {
             }
 
             if (keepAspectRatio) {
-                if (width.isNotEmpty()) {
-                    val newWidth = width.toInt()
-                    result =    ScaleParams(
-                        newWidth,
-                        null,
-                        null,
-                        keepAspectRatio
+                val newWidth = width.toIntOrNull()
+                val newHeight = height.toIntOrNull()
+                return when {
+                    newWidth != null -> ScaleParams(
+                        newWidth = newWidth,
+                        newHeight = null,
+                        scaleFactor = null,
+                        keepAspectRatio = true
                     )
 
-                } else if (height.isNotEmpty()) {
-                    val newHeight = height.toInt()
-                    result =   ScaleParams(
-                        null,
-                        newHeight,
-                        null,
-                        keepAspectRatio
+                    newHeight != null -> ScaleParams(
+                        newWidth = null,
+                        newHeight = newHeight,
+                        scaleFactor = null,
+                        keepAspectRatio = true
                     )
 
+                    else -> null
                 }
             }
             if (!keepAspectRatio && width.isNotEmpty() && height.isNotEmpty()) {
-                val newWidth = width.toInt()
-                val newHeight = height.toInt()
-                result =   ScaleParams(
-                    newWidth,
-                    newHeight,
-                    null,
-                    keepAspectRatio
-                )
+                val newWidth = width.toIntOrNull()
+                val newHeight = height.toIntOrNull()
+
+              return  if (newWidth != null && newHeight != null) {
+                    ScaleParams(
+                        newWidth = newWidth,
+                        newHeight = newHeight,
+                        scaleFactor = null,
+                        keepAspectRatio = false
+                    )
+                } else {
+                    null
+                }
 
             }
 
         } else {
-            result =  ScaleParams(
+           return ScaleParams(
                 null,
                 null,
                 percentage / 100f,
@@ -191,7 +192,7 @@ class ScaleImageViewModel : ViewModel() {
             )
 
         }
-      return  result
+      return  null
     }
 
     fun resetSelectedPredefinedDimension() {

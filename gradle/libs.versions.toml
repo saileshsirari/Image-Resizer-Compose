@@ -4,16 +4,18 @@ androidImageCropper = "4.9.1"
 androidImageCropperVersion = "4.6.0"
 composeBomVersion = "2025.02.00"
 datastorePreferences = "1.1.3"
-firebaseBom = "33.11.0"
+firebaseBom = "33.12.0"
+junitJupiterEngine = "5.12.0"
+junitJupiterEngineVersion = "5.12.0"
 kotlin = "2.0.21"
 coreKtx = "1.10.1"
 junit = "4.13.2"
 junitVersion = "1.1.5"
 espressoCore = "3.5.1"
 lifecycleRuntimeKtx = "2.6.1"
-activityCompose = "1.8.0"
+activityCompose = "1.10.1"
 composeBom = "2024.09.00"
-coreKtxVersion = "1.15.0"
+coreKtxVersion = "1.16.0"
 lifecycleRuntimeKtxVersion = "2.8.7"
 activityComposeVersion = "1.10.0"
 coilCompose = "2.6.0"
@@ -22,6 +24,8 @@ lifecycleViewmodelCompose = "2.8.7"
 navigationCompose = "2.8.6"
 kotlinxSerializationJson = "1.7.3"
 sketch = "4.0.2"
+striktCore = "0.34.0"
+striktJunit5 = "0.3.1"
 workMultiprocess = "2.10.0"
 workRuntimeKtx = "2.10.0"
 workTesting = "2.10.0"
@@ -38,10 +42,10 @@ adaptive = "1.1.0-rc01"
 
 uiTestJunit4 = "1.7.8"
 uiTooling = "1.7.8"
+junitJupiter = "5.12.0"
 
 [libraries]
 android-image-cropper = { module = "com.github.CanHub:Android-Image-Cropper", version.ref = "androidImageCropper" }
-androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-datastore = { module = "androidx.datastore:datastore", version.ref = "datastorePreferences" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePreferences" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleViewmodelCompose" }
@@ -52,6 +56,8 @@ androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version
 androidx-work-testing = { module = "androidx.work:work-testing", version.ref = "workTesting" }
 firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
+firebase-perf = { module = "com.google.firebase:firebase-perf" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -66,10 +72,12 @@ androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-man
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtxVersion" }
+junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junitJupiterEngine" }
 lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtxVersion" }
-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityComposeVersion" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coilCompose" }
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanistPermissions" }
+strikt-core = { module = "io.strikt:strikt-core", version.ref = "striktCore" }
+strikt-junit5 = { module = "io.strikt:strikt-junit5", version.ref = "striktJunit5" }
 vanniktech-android-image-cropper = { module = "com.vanniktech:android-image-cropper", version.ref = "androidImageCropperVersion" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 sketch-http-ktor = { module = "io.github.panpf.sketch4:sketch-http-ktor3", version.ref = "sketch" }
@@ -88,6 +96,7 @@ androidx-adaptive-navigation = { module = "androidx.compose.material3.adaptive:a
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junitJupiter" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
