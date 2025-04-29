@@ -7,12 +7,13 @@ import android.util.StatsLog.logEvent
 import androidx.core.os.bundleOf
 import com.image.resizer.compose.log
 import com.image.resizer.utils.AnalyticsHelper.EVENT_IMAGE_SAVED
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-fun CoroutineScope.logEvent(block: suspend () -> Unit){
-    launch(Dispatchers.IO) {
+fun CoroutineScope.logEvent(dispatcher: CoroutineDispatcher = Dispatchers.IO,block: suspend () -> Unit){
+    launch(dispatcher) {
         block()
         log(tag = AnalyticsHelper.TAG, message = "$block")
     }

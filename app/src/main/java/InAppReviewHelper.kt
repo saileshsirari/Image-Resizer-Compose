@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import android.util.StatsLog.logEvent
 import com.google.android.play.core.ktx.launchReview
 import com.google.android.play.core.ktx.requestReview
 import com.google.android.play.core.review.ReviewManager
@@ -11,6 +12,10 @@ import com.google.android.play.core.review.ReviewManagerFactory
 import java.util.concurrent.TimeUnit
 import androidx.core.content.edit
 import com.image.resizer.compose.log
+import com.image.resizer.utils.AnalyticsHelper.logReviewShown
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 
 object InAppReviewHelper {
 
@@ -31,6 +36,7 @@ object InAppReviewHelper {
         val prefs = getSharedPreferences(context)
         return prefs.getInt(REQUEST_COUNT, MIN_REVIEW_REQUEST_COUNT)
     }
+
     private fun setRequestCount(context: Context, count: Int) {
         val prefs = getSharedPreferences(context)
         prefs.edit { putInt(REQUEST_COUNT, count) }
@@ -47,10 +53,10 @@ object InAppReviewHelper {
     }
 
     private fun shouldRequestReview(context: Context): Boolean {
-        val requestCount =  getRequestCount(context)
-        if(requestCount>0){
-            setRequestCount(context,requestCount-1)
-            return  false
+        val requestCount = getRequestCount(context)
+        if (requestCount > 0) {
+            setRequestCount(context, requestCount - 1)
+            return false
         }
 
         val lastRequestTime = getLastRequestTime(context)
@@ -61,26 +67,36 @@ object InAppReviewHelper {
     }
 
     suspend fun requestReview(context: Context): Boolean {
+
         if (shouldRequestReview(context)) {
             val reviewManager: ReviewManager = ReviewManagerFactory.create(context)
             try {
                 val reviewInfo = reviewManager.requestReview()
                 if (context is Activity) {
                     reviewManager.launchReview(context, reviewInfo)
-                    return  true
-                    log(tag = TAG, message =  "Review Launched")
+                    coroutineScope {
+                        logEvent(Dispatchers.IO) {
+                            logReviewShown()
+                        }
+                    }
+
+                    return true
+                    log(tag = TAG, message = "Review Launched")
                 } else {
-                    log(tag = TAG, message =  "Can't launch review because context is not Activity")
+                    log(tag = TAG, message = "Can't launch review because context is not Activity")
                 }
                 setLastRequestTime(context, System.currentTimeMillis())
 
             } catch (e: Exception) {
-                log(tag = TAG, message = "Error requesting or launching in-app review: ${e.message}")
+                log(
+                    tag = TAG,
+                    message = "Error requesting or launching in-app review: ${e.message}"
+                )
             }
         } else {
             log(tag = TAG, message = "Can't request a review")
 
         }
-       return false
+        return false
     }
 }
