@@ -49,8 +49,8 @@ android {
         applicationId = "apps.sai.com.imageresizer"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10000010
-        versionName = "2.00"
+        versionCode = 10000012
+        versionName = "2.02"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

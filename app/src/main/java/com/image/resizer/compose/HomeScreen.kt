@@ -480,6 +480,9 @@ fun <T : Media> HomeScreen(
                         is ScaleState.ShowPopup -> {
                             Log.d(TAG, "ScaleState.ShowPopup here")
                             // Implement image scaling logic here
+                            scope.logEvent {
+                                AnalyticsHelper.logImageScaled()
+                            }
                             ScaleImagePopup(onDismiss = {
                                 homeScreenViewModel.dismissScalePopup()
                             }, viewModel = viewModel, onScale = {

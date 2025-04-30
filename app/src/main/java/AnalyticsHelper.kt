@@ -15,7 +15,6 @@ import kotlinx.coroutines.launch
 fun CoroutineScope.logEvent(dispatcher: CoroutineDispatcher = Dispatchers.IO,block: suspend () -> Unit){
     launch(dispatcher) {
         block()
-        log(tag = AnalyticsHelper.TAG, message = "$block")
     }
 }
 object AnalyticsHelper {
@@ -61,5 +60,6 @@ object AnalyticsHelper {
 
     private fun logEvent(eventName: String, bundle: Bundle? = null) {
         analytics.logEvent(eventName, bundle)
+        log(tag = TAG, message = eventName)
     }
 }
