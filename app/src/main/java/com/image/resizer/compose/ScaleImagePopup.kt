@@ -155,7 +155,7 @@ fun CustomScaleTabContent(viewModel: ScaleImageViewModel, onPredefinedSelect: (B
                         text = { Text(dimension.toString(),
                             style = MyTypography.bodyMedium) },
                         onClick = {
-                            viewModel.selectPredefinedDimension(dimension, index)
+                            viewModel.selectPredefinedDimension(dimension)
                             onPredefinedSelect(true)
                             isDropdownExpanded = false
                             viewModel.updateHeight("")
@@ -172,12 +172,12 @@ fun CustomScaleTabContent(viewModel: ScaleImageViewModel, onPredefinedSelect: (B
 
                 value = viewModel.width,
                 onValueChange = {
-                    if (it.length <= maxChar) {
+                        // filter the input
+                    onTextEntered(it, maxChar, viewModel){
                         viewModel.updateWidth(it)
-                        viewModel.resetSelectedPredefinedDimension()
-                        onPredefinedSelect(false)
-                        isDropdownExpanded = false
                     }
+                    onPredefinedSelect(false)
+                    isDropdownExpanded = false
                 },
                 label = { Text("Width",style = MyTypography.titleMedium) },
                 modifier = Modifier.weight(1f)
@@ -187,12 +187,11 @@ fun CustomScaleTabContent(viewModel: ScaleImageViewModel, onPredefinedSelect: (B
                 value = viewModel.height,
 
                 onValueChange = {
-                    if (it.length <= maxChar) {
+                    onTextEntered(it, maxChar, viewModel){
                         viewModel.updateHeight(it)
-                        viewModel.resetSelectedPredefinedDimension()
-                        onPredefinedSelect(false)
-                        isDropdownExpanded = false
                     }
+                    onPredefinedSelect(false)
+                    isDropdownExpanded = false
                 },
                 label = { Text("Height",  style = MyTypography.titleMedium) },
                 modifier = Modifier.weight(1f)
@@ -213,6 +212,20 @@ fun CustomScaleTabContent(viewModel: ScaleImageViewModel, onPredefinedSelect: (B
         Spacer(modifier = Modifier.padding(8.dp))
 
     }
+}
+
+private fun onTextEntered(
+    string: String,
+    maxChar: Int,
+    viewModel: ScaleImageViewModel,
+    onValueEntered: (String) -> Unit = {}
+) {
+    val filteredValue = string.filter { char -> char.isDigit() }
+    if (filteredValue.length <= maxChar) {
+        viewModel.resetSelectedPredefinedDimension()
+        onValueEntered(filteredValue)
+    }
+
 }
 
 @Preview

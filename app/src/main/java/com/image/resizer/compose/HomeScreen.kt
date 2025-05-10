@@ -99,6 +99,9 @@ import com.image.resizer.compose.mediaApi.util.Constants.Animation.enterAnimatio
 import com.image.resizer.compose.mediaApi.util.Constants.Animation.exitAnimation
 import com.image.resizer.compose.mediaApi.util.rememberActivityResult
 import com.image.resizer.compose.mediaApi.util.writeRequests
+import com.image.resizer.utils.AnalyticsHelper
+import com.image.resizer.utils.InAppReviewHelper
+import com.image.resizer.utils.logEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -307,6 +310,16 @@ fun <T : Media> HomeScreen(
                                                 context = context,
                                                 onSuccess = {
                                                     homeScreenViewModel.showToast(it)
+                                                    scope.logEvent {
+                                                        AnalyticsHelper.logImageSaved()
+                                                    }
+                                                    scope.launch {
+                                                        if (InAppReviewHelper.requestReview(context)) {
+                                                            scope.logEvent {
+                                                                AnalyticsHelper.logImageSaved()
+                                                            }
+                                                        }
+                                                    }
                                                 },
                                                 onFail = {
                                                     homeScreenViewModel.showToast(it)
@@ -325,6 +338,9 @@ fun <T : Media> HomeScreen(
                                                 homeScreenViewModel.saveOverride(
                                                     context = context,
                                                     onSuccess = {
+                                                        scope.logEvent {
+                                                            AnalyticsHelper.logImageReplaced()
+                                                        }
                                                         homeScreenViewModel.showToast(it)
                                                         homeScreenViewModel.showSelectedImages()
                                                     },
@@ -464,6 +480,9 @@ fun <T : Media> HomeScreen(
                         is ScaleState.ShowPopup -> {
                             Log.d(TAG, "ScaleState.ShowPopup here")
                             // Implement image scaling logic here
+                            scope.logEvent {
+                                AnalyticsHelper.logImageScaled()
+                            }
                             ScaleImagePopup(onDismiss = {
                                 homeScreenViewModel.dismissScalePopup()
                             }, viewModel = viewModel, onScale = {
@@ -666,6 +685,9 @@ private fun HandleCompressState(
     when (currentCompressState) {
         is CompressState.Success -> {
             if (selectedImageItems.isNotEmpty()) {
+                scope.logEvent {
+                    AnalyticsHelper.logImageCompressed()
+                }
                 ScaledImagesGrid(
                     modifier = Modifier
                         .fillMaxSize()
@@ -717,6 +739,7 @@ private fun HandleGalleryState(
     selectedImageItems: List<ImageItem>,
     homeScreenViewModel: HomeScreenViewModel
 ) {
+    val scope = rememberCoroutineScope { Dispatchers.IO }
     val currentGalleryState = galleryState
     when (currentGalleryState) {
         is GalleryState.Success -> {
@@ -725,6 +748,9 @@ private fun HandleGalleryState(
                 enter = fadeIn(animationSpec = tween(durationMillis = 3000)),
                 exit = fadeOut(animationSpec = tween(durationMillis = 3000))
             ) {
+                scope.logEvent {
+                    AnalyticsHelper.logImagesSelected(selectedImageItems.size)
+                }
                 GalleryImagesComponent(selectedImageItems) {
                     homeScreenViewModel.onImageItemClicked(it) {
                         navController.navigate(it) {

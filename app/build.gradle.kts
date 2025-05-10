@@ -11,6 +11,10 @@ plugins {
     id("kotlin-parcelize")
     alias(libs.plugins.kotlinSerialization)
     id("com.google.gms.google-services")// Add this line
+    // Add the Performance Monitoring Gradle plugin
+    id("com.google.firebase.firebase-perf")
+    // Add the Crashlytics Gradle plugin
+    id("com.google.firebase.crashlytics")
 //    alias(libs.plugins.roomPlugin)
 //    alias(libs.plugins.kspAndroid)
 }
@@ -45,8 +49,8 @@ android {
         applicationId = "apps.sai.com.imageresizer"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10000010
-        versionName = "2.00"
+        versionCode = 10000012
+        versionName = "2.02"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -144,10 +148,10 @@ android {
 
 dependencies {
 
-    implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.review.ktx) // or latest version
 
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
@@ -155,16 +159,19 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.core.ktx)
     implementation(libs.lifecycle.runtime.ktx)
-    implementation(libs.activity.compose)
     implementation(libs.coil.compose)
     implementation(libs.accompanist.permissions)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.sketch.http.ktor)
+
     // Subsampling
     implementation(libs.zoomimage.sketch)
     // Import the Firebase BoM
     implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.perf)
+    // Add the Performance Monitoring Gradle plugin
     implementation(libs.firebase.analytics)
+    implementation(libs.firebase.crashlytics)
     // Pinch to zoom
     implementation(libs.pinchzoomgrid)
     // Composables - Core
@@ -186,6 +193,10 @@ dependencies {
 //    ksp(libs.room.compiler)
     // Kotlin + coroutines
     implementation(libs.androidx.work.runtime.ktx)
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.junit.jupiter.engine)
+
+    testImplementation(libs.junit)
 
     // optional - Test helpers
     androidTestImplementation(libs.androidx.work.testing)
@@ -193,7 +204,10 @@ dependencies {
     //optional - Multiprocess support
     implementation(libs.androidx.work.multiprocess)
 
-    testImplementation(libs.junit)
+    testImplementation(libs.strikt.core)
+
+
+
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
